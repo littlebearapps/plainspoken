@@ -14,8 +14,9 @@ Status: v0.5, the first public release. It has:
 A production host has already moved its own checks over to it.
 
 Next:
-- **v1.0.0:** run the tier-2 blind reader test once (the model panel; it needs samples of the author's unassisted
-  writing) and record the results. Tier 1, with human readers, comes later.
+- **v1.0.0:** two accept items are left: the rewrite-quality eval against a no-plugin baseline
+  (`claude plugin eval . --tag rewrite`), and one run of the tier-2 blind reader test (the model panel; it needs
+  samples of the author's unassisted writing), with results recorded. Tier 1, with human readers, comes later.
 - **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
   ([#1](https://github.com/littlebearapps/plainspoken/issues/1)), and `kaizen apply --target profile` editing the
   proposal's own profile rather than the one the project resolves now
