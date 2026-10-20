@@ -1,7 +1,8 @@
 # plainspoken
 
-A Claude Code plugin that helps Claude write like a person: specific, honest, plain,
-in a stated voice, with every claim traceable.
+A writing plugin that helps an AI agent write like a person: specific, honest, plain,
+in a stated voice, with every claim traceable. Built for Claude Code; it also installs in Codex and Hermes Agent
+(see [Codex and Hermes Agent](#codex-and-hermes-agent)).
 
 Status: v0.5, the first public release. It has:
 - the anti-AI check and humanize skills, with four isolated judges;
@@ -14,15 +15,16 @@ Status: v0.5, the first public release. It has:
 A production host has already moved its own checks over to it.
 
 Next:
-- **v1.0.0:** two accept items are left: the rewrite-quality eval against a no-plugin baseline
-  (`claude plugin eval . --tag rewrite`), and one run of the tier-2 blind reader test (the model panel; it needs
-  samples of the author's unassisted writing), with results recorded. Tier 1, with human readers, comes later.
+- **v1.0.0:** one accept item is left: the rewrite-quality eval against a no-plugin baseline
+  (`claude plugin eval . --tag rewrite`). Its first run (20 Oct 2026) showed no difference, because the model never
+  started `humanize` on those prompts, so the cases and graders are being reworked. The tier-2 blind reader test
+  runs after v1.0, once samples of the author's unassisted writing exist; tier 1, with human readers, comes later.
 - **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
   ([#1](https://github.com/littlebearapps/plainspoken/issues/1)), and `kaizen apply --target profile` editing the
   proposal's own profile rather than the one the project resolves now
   ([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
-- **After v1.0:** an editor agent that can rewrite, not only cut. Support for AI tools other than Claude Code is
-  planned for v2.0.
+- **After v1.0:** an editor agent that can rewrite, not only cut. Hooks (lint after each edit, the publish gate)
+  for Codex and Hermes Agent.
 
 ## Use
 
@@ -41,6 +43,33 @@ marketplace's `extraKnownMarketplaces` entry in a project's `.claude/settings.js
 
 Install it into the project that uses it (`claude plugin install plainspoken@lba-plugins --scope project`) unless
 you want it everywhere. At user scope, the lint-watch hook lints every Markdown edit in every project you open.
+
+### Codex and Hermes Agent
+
+The same skills, agents and engine install in two more hosts. The skills are written for Claude Code, so each host
+gets a short note on how to run them there, which the skills point to: [`hosts/codex.md`](hosts/codex.md) and
+[`hosts/hermes.md`](hosts/hermes.md). In both, the judges and checkers run as separate one-shot processes with a
+fresh context (`codex exec --sandbox read-only`, `hermes chat -q`), built by `run.py agent-prompt`.
+
+Codex (CLI and the ChatGPT desktop app; it reads the same marketplace):
+
+    codex plugin marketplace add littlebearapps/lba-plugins
+    codex plugin add plainspoken@lba-plugins
+
+Then start a new session and use `$plainspoken:check`, `$plainspoken:humanize` and the rest.
+
+Hermes Agent:
+
+    hermes plugins install littlebearapps/plainspoken --enable
+
+Then start a new session (or `/reset`). Hermes loads `.hermes-plugin/`, which registers the skills as
+`plainspoken:<name>` and tells the model where the plugin lives. To add it to one Hermes profile only, name the
+profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`.
+
+What's missing outside Claude Code in this version: the hooks (no lint after each edit, no publish gate, no kaizen
+nudges), so run the check yourself before anything goes out; the install-time settings (pick a profile with
+`[engine] profile` in `.plainspoken/config.toml`); and an enforced read-only sandbox for the agents in Hermes, where
+it's an instruction they follow.
 
 Check a draft:
 

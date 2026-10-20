@@ -7,6 +7,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspo
 
 # plainspoken check
 
+> Running in Codex or Hermes Agent? Read `../../hosts/codex.md` or `../../hosts/hermes.md` (relative to this
+> skill's folder) once before step 1. In Claude Code, skip this note.
+
 Core rules (these hold for the whole run):
 - The engine decides. You run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py <subcommand>` and act on its exit codes;
   you never score, merge or name report files yourself (`run.py paths <file>` prints every path).

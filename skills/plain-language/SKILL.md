@@ -7,6 +7,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *)
 
 # plainspoken plain-language
 
+> Running in Codex or Hermes Agent? Read `../../hosts/codex.md` or `../../hosts/hermes.md` (relative to this
+> skill's folder) once before step 1. In Claude Code, skip this note.
+
 ## Core rules
 
 - The reader is the profile's `reader` (the `reader:` line injected below), at its `comprehension_floor` school year.

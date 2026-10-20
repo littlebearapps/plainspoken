@@ -1,0 +1,63 @@
+# plainspoken in Hermes Agent
+
+The skills are written for Claude Code. The plugin loads this note into the first turn of every session; apply it
+whenever you use a plainspoken skill. Where this note and a skill disagree about *how* to run something, this note
+wins in Hermes; the skill still decides *what* to do.
+
+## Paths and commands
+
+- `${CLAUDE_PLUGIN_ROOT}` means the plugin's root folder, given at the top of this note (it holds `lib/run.py`). It
+  is also two folders above the `[Skill directory: …]` a loaded skill shows. Hermes doesn't fill it in, so write the
+  absolute path into every command. `RUN` in the skills is `python3 <root>/lib/run.py`, run with `terminal`.
+- Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
+  literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
+- A line written as `` !`command` `` is something Claude Code runs when the skill loads. Run it yourself first, with
+  the root filled in, and read its output as the skill's injected context.
+- Claude Code tool names map as: Read → `read_file`, Write → `write_file`, Edit → `patch`, Bash → `terminal`,
+  Grep/Glob → `search_files`. `allowed-tools`, `argument-hint` and `disable-model-invocation` are Claude Code
+  settings; the manual-only skills (`claims`, `reader-value`, `kaizen`) still start only when the user asks.
+- Another skill named as `/plainspoken:<name>` loads with `skill_view("plainspoken:<name>")`. If that returns not
+  found, read `<root>/skills/<name>/SKILL.md` and follow it.
+- Run every engine call from the project root (`cd` there first), as the skills say. Report files are keyed to it.
+
+## Agents (the judges and checkers)
+
+When a skill says to start a `plainspoken:<agent>` subagent (`tells-judge`, `claims-checker`, `delivery-checker`,
+`cold-reader`), run that agent as its own one-shot Hermes process instead. It starts with a fresh context, so it
+never sees this session. Never do an agent's job yourself: the skills' rule that you don't award your own pass holds
+here too.
+
+1. Build the prompt. Pipe the agent's input into `RUN agent-prompt <agent>`, which prepends the agent's
+   instructions and the opener the skill names. For the check skill's judges, `--line N` picks judge N from
+   `judge-input`'s four lines:
+
+   ```bash
+   T=$(mktemp -d)
+   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' | RUN agent-prompt tells-judge --line 1 > "$T/J1.prompt"
+   ```
+
+   The claims checker's input comes from `RUN claims checker-input …`, the delivery checker's from
+   `RUN reader-value deliver-input …` (no `--line` for either), and the cold reader's is its two lines
+   (`Reader: …`, `File: …`) passed on stdin.
+2. Run it with the file tools only:
+
+   ```bash
+   hermes chat --query-file "$T/J1.prompt" --oneshot -Q -t file | RUN agent-reply > "$T/J1.json"
+   ```
+
+   The four judges can run at once (end each line with `&`, then `wait`). Each takes a minute or so. Hermes has no
+   read-only toolset, so the agent's "never edit a file" rule is an instruction it follows, not a sandbox. If
+   `hermes chat` can't run, use `delegate_task` with the prompt file's contents as the goal, and say so in the report.
+3. Record it with the skill's own record step, reading from your file instead of the `reply` path:
+   `RUN judge-record "FILE" --group J1 --from "$T/J1.json"` (or `claims record … --from`, `reader-value deliver …
+   --from`). The record step validates the reply; a stale or invalid one means starting that agent again, as the
+   skill says.
+
+## What's different from Claude Code
+
+- No hooks in this version: no lint after each edit, no publish gate and no kaizen nudges. Run the check skill
+  yourself before anything goes out.
+- No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
+  `.plainspoken/config.toml` (see the README). Kaizen records go to `.plainspoken/` in the project.
+- Agents run on this profile's default model (`hermes chat -m <model>` picks another), not the model the agent file
+  names.
