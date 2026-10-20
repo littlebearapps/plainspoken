@@ -1,6 +1,6 @@
-# plainspoken kaizen calibration: the trigger thresholds and the knobs calibrate may turn (Phase 5).
+# plainspoken kaizen calibration: the trigger thresholds and the knobs calibrate may turn.
 # Calibrate only proposes. A proposal changes the ruleset only through `kaizen apply`, after a person approves it.
-# A project can't override these values in this phase.
+# A project can't override these values.
 
 [triggers]
 fp_min_fires = 20        # effective FP above 10% with 20 or more fires

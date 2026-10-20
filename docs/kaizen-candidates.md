@@ -1,12 +1,12 @@
 # Kaizen candidates
 
 Observations that may become rule or data changes. Nothing here changes the ruleset: a change needs evidence from
-the ledger (Phase 5), a proposal and a recorded human approval (`kaizen apply`). Each entry is shaped so it can be
+the kaizen ledger, a proposal and a recorded human approval (`kaizen apply`). Each entry is shaped so it can be
 filed as a GitHub issue with the `kaizen` label.
 
-The loop that acts on them now exists (Phase 5: capture, `kaizen calibrate`, approval, `kaizen apply`; see
-[guides/kaizen.md](../guides/kaizen.md)). K1 to K4 still wait for real ledger data: the first calibrate run on a real
-ledger takes them up, through a proposal and a recorded approval like any other change. K5 is a tooling note, not a
+The loop that acts on them ships in v0.5.0 (capture, `kaizen calibrate`, approval, `kaizen apply`; see
+[guides/kaizen.md](../guides/kaizen.md)). A production host now records a real ledger; K1 to K4 wait for its first
+calibrate runs, and go through a proposal and a recorded approval like any other change. K5 is a tooling note, not a
 rule change.
 
 ## K1: the fixer edits to the 12f thresholds
@@ -18,9 +18,9 @@ rule change.
 - **Why it matters:** anti-Goodhart: a pass rate that rises while readers notice no difference is a
   failure to investigate.
 - **Candidate change:** give the fix pass the failing evidence spans only, never the numeric thresholds; keep 12f
-  at WARN; measure 12f fixes against reader results once the blind reader test runs (built in Phase 6; waiting on
-  samples of the author's own writing).
-- **Decision needed:** none until Phase 5 has data.
+  at WARN; measure 12f fixes against reader results once the blind reader test runs (its tier-2 run is a v1.0.0 item and
+  needs samples of the author's own writing).
+- **Decision needed:** none until the ledger has 12f data.
 
 ## K2: word-level data from the intake sources
 
@@ -29,7 +29,7 @@ rule change.
   Australian swaps, overclaim verbs, agency soft-words, US regionalisms).
 - **Why not now:** word lists belong to the checker, never drafting prompts, and the ruleset changes
   only through `kaizen apply` with evidence.
-- **Candidate change:** propose them as `data/rules.toml` / `data/locales/en-AU.toml` entries in Phase 5, each
+- **Candidate change:** propose them as `data/rules.toml` / `data/locales/en-AU.toml` entries through calibrate, each
   checked against the golden set for false positives. The tables are not kept in the repo; they're re-derived from
   the author's own source files when the proposal is written.
 - **Informal terms to include:** from the localisation source, in three tiers. Usually fine in casual business
@@ -39,7 +39,7 @@ rule change.
   `guides/locale-en-AU.md`. The verb is two words and the noun or adjective is hyphenated (set up / set-up, clean
   up / clean-up, kick off / kick-off); the closed forms "setup" and "cleanup" are flagged in prose unless they're
   part of a name. It's word-level data, so it belongs to the checker, not the guide.
-- **Decision needed:** at the first Phase 5 calibrate run.
+- **Decision needed:** at the first calibrate run on a real ledger.
 
 ## K3: word-level data in the copy-audit sources
 
@@ -47,9 +47,9 @@ rule change.
 - **Seen:** Phase 3 intake (2026-10-12): the source anti-tells catalogue and the outcomes-led document carry word
   lists (buzzwords, overclaim verbs, soft words) that copy-audit doesn't restate.
 - **Why not now:** word lists belong to the checker; the ruleset changes only through `kaizen apply`.
-- **Candidate change:** fold them into the K2 proposal at the first Phase 5 calibrate run, checked against the golden
-  set. They're re-derived from the author's own source files; they aren't kept in the repo.
-- **Decision needed:** at the first Phase 5 calibrate run, together with K2.
+- **Candidate change:** fold them into the K2 proposal at the first calibrate run on a real ledger, checked against
+  the golden set. They're re-derived from the author's own source files; they aren't kept in the repo.
+- **Decision needed:** at the first calibrate run on a real ledger, together with K2.
 
 ## K4: rules 7d and 7b against the write skill's own guidance
 
