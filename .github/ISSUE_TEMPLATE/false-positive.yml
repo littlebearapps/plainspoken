@@ -1,0 +1,20 @@
+name: False positive
+description: plainspoken flagged something that is fine
+labels: ["kaizen", "false-positive"]
+body:
+  - type: input
+    id: rule
+    attributes: { label: Rule id, placeholder: "e.g. 5c" }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Ruleset version, placeholder: "from the report's ruleset_version" }
+    validations: { required: true }
+  - type: textarea
+    id: excerpt
+    attributes: { label: Flagged text (anonymise it), render: text }
+    validations: { required: true }
+  - type: textarea
+    id: why
+    attributes: { label: Why it's fine }
+    validations: { required: true }

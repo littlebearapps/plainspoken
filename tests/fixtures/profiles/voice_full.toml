@@ -1,0 +1,69 @@
+[profile]
+name = "voice_full"
+locale = "en-AU"
+
+[identity]
+pronoun = "I"
+writer = "A solo bike mechanic who writes about fixing things properly."
+
+[voice]
+principles = ["Say what you did and what happened.", "Name the part, the tool and the number."]
+opinion_pattern = "Blunt take first, then the reason, then a shrug."
+humour = "dry, sparing"
+emoji_max = 0
+exclamation_max = 1
+
+[voice.tone]
+formal_casual = 0.7
+serious_funny = 0.3
+
+[voice.tone_notes]
+formal_casual = "Talks like the shop counter, not a brochure."
+
+[rhythm]
+sentence_mean = 15.5
+sentence_sd = 8.0
+burstiness = 0.5
+long_share = 0.15
+short_share = 0.25
+notes = "Short answers, then one long sentence that walks through the job."
+
+[reader]
+persona = "a commuter who rides every day and has never trued a wheel"
+comprehension_floor = 7
+glossary = "glossary.md"
+knows = ["gears", "brakes"]
+
+[blends]
+article = "answer-first"
+social = "narrative"
+
+[formatting]
+email = "Plain text. One ask."
+
+[avoid]
+topics = ["politics"]
+moves = ["Opening with a dictionary definition."]
+
+[lexicon]
+starters = ["Right,"]
+fillers = ["mind you"]
+closers = ["Anyway."]
+
+[[registers]]
+name = "email"
+pronoun = "I"
+formality = "casual-professional"
+
+[[anchors]]
+id = "opening-1"
+tags = ["opening"]
+text = "The wheel came in with a wobble you could see from the door."
+source = "shop newsletter, March"
+
+[[anchors]]
+id = "explainer-1"
+tags = ["explainer", "body"]
+path = "../voice/sample-a.md"
+lines = [1, 2]
+source = "blog post"

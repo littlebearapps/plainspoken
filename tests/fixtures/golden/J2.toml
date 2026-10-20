@@ -1,0 +1,14 @@
+schema = 1
+group = "J2"
+
+[[case]]
+id = "J2-7c-001"
+rule = "7c"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "constructed parallel construction for 7c"
+text = """
+A bike path is not just a strip of paint, it's a promise to every parent who rides to the bakery.
+"""

@@ -1,0 +1,12 @@
+# Brief: declining a meeting
+
+Audience: a colleague in another team who has invited you to a one-hour planning meeting next week.
+
+Format: a short email with a subject line, a greeting and a sign-off.
+
+Length: 80 to 120 words for the email body.
+
+Topic: politely declining a planning meeting because of a deadline that week.
+
+Ask them to send the notes afterwards, or propose a 15-minute call the following week. Keep the tone friendly and
+direct.

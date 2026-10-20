@@ -1,0 +1,102 @@
+# Ruleset changelog
+
+Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
+
+## Comment revision (2026-10-19; ruleset version unchanged)
+
+- **Stale forward references:** comments only, so no rule, threshold or list changes and no version bump
+  (the same as earlier comment-only fixes). `rules.toml` no longer points at a Phase 3 rule reference in
+  `guides/` (none ships) or says social severities arrive with the adapt skill (they aren't modelled; that needs a
+  kaizen proposal). The three `data/locales/en-*.toml` headers no longer promise a Phase 3 spelling-preference
+  check (none ships). The file's bytes change, so a pending proposal's `base_sha256` no longer matches and
+  `kaizen apply` rebases it.
+
+## 4.3.0 (2026-10-19)
+
+- KZ-20261019-b9d6bb: rule 12d, add (trigger: owner). rule 12d: add (a FAQ-only run threshold for 12d, the narrow knob calibrate turns when the evidence sits in FAQ sections; the same value as paragraph_uniform_run, so no change until evidenc…
+- Evidence: design_gap 12d has no FAQ-only knob
+- Approved by owner.
+- **Rule 12d, FAQ-only run (`paragraph_uniform_faq_run`):** the run length 12d needs when a run starts in a
+  FAQ section (the same test as the `faq` section facet), so calibrate's narrow knob can loosen 12d for FAQ answers
+  alone when the evidence sits there, as `staccato_faq_short_run` does for 7d. It starts at 4, the value of
+  `paragraph_uniform_run`, so nothing fires differently until kaizen evidence turns it. Added through the new
+  `threshold_add` edit kind. The approval is the owner's 19 Oct 2026 plan decision ("all recommendations
+  approved"); the implementing agent transcribed the decision line.
+
+## 4.2.0 (2026-10-19)
+
+- KZ-20261019-9fd6de: rule 33, add (trigger: owner). rule 33: add (owner review sheet 2: count stock significance phrases like rule 2b, shadow first): add rule 33 (Stock significance phrases) with list stock_significance and threshold stock_signi…
+- Evidence: golden J3-12c-006 J3-12c-008; owner_note sheet 2, J3-12c-008
+- Approved by owner.
+- **Rule 33, stock significance phrases (shadow, report only):** counts phrases such as "far-reaching
+  implications" and "pivotal moment" (list `stock_significance`) like rule 2b: one is fine, 2 or more
+  (`stock_significance_warn`) is a WARN once promoted. From the owner's review sheet 2 (18 Oct 2026): `J3-12c-008`
+  isn't a 12c tell, but the phrase reads a bit telly and a better sentence names who it affects. Kept out of 12c so
+  that rule stays a scale test. Promotion only through kaizen with evidence. The approval is the owner's 19 Oct
+  2026 plan decision ("all recommendations approved"); the implementing agent transcribed the decision line.
+
+## Rubric revision (2026-10-19; ruleset version unchanged)
+
+- **Rule 12c (J3), size test:** a narrow scope doesn't excuse an inflated size. Big significance language
+  about one local thing (one school, one shop, one event) needs evidence that the change reaches across much of
+  it; one or two small changes are a fail even though the scope is narrow. The earlier scope test is unchanged: a
+  narrow claim with matching evidence still passes. Prompted by the owner-confirmed `J3-12c-009`, which Claude Opus
+  passed in 3 of 3 runs while all four panel models that answered failed it. Approved by the owner on 19 Oct 2026.
+  Claude Opus after the change: J3 60/60 in 2 of 2 runs, `J3-12c-009` a fail in both, every other 12c case on its
+  label. No panel re-run.
+
+## Delivery rubric (2026-10-19; ruleset version unchanged)
+
+- **New rubric `data/rubrics/delivery.md`:** the isolated `delivery-checker` agent's rubric for the
+  reader-value delivery gate: the seven items (`outcome` … `start_here`) ported from the host's pre-publish delivery
+  gate, verbatim-evidence rules and the reply schema. `<key>.delivery.json` binds its hash, so a later edit makes
+  earlier delivery records stale. The reading of the success-and-stop item for history and commentary contracts is
+  plainspoken's own and is labelled as such.
+
+## Claims rubric revision (2026-10-19; ruleset version unchanged)
+
+- **Verbatim evidence:** a finding's `evidence` is at least three words. `claims record` marks shorter
+  evidence unverified, because one or two common words are found almost anywhere. The rubric's hash changes, so an
+  earlier `<key>.claims-check.json` reads as `checker result stale (rubric changed)` until the checker runs again.
+- **Severity names `scope_stretch`:** the class (a location that says more than the claim's ledger `text`)
+  is listed under `blocking`, beside the location-level entailment failures ("What to check" item 6). The rubric's
+  hash changes again, with the same effect on earlier checker records.
+
+## Rubric revision (2026-10-18, second; ruleset version unchanged)
+
+- **Rule 12c (J3):** a scope test. Judge the stated scale against the scope the sentence itself names; when the
+  article's evidence covers that scope, it's a pass even for a listed phrase. Prompted by `J3-12c-006`, which two
+  to three panel models flagged per run while Claude passed it.
+- **Rule 17 (J3):** what the reader already knows comes from the passage. When the text expects the reader to do
+  the thing, an analogy for its basics talks down; when it says its reader is new, a plain analogy can help.
+  Prompted by the owner-confirmed `J3-17-001`, which GLM passed in both panel runs.
+- New golden minimal pairs `J3-12c-007`/`-008` and `J3-17-007`/`-008` (provisional). Claude Opus after the
+  change: J3 59/59 in 2 of 2 runs. Approved by the owner on 18 Oct 2026.
+
+## Rubric revision (2026-10-18, ruleset version unchanged)
+
+- **Rule 27 (J3):** a marketing "optimise" that belongs to someone else (a vendor's pitch, a quote) passes when
+  the writer doubts, tests or deflates it. The writer's own paraphrase (indirect speech), or reporting the phrase
+  and carrying on in the same frame, still fails.
+  Approved by the owner on 18 Oct 2026 after all six judges flagged the confirmed pass `J3-27-003`.
+  `rules.toml` is untouched (`kaizen apply` edits only the ruleset file); reports pin the rubric by its
+  `rubric_sha256`. New golden minimal pair `J3-27-007` (fail). Claude Opus after the change: J3 55/55 in 2 of 2 runs, JR
+  unchanged (its one miss, `JR-12d-001`, predates this).
+
+## 4.1.0 (2026-10-10)
+
+- Every rule carries `era`; new rules also carry `models` and a cited `source`.
+- Findings report a per-1,000-word rate per rule (`rates_per_1k`).
+- Five **shadow** rules (report only, never block, outside merge coverage): 28 salience flags,
+  29 sincerity markers, 30 signposting openers, 31 gotcha framing, 32 newer model-era words. Sources in
+  `data/rules.toml`. Promotion needs a kaizen proposal with evidence and human approval (Phase 5).
+- Proposed for review (not changed): rule 21, synonym cycling. humanizer 3.1.0 dropped it as a human habit.
+- Correction (2026-10-19): the drop was in humanizer **v3.0.0** (2026-09-06), not 3.1.0; 3.1.0 inherited
+  it. The review (`docs/acceptance/rule-21-review.md`) found no fire on real writing; the owner's decision, 19 Oct
+  2026, is to keep rule 21 unchanged. No ruleset change.
+
+## 4.0.0 (2026-10-10)
+
+- Ported from the author's earlier private ruleset (v4). Site-scoped rules became profile-scoped (now `PB` and
+  `NR-1…6`); the site's banned phrases moved to profiles; `[aliases]`, `judge_may_block`, `[thresholds.social]`
+  and `[spelling] expand` added.

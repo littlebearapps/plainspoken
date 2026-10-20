@@ -1,0 +1,36 @@
+{
+  "action": "loosen",
+  "adapter": "file",
+  "base_sha256": "61bca4c24bba94cd176abfa2a13143f4945d942565967e7539294d9b66cd615f",
+  "bump": "minor",
+  "created": "2026-10-19T01:00:00+00:00",
+  "diff": "--- a/rules.toml\n+++ b/rules.toml\n@@ -4,7 +4,7 @@\n \n [thresholds.\"default\"]\n em_dash_max = 3\n-claude_warn_total = 4\n+claude_warn_total = 5\n conversational_warn = 3\n conversational_block = 6\n however_max = 2\n",
+  "edits": [
+    {
+      "key": "claude_warn_total",
+      "kind": "set_threshold",
+      "new": 5,
+      "old": 4,
+      "table": "default"
+    }
+  ],
+  "effect": {
+    "corpus": "not measured (no corpus)",
+    "golden": "not available until Phase 6"
+  },
+  "evidence": {
+    "fixture": "v0.4.0 store"
+  },
+  "id": "KZ-20261019-12891c",
+  "key": "64a072b0f74d",
+  "profile": null,
+  "ref": ".plainspoken/kaizen/proposals/KZ-20261019-12891c.md",
+  "rule": "2b",
+  "ruleset_version": "4.1.0",
+  "summary": "rule 2b: loosen (fixture D: approved and applied): claude_warn_total 4 → 5",
+  "targets": [
+    "ruleset",
+    "profile"
+  ],
+  "trigger": "fp"
+}

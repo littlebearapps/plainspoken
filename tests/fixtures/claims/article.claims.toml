@@ -1,0 +1,52 @@
+# An invented ledger for tests: a TOML ledger with unquoted dates and datetimes.
+schema_version = 1
+article_id = "fixture-001"
+article_slug = "repair-shop-booking-data"
+source_file = "article.md"
+source_content_hash = "sha256:ec6329d11fa5acdbd8d5481e7ca9eacc077080c5d892dc89d6aec4b77402e920"
+checked_at = 2026-10-14T09:00:00+10:00
+checked_by = "test-fixture"
+coverage_status = "complete"
+
+[[claims]]
+claim_id = "SHOP-001-C001"
+text = "In 2025, 38% of the shop's bookings came in after 6pm"
+claim_type = "first_hand"
+prominence = "high"
+status = "first_hand"
+refresh_after = 2027-01-01
+
+[[claims.locations]]
+kind = "body"
+
+[claims.first_hand_scope]
+owner = "the shop owner"
+scope = "the shop's own booking export for calendar year 2025"
+method = "booking system export"
+
+[[claims]]
+claim_id = "SHOP-001-C002"
+text = "The regional survey puts the share of after-hours bookings at 41% across similar shops."
+claim_type = "statistic"
+prominence = "medium"
+status = "verified"
+
+[[claims.locations]]
+kind = "body"
+
+[claims.source]
+url = "https://example.org/regional-survey"
+title = "Regional repair shop survey"
+source_tier = "primary"
+
+[claims.binding]
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+passage = "after-hours bookings made up 41% of all bookings"
+passage_sha256 = "sha256:b30e60aacbcf5de43c3246e06a20bafb9238830b08d611a0e450d5e334e64827"
+source_text_sha256 = "sha256:f4ef49aebdd66133f8944da1a302571d33fd15f1adbea73270f92fbe25084249"
+retrieved_at = 2026-10-14T09:00:00+10:00
+source_snapshot = ".plainspoken/sources/example-source.md"

@@ -1,0 +1,30 @@
+schema = 1
+group = "J1"
+
+[[case]]
+id = "J1-5b-001"
+rule = "5b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair for 5b; see J1-5b-002"
+text = """
+In this post I want to walk you through how the garden shed got its new roof.
+
+The old sheets had rusted through along the ridge, so the rain came in every winter.
+"""
+
+[[case]]
+id = "J1-5b-002"
+rule = "5b"
+label = "pass"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "minimal pair for 5b; see J1-5b-001"
+text = """
+The garden shed got a new roof in March.
+
+The old sheets had rusted through along the ridge, so the rain came in every winter.
+"""

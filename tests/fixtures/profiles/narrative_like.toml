@@ -1,0 +1,17 @@
+[profile]
+name = "narrative_like"
+locale = "en-AU"
+flags = ["narrative"]
+
+[document]
+long_sentence_headings = ['\bvenue profile\b']
+visible_frontmatter_keys = ["title", "description", "og_title", "og_description", "ogTitle", "ogDescription", "heroImageAlt"]
+faq_frontmatter_key = "faqs"
+resource_list_headings = ['^[*_]*tools\s*(?:&|&amp;|and)\s*resources\b']
+
+[thresholds]
+em_dash_max = 5
+staccato_long_sentence = 20
+staccato_short_run = 7
+narrative_paragraph_short = 20
+narrative_paragraph_long = 80

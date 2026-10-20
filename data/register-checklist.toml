@@ -1,0 +1,99 @@
+# register-check items (flags only). v0.2 ships this generic checklist only: a host can't add its own items yet
+# (an extension point for hosts' regulated-claims checks is planned for a later version).
+version = 1
+
+[[items]]
+id = "R1"
+title = "Honesty"
+ask = "Is every number, result and example real and supportable?"
+flag_when = "a metric, result, testimonial or guarantee has nothing behind it, or a past result is stretched"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
+
+[[items]]
+id = "R2"
+title = "Outcome promises"
+ask = "Does it promise only what the writer controls?"
+flag_when = "it promises an outcome that depends on someone else (a ranking, sales, sign-ups, a mention); name the lever and the signal to watch instead"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
+
+[[items]]
+id = "R3"
+title = "Pressure"
+ask = "Is it free of urgency, guilt and warmth the writer doesn't feel?"
+flag_when = "a deadline, scarcity, guilt or familiarity is manufactured"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
+
+[[items]]
+id = "R4"
+title = "Pronoun stance"
+ask = "Do the pronouns match who is actually doing the work?"
+flag_when = "{pronoun_rule}"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
+
+[items.by_pronoun]
+I = "reader-facing text uses we, our, us or let's for one person's work (quoted speech excepted)"
+we = "a lone I stands in for a team's work, or the team is implied where one person acts"
+either = "the pronoun shifts within one message without a reason"
+
+[[items]]
+id = "R5"
+title = "Formality"
+ask = "Does the tone fit the register ({formality})?"
+flag_when = "it reads stiffer or chummier than {formality}"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
+
+[[items]]
+id = "R6"
+title = "Consent"
+ask = "Does it assume only the permission it has?"
+flag_when = "it adds someone to a list, or treats a found address or a past contact as permission"
+applies_to = ["email", "message", "outreach", "follow-up"]
+
+[[items]]
+id = "R7"
+title = "First contact"
+ask = "Would this read as written to one person, with an easy no?"
+flag_when = "it could go to anyone unchanged, hides who is writing or where the details came from, has no easy no, or asks before giving one useful observation"
+applies_to = ["outreach"]
+
+[[items]]
+id = "R8"
+title = "Follow-up"
+ask = "Does it stand on its own and add something?"
+flag_when = "it only makes sense after the earlier note, escalates (a new deadline, discount or ask), or a closing note still asks"
+applies_to = ["follow-up"]
+
+[[items]]
+id = "R9"
+title = "Unasked advice"
+ask = "Is advice offered, not ordered?"
+flag_when = "it tells a reader who didn't ask what they should do (fine in a how-to the reader chose)"
+applies_to = ["email", "message", "outreach", "follow-up"]
+
+[[items]]
+id = "R10"
+title = "Insider words"
+ask = "Would {reader} use every word here?"
+flag_when = "a term that reader wouldn't use has no plain gloss (see the plain-language skill)"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
+
+[[items]]
+id = "R11"
+title = "Spelling and locale"
+ask = "Is it consistently {locale}?"
+flag_when = "spelling, dates, money or idioms drift from {locale}"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
+
+[[items]]
+id = "R12"
+title = "Scope"
+ask = "Is it clear what is and isn't included?"
+flag_when = "what's free, paid, included or left out is hidden, vague or contradicts itself"
+applies_to = ["email", "page", "outreach", "follow-up"]
+
+[[items]]
+id = "R13"
+title = "Personal details"
+ask = "Does it hold only the personal details it needs?"
+flag_when = "it mentions health, money, family or other private details the reader didn't share for this purpose"
+applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]

@@ -1,0 +1,435 @@
+{
+  "article": "posts/sample-post.md",
+  "profile": "default",
+  "profile_sha256": "c4d05bef3a1b0e4aa9ea7cb2b3b03d4ec7f7382dc670209f3169312902331a46",
+  "ruleset_version": "4.1.0",
+  "content_type": "article",
+  "article_sha256": "510bcfbe3c83f858d74d32c95087ea8fe1a9cb9537053ac0ed718bf4df45d38a",
+  "generated": "2026-10-19T03:19:57+00:00",
+  "status": "FAIL",
+  "blocks": [
+    "2",
+    "4a"
+  ],
+  "warns": [
+    "10",
+    "11",
+    "7d"
+  ],
+  "unresolved": [
+    "11"
+  ],
+  "justified": [
+    {
+      "rule": "10",
+      "kind": "voice",
+      "reason": "This is the writer's own register and reads as intended.",
+      "review": "accept",
+      "review_reason": "checked against the evidence"
+    },
+    {
+      "rule": "11",
+      "kind": "voice",
+      "reason": "This is the writer's own register and reads as intended.",
+      "review": "reject",
+      "review_reason": "checked against the evidence"
+    },
+    {
+      "rule": "7d",
+      "kind": "voice",
+      "reason": "This is the writer's own register and reads as intended.",
+      "review": "accept",
+      "review_reason": "checked against the evidence"
+    }
+  ],
+  "unused_justifications": [],
+  "problems": [],
+  "coverage": {
+    "expected": 41,
+    "covered": 41,
+    "missing": []
+  },
+  "metrics": {
+    "words": 50,
+    "ttr": 0.78,
+    "mattr": 0.78,
+    "burstiness": 0.559,
+    "opening_top3_share": 0.375,
+    "capsule_transition_share": 0.0,
+    "paragraph_sd": 6.5
+  },
+  "allows": [
+    {
+      "rule": "2",
+      "phrase": "pinned",
+      "line": 10,
+      "reason": "quoted from the changelog"
+    }
+  ],
+  "rules": {
+    "1": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "BLOCK",
+      "findings": []
+    },
+    "2": {
+      "source": "judge:J3",
+      "verdict": "fail",
+      "judge_verdict": "pass",
+      "severity": "BLOCK",
+      "evidence": [],
+      "findings": [
+        {
+          "rule": "2",
+          "severity": "BLOCK",
+          "line": 7,
+          "excerpt": "Furthermore, the tests were robust and the fix was crucial — I think.",
+          "message": "Banned word — use the plain swap: “robust”",
+          "source": "lint"
+        },
+        {
+          "rule": "2",
+          "severity": "BLOCK",
+          "line": 7,
+          "excerpt": "Furthermore, the tests were robust and the fix was crucial — I think.",
+          "message": "Banned word — use the plain swap: “crucial”",
+          "source": "lint"
+        }
+      ]
+    },
+    "2b": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "4a": {
+      "source": "lint",
+      "verdict": "fail",
+      "severity": "BLOCK",
+      "findings": [
+        {
+          "rule": "4a",
+          "severity": "BLOCK",
+          "line": 7,
+          "excerpt": "Furthermore, the tests were robust and the fix was crucial — I think.",
+          "message": "Academic transition — delete or use also/but/still: “Furthermore”",
+          "source": "lint"
+        }
+      ]
+    },
+    "4a2": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "4b": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "BLOCK",
+      "findings": []
+    },
+    "5b": {
+      "source": "judge:J1",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "BLOCK",
+      "evidence": [],
+      "findings": []
+    },
+    "5c": {
+      "source": "judge:J3",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "BLOCK",
+      "evidence": [],
+      "findings": []
+    },
+    "5d": {
+      "source": "judge:J1",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "BLOCK",
+      "evidence": [],
+      "findings": []
+    },
+    "5e": {
+      "source": "judge:J4",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "6": {
+      "source": "judge:J2",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "BLOCK",
+      "evidence": [],
+      "findings": [
+        {
+          "rule": "6",
+          "severity": "CANDIDATE",
+          "line": 7,
+          "excerpt": "Furthermore, the tests were robust and the fix was crucial — I think.",
+          "message": "Three-item list (20.0 per 1,000 words) — judge J2 decides",
+          "source": "lint"
+        }
+      ]
+    },
+    "7": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "7b": {
+      "source": "judge:J2",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "7c": {
+      "source": "judge:J2",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": [
+        {
+          "rule": "7c",
+          "severity": "CANDIDATE",
+          "line": 10,
+          "excerpt": "Not just a fix, it's a lesson.",
+          "message": "“Not just X, it's Y” construction",
+          "source": "lint"
+        }
+      ]
+    },
+    "7d": {
+      "source": "lint",
+      "verdict": "fail",
+      "severity": "WARN",
+      "findings": [
+        {
+          "rule": "7d",
+          "severity": "WARN",
+          "line": 7,
+          "excerpt": "(intro)",
+          "message": "No sentence over 25 words in this section — let one thought run long",
+          "source": "lint"
+        }
+      ]
+    },
+    "8": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "10": {
+      "source": "judge:J3",
+      "verdict": "fail",
+      "judge_verdict": "fail",
+      "severity": "WARN",
+      "evidence": [
+        {
+          "line": 9,
+          "quote": "The result? A green build.",
+          "reason": "rhetorical setup"
+        }
+      ],
+      "findings": []
+    },
+    "11": {
+      "source": "judge:J1",
+      "verdict": "fail",
+      "judge_verdict": "fail",
+      "severity": "WARN",
+      "evidence": [
+        {
+          "line": 9,
+          "quote": "The result? A green build.",
+          "reason": "rhetorical setup"
+        }
+      ],
+      "findings": []
+    },
+    "12": {
+      "source": "judge:J2",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": [
+        {
+          "rule": "12",
+          "severity": "CANDIDATE",
+          "line": 10,
+          "excerpt": "The result?",
+          "message": "Both-sides framing or rhetorical question — judge J2 decides",
+          "source": "lint"
+        }
+      ]
+    },
+    "12b": {
+      "source": "judge:J3",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "12c": {
+      "source": "judge:J3",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "12d": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "12e": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "12f": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "BLOCK",
+      "findings": []
+    },
+    "13": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "14": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "15": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "16": {
+      "source": "judge:J2",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "19": {
+      "source": "judge:J4",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "BLOCK",
+      "evidence": [],
+      "findings": []
+    },
+    "20": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "BLOCK",
+      "findings": []
+    },
+    "22": {
+      "source": "judge:J2",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "23": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "24": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "25": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "26": {
+      "source": "judge:J1",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "27": {
+      "source": "judge:J3",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "HM": {
+      "source": "lint",
+      "verdict": "pass",
+      "severity": "WARN",
+      "findings": []
+    },
+    "18": {
+      "source": "judge:J1",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "21": {
+      "source": "judge:J2",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "17": {
+      "source": "judge:J3",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    },
+    "9": {
+      "source": "judge:J4",
+      "verdict": "pass",
+      "judge_verdict": "pass",
+      "severity": "WARN",
+      "evidence": [],
+      "findings": []
+    }
+  }
+}

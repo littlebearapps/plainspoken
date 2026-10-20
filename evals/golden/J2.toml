@@ -1,0 +1,646 @@
+schema = 1
+group = "J2"
+
+# ---------------------------------------------------------------- 6 Rule of three
+
+[[case]]
+id = "J2-6-001"
+rule = "6"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author's calibration of their own published post (2026-09-27): author overruled the fail (anonymised, trimmed)"
+text = '''
+When I type a task for the coding agent at my desk, I tend to be terse: "refactor the auth middleware." When I'm walking and talking, I naturally add context: "Hey, the auth middleware in the app is getting messy - the session validation is mixed in with the role checking. Can you split those into separate middleware functions? Keep the existing tests passing."
+
+The voice prompt is longer, more specific, and gives the coding agent more to work with.
+'''
+
+[[case]]
+id = "J2-6-002"
+rule = "6"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "library newsletter built from padded near-synonym triplets. Minimal pair: J2-6-007"
+text = '''
+Our new reading room upstairs is quiet, calm and peaceful. It's a place to read, relax and unwind, with comfortable, cosy and inviting armchairs along the window. Drop in any afternoon to browse, discover and explore the local history shelf.
+'''
+
+[[case]]
+id = "J2-6-003"
+rule = "6"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "CLI release note where every list is a padded triplet"
+text = '''
+This release makes tidyfs faster, quicker and more responsive on large folders. The new config loader is simpler, cleaner and easier to read. I also reworked the help text so it's clearer, shorter and more helpful. Upgrade with `pipx upgrade tidyfs`.
+'''
+
+[[case]]
+id = "J2-6-004"
+rule = "6"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "accounting-firm LinkedIn post with padded triplets as its default shape"
+text = '''
+Every client who walks through our door should feel heard, valued and respected. Our team is friendly, approachable and easy to talk to, and our advice is practical, useful and down to earth. Book a chat whenever it suits you.
+'''
+
+[[case]]
+id = "J2-6-005"
+rule = "6"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "hard negative: triplets that are the real count (three regroup points, three tools) among lists of other lengths"
+text = '''
+The ride has three regroup points: the boathouse, the top of the quarry hill and the café at the footbridge. If you're dropped between them, wait at the next one and someone will come back for you.
+
+Bring a spare tube, a pump and tyre levers. We start at 7:30 sharp on Sundays and Wednesdays, and the Wednesday ride skips the hill.
+'''
+
+[[case]]
+id = "J2-6-006"
+rule = "6"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: README where list lengths vary and the one triplet is load-bearing"
+text = '''
+## Supported files
+
+tidyfs sorts photos, PDFs, audio files and spreadsheets. It skips anything hidden and anything inside a `.git` folder.
+
+Run it with `--dry-run` first to see the moves without making them. Each run writes a log, prints a summary and leaves an undo script in the target folder, so a bad sort is one command to reverse.
+'''
+
+[[case]]
+id = "J2-6-007"
+rule = "6"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J2-6-002 with the padded triplets cut down"
+text = '''
+Our new reading room upstairs is quiet. It has four armchairs along the window and a long table for laptops. Drop in any afternoon to browse the local history shelf.
+'''
+
+# ---------------------------------------------------------------- 7b Press-release opener
+
+[[case]]
+id = "J2-7b-001"
+rule = "7b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "plugin changelog post opening on a count announcement. Minimal pair: J2-7b-006"
+text = '''
+Fixed 14 bugs across 4 plugins this week. The worst was a crash when the export folder didn't exist yet; the exporter now creates the folder and carries on. The rest were small layout problems in the settings panel.
+'''
+
+[[case]]
+id = "J2-7b-002"
+rule = "7b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "landcare-group post opening on an announcement-shaped tally"
+text = '''
+Planted 400 seedlings in 3 weekends along the creek reserve. The wattles went in first, on the steep bank where the soil keeps washing out. I'll go back in a month to see how many survived the dry spell.
+'''
+
+[[case]]
+id = "J2-7b-003"
+rule = "7b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "library app post that opens like a product-update email"
+text = '''
+We're thrilled to announce that the library app now supports holds on e-audiobooks! You can place a hold from the title page, and the app will send a notification when your copy is ready. Holds last for three days before the copy goes to the next person in the queue.
+'''
+
+[[case]]
+id = "J2-7b-004"
+rule = "7b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: club post opening on an observation"
+text = '''
+Most people who join the Sunday ride stop coming after their third week, and it's rarely about fitness. When I've asked, it's usually that nobody said hello at the start. So now someone does.
+'''
+
+[[case]]
+id = "J2-7b-005"
+rule = "7b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: opens on a scene that contains numbers but announces nothing"
+text = '''
+At 6:40 on a wet Tuesday, the bakery had already sold out of sourdough, and two regulars were standing at the counter looking betrayed. That was the week I started baking a second batch. It costs me an extra hour, and it hasn't sold out since.
+'''
+
+[[case]]
+id = "J2-7b-006"
+rule = "7b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J2-7b-001 opening on the lesson instead of the count"
+text = '''
+A missing folder shouldn't crash an export, but until this week it did. The exporter now creates the folder and carries on. The other fixes this week were small layout problems in the settings panel.
+'''
+
+# ---------------------------------------------------------------- 7c Parallel constructions
+
+[[case]]
+id = "J2-7c-001"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "author-approved fix from a published post: negative parallel restated plainly"
+text = '''
+You've asked around, or filled in a form, and now there's an SEO quote sitting in your inbox. It's probably a monthly retainer, somewhere between one and a few thousand dollars, with a list of inclusions that all sound reasonable and none of which you can independently judge. That's not a knock on you. It's the whole problem with buying SEO: the person quoting knows exactly what the work involves, and you don't.
+'''
+
+[[case]]
+id = "J2-7c-002"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "author-approved fix from a published post: two negative parallels restated plainly"
+text = '''
+None of this makes the provider dishonest. It makes the quote, as written, unable to answer the only question that matters: what am I actually buying? That's not a reason to walk away. It's the list of things to ask before you sign.
+'''
+
+[[case]]
+id = "J2-7c-003"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "author-approved fix from a published post: negative parallel restated plainly. Minimal pair: J2-7c-010"
+text = '''
+Which is why the range itself is so wide it's nearly useless. "Somewhere between $400 and $15,000 a month" narrows nothing down. The useful question isn't what SEO costs. It's what your specific quote buys.
+'''
+
+[[case]]
+id = "J2-7c-004"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "author-approved fix from a published post: negative parallel cut"
+text = '''
+Sometimes the best reading of a quote is "not yet". That's not anti-SEO - done well, it's real, compounding work that can genuinely improve how easily people find you. It's about sequence.
+'''
+
+[[case]]
+id = "J2-7c-005"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "author-approved fix from a published post: negative parallel restated plainly (anonymised)"
+text = '''
+But "not showing up in search" isn't one problem. It's six different problems that all look the same from the outside. Some of them you can fix yourself this week for nothing. One of them you can't, and knowing which kind you have is the entire game.
+'''
+
+[[case]]
+id = "J2-7c-006"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "author-approved fix from a published post: in-sentence negative parallel restated plainly (anonymised)"
+text = '''
+**Fix:** shopfront customers visit you? Show the address. Service-area business? Hide it, and set a service area that matches reality. The listing platform also doesn't allow service-area businesses to list a "virtual office" address that nobody staffs, so if that's the setup, it's not a workaround - it's cause 2 waiting to happen.
+'''
+
+[[case]]
+id = "J2-7c-007"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "author-approved fix from a published post: negative parallel cut. Minimal pair: J2-7c-011"
+text = '''
+If you got here, your profile exists, it's verified, compliant, accurate and correctly configured. It shows when someone searches your name. It just doesn't appear when someone searches *"plumber near me"* - competitors do instead. That isn't a fault. That's competition, and it's a different kind of problem to everything above.
+'''
+
+[[case]]
+id = "J2-7c-008"
+rule = "7c"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "food-bank newsletter with a three-sentence same-shape run for rhetorical effect"
+text = '''
+Every Thursday the shelves at the food bank fill up and empty again. The farmers drop off the surplus. The volunteers sort the surplus. The families carry the surplus home. It works because nobody in that chain is paid, and it would stop the week the hall rent went up.
+'''
+
+[[case]]
+id = "J2-7c-009"
+rule = "7c"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "council bus-timetable post built on a 'not only... but also' parallel"
+text = '''
+The new 402 timetable starts on Monday. It's not only more frequent but also far easier to read. Buses now run every 15 minutes until 7 pm, and the printed card fits in a wallet.
+'''
+
+[[case]]
+id = "J2-7c-010"
+rule = "7c"
+label = "pass"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "minimal pair of J2-7c-003: the replacement side of that author-approved fix, as published"
+text = '''
+Which is why the range itself is so wide it's nearly useless. "Somewhere between $400 and $15,000 a month" narrows nothing down. The useful question is what your specific quote buys.
+'''
+
+[[case]]
+id = "J2-7c-011"
+rule = "7c"
+label = "pass"
+content_type = "article"
+source = "owner-endorsed"
+status = "endorsed"
+origin = "minimal pair of J2-7c-007: the replacement side of that author-approved fix, as published"
+text = '''
+If you got here, your profile exists, it's verified, compliant, accurate and correctly configured. It shows when someone searches your name. It just doesn't appear when someone searches *"plumber near me"* - competitors do instead. That's competition, and it's a different kind of problem to everything above.
+'''
+
+[[case]]
+id = "J2-7c-012"
+rule = "7c"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: numbered procedure whose steps share a shape because they're steps"
+text = '''
+To replace a tap washer:
+
+1. Turn off the water at the meter.
+2. Open the tap fully to drain what's left in the pipe.
+3. Unscrew the tap head with a shifter.
+4. Swap the old washer for a new one of the same size.
+5. Screw the head back on and turn the water on slowly.
+
+If it still drips after that, the seat is probably worn, and that's a job for a plumber.
+'''
+
+[[case]]
+id = "J2-7c-013"
+rule = "7c"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "hard negative: opening-hours paragraph where similar shapes are incidental and broken by an aside"
+text = '''
+The library opens at 9 on weekdays. On Saturdays it opens at 10, which still catches a few people out every month, and it shuts at 1. Sunday is closed, but the returns chute by the car park takes books all weekend.
+'''
+
+# ---------------------------------------------------------------- 12 Compulsive balance / rhetorical questions
+
+[[case]]
+id = "J2-12-001"
+rule = "12"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "gardening post with an empty 'While X, Y' opener"
+text = '''
+While there are many ways to store seed potatoes, the best place is a paper bag on a cool, dark shelf in the shed. Check them every fortnight and throw out any that have gone soft. They'll be ready to plant when the shoots are about two centimetres long.
+'''
+
+[[case]]
+id = "J2-12-002"
+rule = "12"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "bakery update using a self-posed rhetorical question for drama"
+text = '''
+In March we moved the pick-up window from the morning to the afternoon. The outcome? Fewer orders left uncollected and a lot less stress at the counter. Uncollected orders fell from about twelve a week to three.
+'''
+
+[[case]]
+id = "J2-12-003"
+rule = "12"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "town-centre parking piece that lays out both sides and declines to pick one"
+text = '''
+Both camps make fair points about paid parking on the main street. On one hand, traders say free parking keeps customers coming in. On the other hand, residents say the spaces are taken all day by commuters. In the end, every town has to weigh this up for itself.
+'''
+
+[[case]]
+id = "J2-12-004"
+rule = "12"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a real trade-off where the writer states a position"
+text = '''
+Self-hosting the club website would save about $15 a month, but it would make one volunteer responsible for every security update. I'd rather pay the $15. We tried self-hosting in 2022, and the site was down for a week when that volunteer went on holiday.
+'''
+
+[[case]]
+id = "J2-12-005"
+rule = "12"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: 'while' meaning 'during'"
+text = '''
+While the pool is closed for retiling, the swim squad will train at the school pool on Tuesday and Thursday mornings. The school pool is 25 metres, so the coaches will adjust the sets. The main pool reopens on 1 November.
+'''
+
+[[case]]
+id = "J2-12-006"
+rule = "12"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a question the reader would really ask, as an FAQ heading"
+text = '''
+### Can I bring my dog to the market?
+
+Yes, as long as it's on a short lead. Dogs aren't allowed in the food tent, and there's a water bowl by the information stall.
+'''
+
+# ---------------------------------------------------------------- 16 From X to Y ranges
+
+[[case]]
+id = "J2-16-001"
+rule = "16"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "neighbourhood-house newsletter with a vague 'from X to Y' span"
+text = '''
+Our volunteers do everything from fundraising to community outreach. If you've got a few hours a month, we'd love to hear from you. Volunteer inductions run on the first Monday of each month at 6 pm.
+'''
+
+[[case]]
+id = "J2-16-002"
+rule = "16"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "workshop blurb gesturing at a vague span"
+text = '''
+The Saturday workshop covers everything from planning to execution, so whatever stage your renovation is at, you'll leave with something useful. It runs from 9 until 1 at the community hall, and morning tea is included.
+'''
+
+[[case]]
+id = "J2-16-003"
+rule = "16"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "CLI README claiming a vague audience span"
+text = '''
+tidyfs suits everyone from hobbyists to large teams. It runs on any machine with Python 3.11 or later, and it doesn't need a server. Install it with `pipx install tidyfs`.
+'''
+
+[[case]]
+id = "J2-16-004"
+rule = "16"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a real place range"
+text = '''
+The ride goes from the boathouse to the second footbridge and back, about 32 km all up. There's one climb, at the quarry, and we regroup at the top.
+'''
+
+[[case]]
+id = "J2-16-005"
+rule = "16"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a real numeric range"
+text = '''
+After I resized the gallery images, the home page's load time on my phone dropped from 3.8 seconds to 1.2 seconds. The images were the only thing I changed.
+'''
+
+[[case]]
+id = "J2-16-006"
+rule = "16"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a real step range"
+text = '''
+The checklist takes you from the first enquiry form to the signed agreement, one step per page. Most clubs get through it in an evening, and the treasurer has to sign the last page.
+'''
+
+# ---------------------------------------------------------------- 21 Synonym cycling
+
+[[case]]
+id = "J2-21-001"
+rule = "21"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hall-booking notice renaming one app four ways. Minimal pair: J2-21-005"
+text = '''
+We've switched to a new booking app for the hall. The app shows groups the free slots as they change. The platform also sends a reminder the day before each booking. We hope the solution cuts down on double bookings, and that the system is easier for older members to use.
+'''
+
+[[case]]
+id = "J2-21-002"
+rule = "21"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "local-history paragraph cycling names for one pool. Minimal pair: J2-21-006"
+text = '''
+The Mercer Street baths opened in 1931 and drew crowds every summer. By the 1950s the aquatic facility needed a new filter. The swimming venue closed for a season while the council found the money, and the leisure complex reopened in December 1956.
+'''
+
+[[case]]
+id = "J2-21-003"
+rule = "21"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "bakery post cycling names for one loaf"
+text = '''
+Our sourdough takes two days to make. The loaf rises overnight in the cool room. The next morning the bread is shaped by hand, and the artisan product goes into the oven at 4 am.
+'''
+
+[[case]]
+id = "J2-21-004"
+rule = "21"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: different names that mean different things"
+text = '''
+The club owns two trailers. The small trailer carries the race-day marquee, and the long one carries the junior squad's bikes. The van that tows them belongs to the president, who lends it on race days.
+'''
+
+[[case]]
+id = "J2-21-005"
+rule = "21"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J2-21-001: one name plus pronouns"
+text = '''
+We've switched to a new booking app for the hall. It shows groups the free slots as they change and sends a reminder the day before each booking. We hope the app cuts down on double bookings, and that it's easier for older members to use.
+'''
+
+[[case]]
+id = "J2-21-006"
+rule = "21"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J2-21-002: the name repeated, no cycling"
+text = '''
+The Mercer Street baths opened in 1931 and drew crowds every summer. By the 1950s the baths needed a new filter. They closed for a season while the council found the money, and reopened in December 1956.
+'''
+
+# ---------------------------------------------------------------- 22 Challenges / Future outlook
+
+[[case]]
+id = "J2-22-001"
+rule = "22"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "community-garden article with a generic Challenges section. Contrast: J2-22-004"
+text = '''
+## Challenges
+
+Like many community groups, the garden has its share of challenges. Funding is always a concern, and keeping volunteers involved takes ongoing effort. Despite these hurdles, the garden remains a much-loved part of the neighbourhood, and its future looks bright.
+'''
+
+[[case]]
+id = "J2-22-002"
+rule = "22"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "bookshop piece ending in an outline-shaped Looking ahead section"
+text = '''
+## Looking ahead
+
+The future of local bookshops will depend on how they adapt to changing reader habits. Online ordering will keep growing, and shops will need to keep up. The ones that stay close to their communities are likely to do well in the years to come.
+'''
+
+[[case]]
+id = "J2-22-003"
+rule = "22"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "CLI README with a generic future-plans section"
+text = '''
+## Future plans
+
+There's a lot more to come for tidyfs. I'll keep improving performance and adding the features people ask for. Watch this space for updates in the months ahead.
+'''
+
+[[case]]
+id = "J2-22-004"
+rule = "22"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: Looking ahead section built from dated, sourced specifics"
+text = '''
+## Looking ahead
+
+The council's 2026-27 budget, adopted on 24 June 2026, sets aside $180,000 to replace the garden's irrigation in March 2027. The garden's lease on the site runs to June 2031, and the committee will ask for a ten-year renewal at the general meeting on 14 October.
+'''
+
+[[case]]
+id = "J2-22-005"
+rule = "22"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: Challenges section made of specific, dated first-hand facts"
+text = '''
+## Challenges
+
+Two things nearly closed the shop in 2024. The rent went up 22% in February, and in August our main distributor went into administration owing us $9,400 in unfilled orders. We got through by moving to a smaller shopfront two doors down in November and buying direct from three publishers.
+'''
+
+[[case]]
+id = "J2-22-006"
+rule = "22"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: README roadmap with dated, tracked milestones. Contrast: J2-22-003"
+text = '''
+## What's next
+
+Version 0.9 is due on 30 November and adds Windows path support, tracked in issue #212. Version 1.0 follows in February 2027 and freezes the config format, so after that a config file that works today will keep working.
+'''

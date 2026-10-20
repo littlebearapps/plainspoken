@@ -1,0 +1,85 @@
+# A claim ledger: one per article, at .plainspoken/claims/<key>.claims.toml (or .claims.json); `paths` prints it.
+# Start one with `claims scaffold <article>`, which lists every value, quote and platform claim it can find as a
+# `blocking` claim. Then give each claim a real status with the fields that status needs, as below.
+#
+# Everything here is an invented example (a plumbing business's blog post). The schema is
+# data/schemas/claim-ledger.schema.json; `claims validate <ledger>` checks a ledger against it.
+
+schema_version = 1
+article_id = "ACME-014"
+article_slug = "what-a-call-out-costs"
+source_file = "posts/what-a-call-out-costs.md"   # relative to the project root, no leading slash, no ..
+source_content_hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"  # `claims hash <article>`
+checked_at = "2026-10-14T09:00:00+11:00"
+checked_by = "the editor"
+coverage_status = "partial"   # complete only once every material claim in the article is in this ledger
+coverage_notes = "Body and title reviewed; the FAQ isn't yet."
+
+# A candidate that isn't a claim (example copy, a made-up scenario) is excluded with a reason, never just deleted.
+[[exclusions]]
+text = "Say a tap drips 20 times a minute"
+reason = "a worked example the reader is asked to imagine, not a claim about anyone"
+
+# verified: needs a source and a binding. Pin the passage with `claims pin --source <saved page> --passage "<text>"`
+# and paste the fragment it prints; never write a hash by hand.
+[[claims]]
+claim_id = "ACME-014-C001"
+text = "The regional survey puts the average call-out fee at $120."
+claim_type = "price"
+prominence = "high"
+status = "verified"
+
+[[claims.locations]]
+kind = "body"
+anchor = "what-you-pay"
+
+[claims.source]
+url = "https://example.org/trades-survey"
+title = "Regional trades pricing survey (invented)"
+source_tier = "primary"
+
+[claims.binding]
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+# first_hand: something the owner measured or saw. The scope says exactly what, and the claim mustn't stretch past it.
+[[claims]]
+claim_id = "ACME-014-C002"
+text = "Last winter, most of our burst-pipe jobs came in before 8am."
+claim_type = "first_hand"
+prominence = "medium"
+status = "first_hand"
+
+[[claims.locations]]
+kind = "body"
+
+[claims.first_hand_scope]
+owner = "the business owner"
+scope = "the business's own job log, June to August 2026"
+method = "job-log export"
+
+# opinion_or_inference: labelled as a view in the article, so it needs no source.
+[[claims]]
+claim_id = "ACME-014-C003"
+text = "A cheap call-out fee is a poor way to choose a plumber."
+claim_type = "premise"
+prominence = "medium"
+status = "opinion_or_inference"
+
+[[claims.locations]]
+kind = "heading"
+
+# removed: audit history. It never counts as coverage, and its id is never reused.
+[[claims]]
+claim_id = "ACME-014-C004"
+text = "Prices rose 30% this year."
+claim_type = "statistic"
+prominence = "medium"
+status = "removed"
+resolution = "No source could be found for the figure; the sentence was cut from the body."
+
+[[claims.locations]]
+kind = "body"

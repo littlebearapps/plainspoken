@@ -1,0 +1,32 @@
+# plainspoken claims data. Shipped defaults the claims engine reads; a project adds to them in
+# .plainspoken/config.toml and never edits this file.
+
+[extraction]
+# Platforms whose behaviour a sentence can assert ("Google indexes…", "Instagram requires…"). Each name is matched
+# literally and case-sensitively as a whole word near a behaviour verb, so the sentence becomes a
+# `platform_behaviour` claim candidate. A project adds its own with `[claims] platforms_extra`.
+platforms = [
+  "Google", "Bing", "ChatGPT", "OpenAI", "Perplexity", "Gemini", "Claude", "Copilot", "Meta", "Facebook",
+  "Instagram", "LinkedIn", "GA4", "Search Console", "Cloudflare", "GitHub", "Apple", "Microsoft",
+]
+
+[reader_value]
+# Phrases that make a reader-value field a call to action, not value for the reader. A `promised_outcome` holding one
+# with fewer than six words left once it's removed is CTA-shaped, and so is a `first_action` holding one. Matched as
+# whole words, case-insensitively, longest first. Bare "book" and "hire" are left out on purpose ("read the book",
+# "hire a skip"), and so are "booking", "sign up" (and "signup", "sign-up"), "request a quote", "get a quote" and
+# "reach out": they're common DIY first actions ("open your booking settings", "sign up for Search Console",
+# "request a quote from three suppliers", "reach out to your web host"). The "me"/"us" forms stay because they point
+# at the author. A project adds its own (its offer names, its "get a quote") with `[reader_value] cta_phrases`.
+cta_phrases = [
+  "book a call", "book a consultation", "enquire", "get in touch", "contact me", "contact us", "hire me",
+  "hire us", "subscribe", "free consultation", "free audit", "intro call", "buy now", "start a free trial",
+  "book a", "book an", "book in", "enquiry", "enquiries", "inquire", "inquiry", "schedule a call", "email me",
+  "email us", "call me", "call us", "free trial", "join the waitlist",
+]
+# An `original_value` that is only one of these (case-insensitive, an optional full stop) is filler: name the actual
+# method, data or experience the piece contributes.
+vague_phrases = [
+  "unique insight", "unique insights", "unique perspective", "expert insight", "expert insights",
+  "expert perspective", "expert advice", "valuable content", "valuable information", "great tips",
+]

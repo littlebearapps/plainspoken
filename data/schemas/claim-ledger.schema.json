@@ -1,0 +1,551 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/littlebearapps/plainspoken/data/schemas/claim-ledger.schema.json",
+  "title": "Claim ledger",
+  "description": "Machine-readable record of every material claim in one article and its verification state. One ledger per article, as TOML (*.claims.toml) or JSON (*.claims.json). Terminal states are closed: there is no unverified_but_reasonable escape hatch, and `removed` is audit history that never counts as a passing claim. Generalised from a blog workspace's ledger schema: `source_file` is any project-relative text file (md, mdx, markdown, txt, html; no leading slash, no `..`); `claim_id` is any hyphen- or underscore-joined alphanumeric id; the sign-off block is `human_signoff`, with `signed_by` required; `first_hand_scope` records `approved_by_owner`; `binding.source_snapshot` names the saved source text that `claims recheck` reads; `regulated_class` lets a host tag a claim for its regulated-claims matrix.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "article_id",
+    "article_slug",
+    "source_file",
+    "source_content_hash",
+    "checked_at",
+    "checked_by",
+    "coverage_status",
+    "claims"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "article_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "article_slug": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_file": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\./).+\\.(md|mdx|markdown|txt|html)$",
+      "description": "Project-relative path of the article (no leading slash, no `..`)."
+    },
+    "source_content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "checked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checked_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coverage_status": {
+      "description": "complete = a layered coverage pass (deterministic + semantic + fresh-context) reconciled every material claim into this ledger. Anything else must be reported as incomplete by consumers — never as passing.",
+      "enum": [
+        "complete",
+        "partial",
+        "stale",
+        "unstarted"
+      ]
+    },
+    "coverage_notes": {
+      "type": "string"
+    },
+    "exclusions": {
+      "type": "array",
+      "description": "Explicit dispositions for extractor candidates that are NOT material claims (illustrative example copy, fictional vignettes, rhetorical strings). Each needs a reason — an exclusion without a reason is a bypass, not a disposition.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "reason"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 4
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    }
+  },
+  "$defs": {
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id",
+        "text",
+        "locations",
+        "claim_type",
+        "prominence",
+        "status"
+      ],
+      "properties": {
+        "claim_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$",
+          "description": "e.g. GEO-007-C014. Stable; never reuse an id after removal."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact claim text as checked."
+        },
+        "locations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "body",
+                  "frontmatter",
+                  "tldr",
+                  "heading",
+                  "chart",
+                  "figcaption",
+                  "faq",
+                  "jsonld",
+                  "table",
+                  "title",
+                  "code_comment",
+                  "alt_text",
+                  "distribution_copy"
+                ]
+              },
+              "field": {
+                "type": "string"
+              },
+              "anchor": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "claim_type": {
+          "enum": [
+            "statistic",
+            "count",
+            "price",
+            "date",
+            "duration",
+            "version",
+            "product_feature",
+            "forecast",
+            "estimate",
+            "comparison",
+            "superlative",
+            "causal",
+            "outcome",
+            "platform_behaviour",
+            "legal_policy",
+            "quotation",
+            "attributed_paraphrase",
+            "historical",
+            "first_hand",
+            "derived_metric",
+            "code_behaviour",
+            "premise"
+          ]
+        },
+        "prominence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "subject": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "geography": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "verified",
+            "derived",
+            "first_hand",
+            "opinion_or_inference",
+            "hypothetical",
+            "removed",
+            "blocking"
+          ]
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url",
+            "title",
+            "source_tier"
+          ],
+          "properties": {
+            "url": {
+              "type": "string",
+              "pattern": "^https?://"
+            },
+            "title": {
+              "type": "string"
+            },
+            "publisher": {
+              "type": "string"
+            },
+            "source_tier": {
+              "enum": [
+                "primary",
+                "near_primary",
+                "reputable_secondary",
+                "aggregator",
+                "unknown"
+              ]
+            },
+            "published_at": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "string"
+            },
+            "locator": {
+              "type": "string",
+              "description": "table, page, heading or paragraph carrying the value"
+            },
+            "accessed_at": {
+              "type": "string"
+            },
+            "content_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          }
+        },
+        "binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "same_subject",
+            "same_geography",
+            "same_period",
+            "same_denominator",
+            "supports_strength"
+          ],
+          "properties": {
+            "same_subject": {
+              "type": "boolean"
+            },
+            "same_geography": {
+              "type": "boolean"
+            },
+            "same_period": {
+              "type": "boolean"
+            },
+            "same_denominator": {
+              "type": "boolean"
+            },
+            "supports_strength": {
+              "type": "boolean",
+              "description": "The article sentence is no stronger than the evidence. Citation proximity is not support."
+            },
+            "passage": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The exact supporting passage from the source, bounded to about 75 words. Optional: ledgers without pinned passages stay valid."
+            },
+            "passage_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "description": "Hash of the pinned passage text."
+            },
+            "source_text_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "description": "Hash of the full extracted source text at retrieval time (drift detection — live URLs decay and drift)."
+            },
+            "archive_url": {
+              "type": "string",
+              "pattern": "^https://",
+              "description": "Archive snapshot URL (Internet Archive SPN2 or equivalent). Full pages are never committed — hash + archive URL instead."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "Timestamp of the pinned retrieval."
+            },
+            "source_snapshot": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project-relative path of the saved source text this passage was pinned from; `claims recheck` reads it."
+            },
+            "additional_passages": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Further pinned spans that JOINTLY entail a compound claim. The primary `passage` stays first; these carry the dimensions it doesn't: period, comparator, denominator, methodology, platform scope. Pinned by the same mechanical rules (verbatim locate, never paraphrase, never stitch). `source_url` means that dimension is evidenced on a different page; it does NOT change the article's citation, which stays `source.url`.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "passage",
+                  "passage_sha256"
+                ],
+                "properties": {
+                  "passage": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "passage_sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "source_text_sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "source_url": {
+                    "type": "string",
+                    "pattern": "^https://"
+                  },
+                  "retrieved_at": {
+                    "type": "string"
+                  },
+                  "locator": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "dependentRequired": {
+            "additional_passages": [
+              "passage"
+            ]
+          }
+        },
+        "derivation": {
+          "type": "object",
+          "description": "How a derived claim was worked out. It needs `inputs`, `derived_from_external` or both (`claims validate` checks that, since this schema subset has no anyOf).",
+          "additionalProperties": false,
+          "required": [
+            "method"
+          ],
+          "properties": {
+            "method": {
+              "type": "string",
+              "minLength": 1
+            },
+            "inputs": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Ids of live claims in this ledger the derivation starts from.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "derived_from_external": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Evidence the derivation used that isn't a claim: project-relative files (no leading slash, no `..`) or http(s) URLs. Never read as claim ids.",
+              "items": {
+                "type": "string",
+                "pattern": "^(?:https?://\\S+|(?!.*://)(?![/\\\\])(?![A-Za-z]:)(?!(?:.*[/\\\\])?\\.\\.(?:[/\\\\]|$))[^\\x00]+)$"
+              }
+            }
+          }
+        },
+        "first_hand_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "owner",
+            "scope",
+            "method"
+          ],
+          "properties": {
+            "owner": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scope": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What was actually measured/experienced — extrapolation beyond it is prohibited."
+            },
+            "method": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sensitive": {
+              "type": "boolean",
+              "description": "true → owner approval required before publication (confidentiality, permission or reputational risk)."
+            },
+            "approved_by_owner": {
+              "type": "boolean"
+            }
+          }
+        },
+        "risk": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "regulated_class": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional class from the host's regulated-claims matrix (configured per project)."
+        },
+        "refresh_after": {
+          "type": "string",
+          "format": "date"
+        },
+        "resolution": {
+          "type": "string",
+          "description": "For removed/blocking: original problem, evidence, correction, affected surfaces."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "human_signoff": {
+          "type": "object",
+          "description": "The owner's recorded sign-off on a routed high-risk claim. Voided mechanically when `wording` no longer appears (whitespace-normalised) in the article: exact-wording invalidation.",
+          "additionalProperties": false,
+          "required": [
+            "signed",
+            "signed_by",
+            "against_run",
+            "findings",
+            "wording",
+            "scope_note"
+          ],
+          "properties": {
+            "signed": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "ISO date the sign-off was granted."
+            },
+            "signed_by": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Who granted the sign-off."
+            },
+            "against_run": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}-[0-9A-Za-z-]+$",
+              "description": "The checker run id whose finding prompted this sign-off."
+            },
+            "findings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Finding ids addressed (informational trail)."
+            },
+            "wording": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The exact article wording reviewed. Whitespace-normalised presence in the article is the validity condition."
+            },
+            "scope_note": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What exactly was approved, in the signer's own scope language."
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "verified"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "source",
+              "binding"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "derived"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "derivation"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "first_hand"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "first_hand_scope"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "removed",
+                  "blocking"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "resolution"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

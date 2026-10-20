@@ -1,0 +1,17 @@
+# An invented reader-value contract: a plumbing business's how-to post.
+schema_version = 1
+type = "task"
+primary_reader = "A homeowner with a slow-draining kitchen sink"
+problem = "Can't tell whether a slow drain is a do-it-yourself job or needs a plumber"
+promised_outcome = "A cleared drain, or a clear sign that it's a job for a licensed plumber"
+effort = "about 30 minutes"
+prerequisites = ["a bucket", "a sink plunger"]
+success_signal = "A full sink empties in under a minute"
+stop_condition = "Stop and call a licensed plumber if water backs up into another fixture"
+original_value = "A three-check triage drawn from the call-outs Acme Plumbing attended last winter"
+cta_excluded_confirmed = true
+
+[first_action]
+verb = "remove"
+object = "the sink strainer and trap cap"
+location = "under the kitchen sink"

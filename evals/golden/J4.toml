@@ -1,0 +1,439 @@
+schema = 1
+group = "J4"
+
+# ---------------------------------------------------------------- 5e -ing sentence openers
+
+[[case]]
+id = "J4-5e-001"
+rule = "5e"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: three consecutive participial openers in one section (bakery reopening)."
+text = """The bakery reopened on Monday after six weeks of repairs. Replacing the old deck oven, the builders found the floor beneath it had rotted through. Pulling up the boards, they discovered the original 1920s brick hearth. Keeping it, the owners had the new oven set on top of the bricks. The first loaves came out at 5 am on Monday, and the queue went round the corner."""
+
+[[case]]
+id = "J4-5e-002"
+rule = "5e"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: three non-consecutive participial openers under one H2 (release notes), the per-section count."
+text = """## What changed in version 2
+
+The export command now writes CSV and JSON. Reading the config at start-up, the tool checks for an `output` key before falling back to CSV. Most people won't notice the difference. Running on a large file, version 2 streams rows instead of loading them all into memory. Peak memory on a 1 GB file dropped from 3 GB to about 200 MB. Detecting a malformed row, the parser now prints the line number and skips it rather than stopping."""
+
+[[case]]
+id = "J4-5e-003"
+rule = "5e"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: three consecutive participial openers in a club newsletter item."
+text = """Walking into the clubrooms on Saturday, you'll notice the new honour boards. Hanging above the bar, they list every premiership side since 1952. Looking closely at the 1968 board, you'll spot a misspelling the signwriter has promised to fix. The boards were paid for by the past players' association."""
+
+[[case]]
+id = "J4-5e-004"
+rule = "5e"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a gerund-subject opener (not counted) followed by three participial openers in a row."
+text = """Updating the members list is a job nobody wants. Opening the spreadsheet last week, I found 212 rows for a club with 140 members. Sorting by surname, I counted 38 duplicates. Checking the rest against the bank deposits, I found another 30 people who hadn't paid since 2022. The clean list is now on the shared drive."""
+
+[[case]]
+id = "J4-5e-005"
+rule = "5e"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed hard negative: every -ing opener is a gerund subject, none participial."
+text = """Baking sourdough takes most of two days. Feeding the starter happens the night before, and shaping the loaves can't start until the dough has doubled. Getting the oven to temperature adds another hour. None of that shows up on the price board, which is why a loaf costs $9."""
+
+[[case]]
+id = "J4-5e-006"
+rule = "5e"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: only two participial openers in the section, below the threshold of three."
+text = """Opening the old council minute books, I expected neat handwriting and dull agendas. Most of it was exactly that. But the 1931 volume has a page where the clerk drew a map of the flooded streets in the margin. Reading it alongside the newspaper reports, you can track the water street by street. The library has scanned that page, and it's on their website."""
+
+[[case]]
+id = "J4-5e-007"
+rule = "5e"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: the -ing openers sit in bullet items, which don't count; the prose has none."
+text = """## Before you lodge
+
+The form takes about ten minutes if you've done these first:
+
+- Checking that the business name matches the one on your ABN
+- Having your last two BAS statements open in another tab
+- Knowing which quarter the overpayment fell in
+- Finding the receipt number from the original payment
+
+The form saves as you go, so you can close the tab and come back to it."""
+
+[[case]]
+id = "J4-5e-008"
+rule = "5e"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: four participial openers split two per H2 section, so neither section reaches three."
+text = """## The old hall
+
+The bluestone hall opened in 1889. Standing at the top of the rise, it was the first building travellers saw from the coach road. For thirty years it hosted dances, inquests and the overflow from the school. Seating about three hundred, it was too small by the 1960s.
+
+## The new hall
+
+Facing the oval rather than the road, the 1972 hall turned its back on the old town. It cost a little under $90,000. Costing that much in a town of 2,000 people, it took a decade of raffles and one large bequest to pay off. The old hall became the historical society's museum."""
+
+# ---------------------------------------------------------------- 9 zero informality
+
+[[case]]
+id = "J4-9-001"
+rule = "9"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a pool's rules page in uniformly polished corporate register; no person anywhere."
+text = """Members are required to present a valid membership card upon entry to the aquatic centre. Lap lanes are allocated according to swimming speed, and signage at each end of the pool indicates the designated pace. Children under the age of ten must be accompanied by a supervising adult at all times. Lockers are available for the duration of a visit and must be cleared before closing. Lost property is retained at reception for a period of thirty days. Enquiries regarding membership renewals should be directed to the administration office during business hours."""
+
+[[case]]
+id = "J4-9-002"
+rule = "9"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a product update in uniformly polished register with no informal marker."
+text = """Version 4.2 of the scheduling application is now available for all users. The release introduces a revised calendar view that displays bookings by room rather than by staff member. Recurring appointments may now be edited individually without affecting the remainder of the series. Performance has been improved when loading calendars containing more than one thousand entries. Users who have configured custom reminder templates are advised to review them following the update. Further information is available in the release notes accessible from the Help menu."""
+
+[[case]]
+id = "J4-9-003"
+rule = "9"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a local-business blog paragraph that reads like a corporate profile; no contractions, asides or person."
+text = """The bakery on Ellis Street has operated continuously since 1948. Ownership has passed through three families during that period, and each has retained the original recipe for the vanilla slice. The premises underwent a substantial renovation in 2015, during which the original shopfront was restored. Customers continue to queue on Saturday mornings, especially during the winter months. The current owners have indicated an intention to extend trading hours in the coming year. Further details will be published on the bakery's website in due course."""
+
+[[case]]
+id = "J4-9-004"
+rule = "9"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: minimal pair of J4-9-001, same rules in a person's register (contractions, a question, an aside)."
+text = """Members need to show a valid membership card at the front desk. Lap lanes are sorted by speed, and the signs at each end of the pool tell you which pace each lane is for. Children under ten must have an adult with them the whole time. Lockers are free for the length of your visit, but please empty them before closing. Lost property stays at reception for thirty days, and then it goes to the op shop. Got a question about renewing? Ask at the office; we're there weekdays until five."""
+
+[[case]]
+id = "J4-9-005"
+rule = "9"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed hard negative: mostly formal release note, but one parenthetical aside shows a person."
+text = """Version 4.2 of the scheduling application is now available for all users. The release introduces a calendar view that groups bookings by room rather than by staff member. Recurring appointments can now be edited one at a time without changing the rest of the series. Calendars with more than a thousand entries load faster. (We know, it took a while. The old loader was written over a weekend in 2019, and it showed.) If you've set up custom reminder templates, check them after updating."""
+
+[[case]]
+id = "J4-9-006"
+rule = "9"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: minimal pair of J4-9-003 in a person's register (first person, an aside, an And starter)."
+text = """The bakery on Ellis Street has been open since 1948, and as far as I can tell it has never closed for more than a fortnight. Three families have owned it. Each kept the vanilla slice recipe, though the second owners swapped the passionfruit icing for plain white in 1979 and, by most accounts, nearly started a riot. The 2015 renovation brought back the original green-tiled shopfront. And the Saturday queue is still there, longest in July."""
+
+# ---------------------------------------------------------------- 19 trailing -ing fake depth
+
+[[case]]
+id = "J4-19-001"
+rule = "19"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: two decorative trailing -ing clauses (listed verbs) in one section of a council update."
+text = """The council has added two new bins at the skate park, highlighting its commitment to a cleaner public space. Volunteers repainted the half-pipe in March, reflecting the community's deep pride in the area. The lights now stay on until 9 pm."""
+
+[[case]]
+id = "J4-19-002"
+rule = "19"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: two decorative trailing -ing clauses in a CLI release note."
+text = """Version 1.4 adds a `--dry-run` flag to the sync command, ensuring users feel confident before making changes. The error messages have also been rewritten, demonstrating the project's focus on the developer experience. Upgrade with `pipx upgrade tallyup`."""
+
+[[case]]
+id = "J4-19-003"
+rule = "19"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed: two decorative trailing clauses on verbs not in the lint list ('capturing', 'adding')."
+text = """The cycling club moved its Saturday ride to 7 am this summer, capturing the spirit of a community that loves an early start. Riders now finish at the bakery on Gilmour Street, adding a warm social dimension to every outing. Numbers are up from about twelve to twenty."""
+
+[[case]]
+id = "J4-19-004"
+rule = "19"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: two decorative trailing clauses on unlisted verbs ('giving', 'reinforcing') in a library social post."
+text = """Our library's Saturday story time is back, giving local families a cherished weekly ritual. We've also added a sensory corner, reinforcing our belief that every child deserves to feel welcome. Sessions start at 10:30."""
+
+[[case]]
+id = "J4-19-005"
+rule = "19"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: two trailing -ing clauses that state real, specific consequences of a bug."
+text = """The payment plugin fired its webhook twice per order, sending every customer two confirmation emails and taking each item out of stock twice. It also retried declined cards every minute, locking several customers' cards after their banks flagged the repeated attempts. Both bugs are fixed in 2.3.1."""
+
+[[case]]
+id = "J4-19-006"
+rule = "19"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: a single decorative trailing clause in the section, below the count of two."
+text = """The historical society has moved its archive to the old courthouse, marking a new chapter for the collection. The boxes went across in two trailer loads on a Saturday in April. The reading room opens on Wednesdays from 10 until 3, and the first job is re-shelving the council rate books by year."""
+
+[[case]]
+id = "J4-19-007"
+rule = "19"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: two decorative trailing clauses, one in each of two H2 sections, so no section reaches two."
+text = """## The move
+
+The archive moved to the old courthouse in April, signalling a fresh start for the society. It took two trailer loads and most of a Saturday.
+
+## Opening hours
+
+The reading room opens on Wednesdays from 10 until 3, reflecting the volunteers' dedication to access. Bring a pencil; pens aren't allowed near the rate books."""
+
+[[case]]
+id = "J4-19-008"
+rule = "19"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: trailing -ing clauses that narrate concrete actions, not fake analysis."
+text = """The under-12s trained in the rain on Thursday, finishing just before the oval lights cut out at 7. Their coach walked the boundary afterwards, counting the fence posts the storm had knocked over. There were eleven. The club has asked the council to replace them before the first home game."""
+
+# ---------------------------------------------------------------- NR-3 proper-noun density in narrative
+
+[[case]]
+id = "J4-NR-3-001"
+rule = "NR-3"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed narrative (club history): a bare list of presidents, grounds and years with no arc or sensory detail."
+text = """The Wattle Bend Football Club was formed in 1894. Presidents included Herbert Lowe (1894–1901), James Pryor (1902–1915), Arthur Bell (1919–1930) and Cecil Dunn (1931–1947). Home grounds were the Mechanics Paddock (1894–1908), Riverside Reserve (1909–1956) and Gordon Park (1957–present). Premierships were won in 1903, 1911, 1924, 1925 and 1938."""
+
+[[case]]
+id = "J4-NR-3-002"
+rule = "NR-3"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed narrative (swimming-baths history): committee names, clubs and carnival dates listed with no glue or texture."
+text = """The Coolabah Creek baths committee first met on 3 March 1921 at the Mechanics' Institute. Members were Edith Marr (chair), Frank Doyle (secretary), Thomas Hale (treasurer), and Albert and Nell Cusack. Clubs using the baths by 1927 were the Riverbank Swimming Club, the Coolabah Lifesaving Club and the Eastside Ladies' Club. Carnivals were held in January 1923, February 1924, January 1926 and March 1927."""
+
+[[case]]
+id = "J4-NR-3-003"
+rule = "NR-3"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed narrative (footy premiership): a team-sheet paragraph of names, venue and goal tallies, no story."
+text = """Tarrawin's 1956 premiership side: Ron Healy (captain), Stan Morrow (coach), Les Penrose, Jack Tierney and Doug Albright in the centre, Bill Ashe at full-back and Mick Fogarty at full-forward. Grand final against Northfield at the Showgrounds, 22 September. Goals: Fogarty 4, Tierney 3, Albright 2, Penrose 1. Best players: Healy, Penrose, Ashe."""
+
+[[case]]
+id = "J4-NR-3-004"
+rule = "NR-3"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: pair of J4-NR-3-001, the same names and dates carried as a compressed narrative with an arc."
+text = """Herbert Lowe founded the Wattle Bend club in 1894 with a borrowed ball and a paddock behind the Mechanics' Institute. James Pryor took it to Riverside Reserve in 1909, and Arthur Bell kept it going through the war years, when it fielded boys and old men. By the time Cecil Dunn handed over in 1947, the club had five premierships and its own grandstand, and nobody in town could remember a winter without it."""
+
+[[case]]
+id = "J4-NR-3-005"
+rule = "NR-3"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a name-dense paragraph that sits beside a paragraph of sensory texture (baths history)."
+text = """The baths committee first met on 3 March 1921 at the Mechanics' Institute: Edith Marr in the chair, Frank Doyle taking minutes, Thomas Hale holding the money, and Albert and Nell Cusack, who owned the land. By 1927 three clubs used the water: the Riverbank swimmers, the lifesavers and the Eastside Ladies.
+
+On carnival days the whole bank smelled of chlorine, hot pies and the creek mud underneath. Kids sat on the corrugated-iron fence until it burned the backs of their legs, then jumped straight into the deep end, and the noise carried up Mill Road to the bakery."""
+
+[[case]]
+id = "J4-NR-3-006"
+rule = "NR-3"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: pair of J4-NR-3-003, the same premiership names told with a beginning, middle and end."
+text = """Ron Healy had captained Tarrawin through three losing grand finals before 1956, and most of the town assumed he'd retire. He didn't. With Stan Morrow coaching and Les Penrose winning the ball all day, Tarrawin beat Northfield by nineteen points at the Showgrounds on 22 September. Mick Fogarty kicked four. Healy kicked none, and he said afterwards it was the best game he'd ever played."""
+
+# ---------------------------------------------------------------- NR-4 long sentences protected in narrative
+
+[[case]]
+id = "J4-NR-4-001"
+rule = "NR-4"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed narrative: four long 'and'-chained sentences in a row (a day at the baths), no short relief."
+text = """The baths opened at six on summer mornings and the old men swam their laps and the lifeguard hosed down the concrete and the kiosk lady unlocked her shutters and set out the icy poles. By nine the families came and the kids ran along the edge and the whistle went and went and nobody listened to it. By noon the water was warm and cloudy and the deep end was full of teenagers and the shallow end was full of mothers and toddlers and floating bandaids. In the late afternoon the shadows came across from the grandstand and the crowd thinned and the lifeguard sat on his chair and counted heads and waited for five o'clock."""
+
+[[case]]
+id = "J4-NR-4-002"
+rule = "NR-4"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: long 'and'-chained sentences that are expository (listing constitutional and lease facts), not narrative."
+text = """The club's constitution was amended in 1962 and the amendment removed the residency rule and added a second vice-president and moved the annual meeting from March to November and set the subscription at two guineas. The grounds lease was renegotiated in 1964 and the council agreed to a 21-year term and the club took on the cost of the fencing and the scoreboard and the water supply to the change rooms. Both changes are recorded in the minute book held at the historical society."""
+
+[[case]]
+id = "J4-NR-4-003"
+rule = "NR-4"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed narrative: four long 'and'-chained sentences in a row (grand final day), no short sentence between."
+text = """The crowd came in from the farms on grand final morning and parked their utes along the boundary and sat on the bonnets and waited for the curtain-raiser. The siren went at two and the ball went up and Penrose tapped it down to Tierney and Tierney kicked it long and the whole hill stood up. Northfield came back in the second quarter and kicked three in a row and the Tarrawin supporters went quiet and somebody's dog started barking and wouldn't stop. By the last change the lead was nineteen points and the farmers were back on their feet and the kids were already climbing the fence and the umpires were looking at their watches."""
+
+[[case]]
+id = "J4-NR-4-004"
+rule = "NR-4"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: pair of J4-NR-4-001, one emotional 'and'-chained sentence surrounded by short ones."
+text = """The baths opened at six on summer mornings. I was usually there by ten past. The water was freezing and green and smelled of the creek, and the old men did their slow laps and nodded at me like I'd joined some kind of club, and I suppose I had. Then the families came. By nine you couldn't hear yourself think."""
+
+[[case]]
+id = "J4-NR-4-005"
+rule = "NR-4"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: pair of J4-NR-4-003, two emotional 'and'-chains separated by short sentences."
+text = """Grand final day, 1956. The utes were parked three deep along the boundary. When Penrose tapped the first bounce down to Tierney and Tierney sent it long, the whole hill stood up and roared and my grandfather grabbed my arm so hard it bruised, and he didn't let go until the ball was through. Northfield came back in the second quarter. It went very quiet. When the final siren went, the kids poured over the fence and the farmers threw their hats and somebody's dog ran a full lap of the ground with a streamer in its mouth."""
+
+[[case]]
+id = "J4-NR-4-006"
+rule = "NR-4"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: two consecutive emotional 'and'-chains (under four), framed by short sentences."
+text = """Mum ran the kiosk at the baths for eleven summers. She opened the shutters at seven and counted the float and set out the icy poles in rows by flavour, and she never once let a kid have one on credit. The kids loved her anyway and brought her shells from the beach and drawings of the pool and once, memorably, a live yabby in a bucket. She kept the yabby. It lived in the laundry trough for a fortnight."""
+
+# ---------------------------------------------------------------- NR-6 opinion delivery in narrative
+
+[[case]]
+id = "J4-NR-6-001"
+rule = "NR-6"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed narrative: opinion marker ('I guess') with no blunt take within three sentences."
+text = """The council closed the Coolabah Creek baths in 1968 and turned the site into a car park three years later. Some residents petitioned to keep the pool, and others said the town couldn't afford the repairs. I guess it's hard to know now what the right call was. The minutes from that year record a long debate but no clear reason for the final vote. Today the car park has forty spaces and a plaque near the ticket machine."""
+
+[[case]]
+id = "J4-NR-6-002"
+rule = "NR-6"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed narrative: no opinion marker at all, and the piece withholds a take on the ground move."
+text = """Tarrawin moved its home games from the Showgrounds to the new Gordon Park oval in 1957. The old ground had a famous slope and a grandstand built in 1911; the new one had lights and proper drainage. Attendance fell for three seasons before recovering. Older supporters still talk about the Showgrounds, and younger ones mostly don't. Whether the move was worth it is a question people in town still discuss."""
+
+[[case]]
+id = "J4-NR-6-003"
+rule = "NR-6"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed narrative: 'To me' marker followed by a vague non-take, no blunt declarative within three sentences."
+text = """The 1972 hall turned its back on the old town, facing the oval instead of the main road. To me, it says something about the era. People will read it in different ways, and the architect left no notes explaining the choice. The bluestone hall became the historical society's museum the same year."""
+
+[[case]]
+id = "J4-NR-6-004"
+rule = "NR-6"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: pair of J4-NR-6-001 with a blunt first-person take next to 'I reckon' and 'that's how I see it'."
+text = """The council closed the Coolabah Creek baths in 1968 and turned the site into a car park three years later. I reckon that was the worst decision the council made all century. The pool needed a new filter and a coat of paint, not a bulldozer, and the town hasn't had anywhere as good for kids on a hot Saturday since. That's how I see it, anyway. The car park has forty spaces and a plaque near the ticket machine."""
+
+[[case]]
+id = "J4-NR-6-005"
+rule = "NR-6"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: pair of J4-NR-6-002 with 'I think' followed by a blunt take and its reason."
+text = """Tarrawin moved its home games to the new Gordon Park oval in 1957. I think the club got it right. The Showgrounds slope had character, but it flooded every second winter, and you can't build a club on a ground you can't play on. Attendance dipped for three seasons and then came back stronger than before."""
+
+[[case]]
+id = "J4-NR-6-006"
+rule = "NR-6"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: pair of J4-NR-6-003; the blunt take comes first and the marker ('anyway') follows within three sentences."
+text = """The 1972 hall faced the oval and turned its back on the old main road. It was a mistake. A hall is meant to be seen from the street, and this one hid behind a car park for fifty years. That's my view, anyway, and a few of the old committee members have told me they've come round to it too."""

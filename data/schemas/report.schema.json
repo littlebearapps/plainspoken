@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/littlebearapps/plainspoken/data/schemas/report.schema.json",
+  "title": "Merge report (<key>.report.json)",
+  "description": "What `merge` writes for one article: the status, the rules that failed, the justifications and the coverage proof, bound to the article, profile and ruleset by their stamps. The shape is unchanged since v0.4.0, and a v0.4.0 report validates. A new field is a schema change and a line in docs/report-contract.md. A reader compares `article_sha256`, `profile_sha256` and `ruleset_version` with the article on disk and `plainspoken profile --json <article>` before trusting `status`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "article",
+    "profile",
+    "profile_sha256",
+    "ruleset_version",
+    "content_type",
+    "article_sha256",
+    "generated",
+    "status",
+    "blocks",
+    "warns",
+    "unresolved",
+    "justified",
+    "unused_justifications",
+    "problems",
+    "coverage",
+    "metrics",
+    "allows",
+    "rules"
+  ],
+  "properties": {
+    "article": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The article path exactly as it was given to `merge`: it can be relative to the directory merge ran in. Resolve it against the project root (docs/report-contract.md), never against the reader's own directory."
+    },
+    "profile": {"type": "string", "minLength": 1, "description": "The profile's [profile] name."},
+    "profile_sha256": {"$ref": "#/$defs/sha256", "description": "The profile file plus its calibration-notes file."},
+    "ruleset_version": {"type": "string", "minLength": 1},
+    "content_type": {"enum": ["article", "social"]},
+    "article_sha256": {"$ref": "#/$defs/sha256", "description": "The article's bytes as merged, bare hex."},
+    "generated": {"type": "string", "format": "date-time", "description": "UTC, to the second."},
+    "status": {
+      "enum": ["PASS", "FAIL", "UNRESOLVED", "INCOMPLETE"],
+      "description": "INCOMPLETE: a file missing, stale or malformed, or a rule without a verdict (see problems and coverage.missing). FAIL: a BLOCK rule failed. UNRESOLVED: a WARN rule failed with no accepted justification. PASS: none of those."
+    },
+    "blocks": {"$ref": "#/$defs/ruleIds", "description": "Rules that failed at BLOCK, sorted."},
+    "warns": {"$ref": "#/$defs/ruleIds", "description": "Rules that failed at WARN, justified or not, sorted."},
+    "unresolved": {"$ref": "#/$defs/ruleIds", "description": "The warns no accepted justification resolves."},
+    "justified": {"type": "array", "items": {"$ref": "#/$defs/justified"}},
+    "unused_justifications": {"$ref": "#/$defs/ruleIds", "description": "Justified rules that didn't fail at WARN."},
+    "problems": {"type": "array", "items": {"type": "string"}, "description": "Why the report is INCOMPLETE, one line each."},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "covered", "missing"],
+      "properties": {
+        "expected": {"type": "integer"},
+        "covered": {"type": "integer"},
+        "missing": {"$ref": "#/$defs/ruleIds"}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["words"],
+      "additionalProperties": {"type": "number"},
+      "description": "The lint's text metrics (words, ttr, mattr, burstiness, ...), all numbers."
+    },
+    "allows": {"type": "array", "items": {"$ref": "#/$defs/allow"}},
+    "rules": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/ruleEntry"},
+      "description": "Rule id to that rule's merged verdict, one entry per rule the lint or a judge decided."
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ruleIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "severity", "line", "excerpt", "message", "source"],
+      "properties": {
+        "rule": {"type": "string", "minLength": 1},
+        "severity": {"enum": ["BLOCK", "WARN", "CANDIDATE", "INFO"]},
+        "line": {"type": "integer", "description": "1-based; 0 is the whole article."},
+        "excerpt": {"type": "string"},
+        "message": {"type": "string"},
+        "source": {"type": "string"}
+      }
+    },
+    "allow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "phrase", "line", "reason"],
+      "properties": {
+        "rule": {"type": "string"},
+        "phrase": {"type": "string"},
+        "line": {"type": "integer"},
+        "reason": {"type": "string"}
+      }
+    },
+    "justified": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "kind", "reason", "review", "review_reason"],
+      "properties": {
+        "rule": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["voice", "quote", "load_bearing", "false_positive", "format", "metric"]},
+        "reason": {"type": "string"},
+        "review": {"enum": ["accept", "reject"], "description": "The JR judge's call."},
+        "review_reason": {"type": "string"}
+      }
+    },
+    "ruleEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "verdict", "severity", "findings"],
+      "properties": {
+        "source": {"type": "string", "pattern": "^(lint|judge:J[1-4])$"},
+        "verdict": {
+          "enum": ["pass", "fail", "pending-judge"],
+          "description": "pending-judge: a lint+judge rule whose judge verdict never arrived (the report is INCOMPLETE)."
+        },
+        "judge_verdict": {
+          "enum": ["pass", "fail"],
+          "description": "Judge entries: the judge's own call, before a lint BLOCK forces verdict to fail."
+        },
+        "severity": {"enum": ["BLOCK", "WARN"]},
+        "lint_block": {"type": "boolean", "description": "Pending lint+judge entries: the lint found a BLOCK."},
+        "evidence": {"type": "array", "description": "Judge entries: the evidence as the judge gave it."},
+        "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["source"], "properties": {"source": {"pattern": "^judge:"}}},
+          "then": {"required": ["judge_verdict", "evidence"]}
+        },
+        {
+          "if": {"required": ["verdict"], "properties": {"verdict": {"const": "pending-judge"}}},
+          "then": {"required": ["lint_block"], "properties": {"source": {"const": "lint"}}}
+        }
+      ]
+    }
+  }
+}

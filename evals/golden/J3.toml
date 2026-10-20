@@ -1,0 +1,618 @@
+schema = 1
+group = "J3"
+
+# ---------------------------------------------------------------- rule 2 (qualified words + quoted mentions)
+
+[[case]]
+id = "J3-2-001"
+rule = "2"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'landscape' used metaphorically in an accounting-firm blog post."
+text = """Running a small accounting firm in a regional town has changed a lot since the tax office moved most lodgements online. The compliance landscape for sole traders now shifts every July, and clients expect me to explain each change before they've even opened their mail. Last year I sent a one-page summary to every client in the second week of July. Half of them replied with questions about the same two lines."""
+
+[[case]]
+id = "J3-2-002"
+rule = "2"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'navigate' used metaphorically in a cycling-club LinkedIn post."
+text = """Our cycling club lost its insurance broker in March, two weeks before the season opened. Six volunteers spent their evenings helping members navigate the new waiver process, and we still had riders turning up without a signed form on day one. Next year the waiver goes into the sign-up page itself. Nobody gets a race number without ticking the box."""
+
+[[case]]
+id = "J3-2-003"
+rule = "2"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'leverage' as a verb in a bakery newsletter tip."
+text = """Most bakeries already have a list of regular customers, even if it's just names scrawled in an order book. You can leverage that list to fill the slow Tuesday afternoons. Send a short note on Monday night naming the one loaf you'll bake extra of, and hold it at the counter for anyone who replies. When a friend tried this at her shop, eleven people answered in the first week."""
+
+[[case]]
+id = "J3-2-004"
+rule = "2"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'unlock' used metaphorically ('unlock a steady run of calls') in a tradie-facing social post."
+text = """A tidy map listing won't fix a bad product, but for a plumber with good reviews it can unlock a steady run of local calls. Check that your hours are right and that the phone number on the listing is the one you actually answer. Mine was my old landline for two years before a customer told me."""
+
+[[case]]
+id = "J3-2-005"
+rule = "2"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'underscore' as a verb in a council-library update."
+text = """The library's visitor counts for winter came in last week. Weekday mornings dropped by a third after the bus route changed, and the numbers underscore how much the branch depends on that one service. I've asked the council to put the old stop back on the timetable for a trial month."""
+
+[[case]]
+id = "J3-2-006"
+rule = "2"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: ban-list word scare-quoted as a description ('a \"robust\" form'), not discussed as a word."
+text = """Our booking form used to accept two reservations for the same table if both people hit submit within a second of each other. The new version is a "robust" form that locks the table the moment the first person clicks. It took the developer about a day and a half to build and test, and we haven't had a double booking since."""
+
+[[case]]
+id = "J3-2-007"
+rule = "2"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'showcase' as a verb in a historical-society exhibition notice."
+text = """The historical society's autumn exhibition will showcase photographs from the 1956 floods, most of them donated by families who still live along the river. The prints go up in the old courthouse foyer on 4 May and stay until the end of June. Entry is free, and volunteers will be on hand on Saturdays to help visitors find their own street."""
+
+[[case]]
+id = "J3-2-008"
+rule = "2"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed: 'enduring' used figuratively ('enduring bond with the town') in a footy-club piece."
+text = """The Cobblers Flat Football Club has played on the same oval since 1921, and its enduring bond with the town is easy to see on a home game day. Half the main street shuts by two o'clock. The bakery sells out of pasties by half-time, and the pub keeps the radio call on in the front bar."""
+
+[[case]]
+id = "J3-2-009"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'npm ecosystem' as a package-registry context in a CLI README."
+text = """The CLI ships as a single npm package with no runtime dependencies. That was deliberate: the npm ecosystem makes it very easy to pull in a hundred transitive packages for a tool that only needs to read a file and print a table. Install it globally with `npm install -g tallyup`, then run `tallyup report.csv`."""
+
+[[case]]
+id = "J3-2-010"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed hard negative: 'framework' as a real technical term (Django) in a club website note."
+text = """The club's website runs on Django, a Python web framework, and the membership database sits in the same app. When renewals open in February, the treasurer exports a CSV from the admin screen and checks it against the bank statement. It takes her about an hour, which is why nobody has pushed to automate it."""
+
+[[case]]
+id = "J3-2-011"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'navigate to' a menu, literal UI use, in an FAQ answer."
+text = """To change your delivery day, log in and navigate to Account, then Deliveries. Pick the new day from the drop-down and press Save. Changes made before 6 pm on Sunday apply to the coming week; anything later starts the week after."""
+
+[[case]]
+id = "J3-2-012"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'unlock' used literally (a kitchen door) in a volunteer roster note."
+text = """The hall key lives in the lockbox by the side door. Volunteers on the Saturday roster get the code by text on Friday night. Whoever arrives first should unlock the kitchen as well, because the urn takes forty minutes to heat and the first players turn up at eight."""
+
+[[case]]
+id = "J3-2-013"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'landscape' used literally (the physical valley) in a local-history piece."
+text = """From the lookout above the quarry you can see the whole valley, and the landscape has barely changed since the first survey maps were drawn in 1868. The river still bends twice before it reaches the bridge. The only new thing on the skyline is the grain silo, built in 1952 and painted white the year after."""
+
+[[case]]
+id = "J3-2-014"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: ban-list words quoted as a genuine mention (discussed as words) in a style-guide note."
+text = """Our newsletter style guide has one short rule about adjectives: if a word could describe any product, cut it. That's why "robust" and "seamless" are banned outright. Neither tells a member what the thing actually does, and both turn up in every supplier brochure that lands on the committee's desk."""
+
+[[case]]
+id = "J3-2-015"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'leverage' as a finance noun (debt ratio) in a co-op board update."
+text = """Before the co-op buys the building next door, the board wants to know how much debt it can carry. With the current loan, the co-op's leverage sits at about 40 per cent of its assets, and the bank has said it won't lend past 60. The treasurer will bring repayment scenarios to the March meeting."""
+
+[[case]]
+id = "J3-2-016"
+rule = "2"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'underscore' as a noun (the character) in an office file-naming note."
+text = """File names on the shared drive follow one pattern: the year, an underscore, then the job number, so 2025_1184 for the Moore Street kitchen job. Spaces break the import script, which is why the old folders still show up as errors in the weekly report."""
+
+# ---------------------------------------------------------------- 5c copula avoidance
+
+[[case]]
+id = "J3-5c-001"
+rule = "5c"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'serves as' standing in for 'is' in a staff-procedures note."
+text = """The FAQ page serves as the single place where opening hours and booking rules are written down. Staff are asked to link to it rather than retype the details in emails, so a change only has to be made once."""
+
+[[case]]
+id = "J3-5c-002"
+rule = "5c"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'stands as' standing in for 'is' in a local-history paragraph."
+text = """Built in 1887, the old post office stands as the oldest brick building on Station Street. It became a craft shop in the 1970s and a café in 2009, and the original counter is still inside, now holding the cake cabinet."""
+
+[[case]]
+id = "J3-5c-003"
+rule = "5c"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'boast' standing in for 'have' in a club newsletter item."
+text = """The renovated clubrooms now boast a commercial dishwasher and a second set of change rooms for the women's teams. The work took fourteen months, mostly because the builder had to wait on the council's drainage approval."""
+
+[[case]]
+id = "J3-5c-004"
+rule = "5c"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'functions as' standing in for 'is' in a CLI release note."
+text = """In version 3, the `settings.toml` file functions as the tool's only source of configuration. Environment variables are no longer read at start-up, so anyone who set `TALLY_OUTPUT` in their shell profile will need to move that value into the file."""
+
+[[case]]
+id = "J3-5c-005"
+rule = "5c"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'offers' as a real offering (free bins) in a council notice."
+text = """The council offers a free green-waste bin to any household that asks for one before 30 September. After that date the bins cost $65 a year. Call the customer service line or fill in the form at the front desk of the civic centre."""
+
+[[case]]
+id = "J3-5c-006"
+rule = "5c"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'represents' as a real representation (one map pin = one report)."
+text = """The map at the top of this page shows every pothole reported through the app since January. Each red pin represents one report, so a cluster on a single corner usually means several people hit the same hole. Grey pins are reports the road crew has already fixed."""
+
+[[case]]
+id = "J3-5c-007"
+rule = "5c"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'marks' as a real physical mark (a plaque at a site)."
+text = """A bronze plaque on the riverbank marks the spot where the punt crossed before the bridge opened in 1903. It's easy to miss: it sits low on a sandstone block about twenty metres downstream from the boat ramp, half hidden by reeds in spring."""
+
+[[case]]
+id = "J3-5c-008"
+rule = "5c"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'represents' in its legal sense (a solicitor acting for a group); 'is' can't replace it."
+text = """A local solicitor represents the residents' group at the planning tribunal hearing on 12 March. The group is objecting to the height of the proposed apartment block, not the block itself, and has asked members to send photos of the current view from their back yards before the end of February."""
+
+# ---------------------------------------------------------------- 10 hedging everything
+
+[[case]]
+id = "J3-10-001"
+rule = "10"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: author ran a three-month side-by-side test, then hedges the recommendation four ways."
+text = """I spent three months running the shop's books through two invoicing apps side by side, so I've got a fair idea which one is better. Which you choose probably depends on your situation. It depends on how many invoices you send, and results may vary between businesses. Invoro might be the stronger pick for some shops, though Tallymark could suit others just as well."""
+
+[[case]]
+id = "J3-10-002"
+rule = "10"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: club ran a six-week attendance trial, then hedges its own decision instead of committing."
+text = """For six weeks the club ran training on both Tuesday and Thursday nights. Thursdays averaged 22 players and Tuesdays averaged 14. Whether the committee should switch permanently is perhaps a matter of perspective. Thursday tends to be the better night in some respects, but results may vary from month to month, and it depends on what members want. Either option could be defended at the AGM."""
+
+[[case]]
+id = "J3-10-003"
+rule = "10"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: README with a clear benchmark result, then a hedged non-recommendation on which back-end to use."
+text = """We benchmarked both storage back-ends on the same 2 GB dataset. SQLite finished every query in under a second, while the flat-file store took up to nine. Which back-end you should pick is partly a matter of preference. SQLite may be a better fit in many contexts, but it depends on your workload, and results may vary. Either option can work well."""
+
+[[case]]
+id = "J3-10-004"
+rule = "10"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: minimal pair of J3-10-001 with the hedges removed; the author commits to one app."
+text = """I spent three months running the shop's books through two invoicing apps on the same set of clients. Use Invoro. It sent reminders on time every week and costs $8 less a month. Tallymark is fine if you only send a handful of invoices, but past about twenty a month its reminder emails started landing in clients' spam folders."""
+
+[[case]]
+id = "J3-10-005"
+rule = "10"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: one factual 'depends on' followed by how to check and a firm recommendation."
+text = """Whether you can add a booking button to your site yourself depends on how the site was built. If it runs on a hosted builder, there's usually a booking block in the editor under Add, then Apps. If a developer built it by hand, ask them, because it's a ten-minute job for them and a weekend of frustration for you. Either way, put the button at the top of the page, not the bottom."""
+
+[[case]]
+id = "J3-10-006"
+rule = "10"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: a real unknown stated as fact, then firm advice; no hedging on the author's own call."
+text = """The council hasn't decided whether the Sunday market trial will continue past June, and the vote isn't until the 14th. Until then, stallholders should book month by month rather than paying for the full year. If the trial ends, a monthly booking costs you nothing extra; a yearly one would take weeks to refund."""
+
+# ---------------------------------------------------------------- 12b ghost citations
+
+[[case]]
+id = "J3-12b-001"
+rule = "12b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'Studies show' with no source named or linked in that sentence or the next."
+text = """Studies show that most people decide whether to trust a tradie's website within the first few seconds. That's why the phone number belongs at the top of the page, in large type, and not buried in the footer. A photo of the actual van helps too."""
+
+[[case]]
+id = "J3-12b-002"
+rule = "12b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'Experts agree' with no named source, in a newsletter tip."
+text = """Experts agree that a weekly email is the right rhythm for a local newsletter. Any more often and people unsubscribe; any less and they forget who you are. I send ours on Thursday mornings, before the weekend plans are made."""
+
+[[case]]
+id = "J3-12b-003"
+rule = "12b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: unlisted ghost-citation phrase ('It has been widely reported') with no source nearby."
+text = """It has been widely reported that charities lose most first-time donors before their second gift. For a small animal shelter, that makes the thank-you note after the first donation the most important email of the year. Ours goes out within 48 hours, signed by whoever was on the desk that day."""
+
+[[case]]
+id = "J3-12b-004"
+rule = "12b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'research found' with the source named and linked in the same sentence."
+text = """Research from the Riverina Business Network's [2024 sole-trader survey](https://example.org/sole-trader-survey-2024) found that late payment was the most common complaint among its members. If that matches your experience, put your payment terms on the quote itself, not just on the invoice that comes later."""
+
+[[case]]
+id = "J3-12b-005"
+rule = "12b"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed hard negative: 'Studies show' with the source named in the very next sentence."
+text = """Studies show that the bike lanes on Hollis Road have slowed weekday traffic. The council's own 2023 traffic count, published in its October meeting papers, recorded the average speed dropping from 52 km/h to 41 km/h after the lanes went in. The same report found no change in bus travel times."""
+
+[[case]]
+id = "J3-12b-006"
+rule = "12b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'According to research' with the source linked in the same sentence."
+text = """According to research published by the [state library's digitisation team](https://example.org/newspaper-digitisation-2024), about 30 per cent of the regional newspaper archive can now be searched by keyword. The rest still has to be read page by page on microfilm, so book a reader at the library before you make the trip."""
+
+# ---------------------------------------------------------------- 12c stakes inflation
+
+[[case]]
+id = "J3-12c-001"
+rule = "12c"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a bakery pre-order form framed as a 'fundamental shift'; the evidence is 15 orders a week."
+text = """This month the bakery started taking pre-orders through a simple online form instead of the phone. It reflects a fundamental shift in how small food businesses relate to their customers. So far, about fifteen orders a week come through the form, mostly for Saturday sourdough."""
+
+[[case]]
+id = "J3-12c-002"
+rule = "12c"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: unlisted inflation ('reshape cycling in this region for a generation') for a six-rider beginners' ride."
+text = """The cycling club has added a second Sunday ride for beginners, starting at 9 am from the rotunda. It's the kind of change that will reshape cycling in this region for a generation. Six riders came to the first one, and two of them had never ridden in a group."""
+
+[[case]]
+id = "J3-12c-003"
+rule = "12c"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: text-message loan renewals framed as a turning point for libraries everywhere; 43 users in week one."
+text = """Our council library now lets members renew loans by text message. This is a turning point for public libraries everywhere, with implications far beyond our branch. In the first week, 43 people used it."""
+
+[[case]]
+id = "J3-12c-004"
+rule = "12c"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: a timetable change described at exactly the scale its numbers support."
+text = """The new timetable cuts the morning wait at Ferntree Hill station from 20 minutes to 10. About 400 people board there before 9 am, so most of them will get to work a little earlier or sleep in a little longer. It won't do much for anyone travelling at night, when the service is still hourly."""
+
+[[case]]
+id = "J3-12c-005"
+rule = "12c"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: a big claim ('changed the shape of the town') that the paragraph's own evidence backs."
+text = """The 1934 flood changed the shape of the town for good. Water reached the second step of the post office, the council rezoned the river flats the following year, and by 1940 sixty houses had been moved or rebuilt on the ridge. Walk along Bank Street today and the gaps between the old houses are where the others used to stand."""
+
+[[case]]
+id = "J3-12c-006"
+rule = "12c"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed hard negative: list phrase 'far-reaching implications' where the stated scale matches the evidence given."
+text = """The tribunal's ruling has far-reaching implications for the foreshore. All 31 boatsheds along the beach were built under the same 1960s permit the tribunal has now found invalid, and the council has written to every owner asking them to apply for a new one by December."""
+
+# ---------------------------------------------------------------- 17 patronising analogies
+
+[[case]]
+id = "J3-12c-007"
+rule = "12c"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed minimal pair for the scope test: statewide stakes claimed, one school's evidence. Pair: J3-12c-008"
+text = """The new bell time has far-reaching implications for schools across the state. From Term 2, Wattle Creek Primary will start at 9:10 instead of 8:50, and its two buses will leave the depot twenty minutes later."""
+
+[[case]]
+id = "J3-12c-008"
+rule = "12c"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed minimal pair for the scope test: the claim names one school and the evidence covers it. Pair: J3-12c-007"
+text = """The new bell time has far-reaching implications for Wattle Creek Primary. From Term 2, every class starts at 9:10 instead of 8:50, both buses leave the depot twenty minutes later, before-school care opens at 7:30, and the canteen moves its order cut-off to 9:30."""
+
+[[case]]
+id = "J3-12c-009"
+rule = "12c"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed: the claim names one school but thin evidence can't carry it (mild tell). Owner label, 2026-10-19. Pair: J3-12c-008"
+text = """The new bell time has far-reaching implications for Wattle Creek Primary. From Term 2, the school will start at 9:10 instead of 8:50, and its two buses will leave the depot twenty minutes later."""
+
+[[case]]
+id = "J3-17-001"
+rule = "17"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed: a CONTRIBUTING section explains git branches to contributors with a schoolroom analogy."
+text = """## Branching
+
+Think of a git branch as a photocopy of your homework: you can scribble on the copy without ruining the original. Create a branch for each change with `git switch -c fix/short-name`, push it, and open a pull request against `main`. CI runs the tests on every push."""
+
+[[case]]
+id = "J3-17-002"
+rule = "17"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: analogies pile up for bookkeepers where the direct explanation (last sentence) would do."
+text = """For readers of this newsletter, most of whom run bookkeeping practices, the new reconciliation screen is worth a look. It's like a set of pigeonholes for your bank lines. Imagine a sorting table where every transaction waits for its matching receipt. Think of it as a traffic controller for your money. In practice, it lists unmatched bank lines on the left and suggested receipts on the right."""
+
+[[case]]
+id = "J3-17-003"
+rule = "17"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a post addressed to electricians explains a safety switch with a pub-bouncer analogy."
+text = """Fellow sparkies: a safety switch is basically like a bouncer at a pub door. It watches who comes in and throws out anyone causing trouble. If you've ever wondered why one trips, picture the bouncer getting nervous."""
+
+[[case]]
+id = "J3-17-004"
+rule = "17"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: one analogy that helps a non-technical library audience understand two-step login."
+text = """From next month, logging in to the library's e-book app will need a code sent to your phone as well as your password. It works a bit like a bank vault that needs both a key and a combination: someone who steals one still can't get in. If you don't have a mobile, the front desk can set you up with a small card that shows the code instead."""
+
+[[case]]
+id = "J3-17-005"
+rule = "17"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'Imagine' invites the reader to picture a real historical scene; no analogy."
+text = """Imagine Station Street in 1910: no bitumen, a horse trough outside the Royal, and the creamery's carts lined up from six in the morning. The photo on the cover of this booklet was taken from the bank's upstairs window that year. You can still stand at the same window if you ask the staff nicely."""
+
+[[case]]
+id = "J3-17-006"
+rule = "17"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'is like' as a plain comparison of two versions of the same form; no analogy."
+text = """The new membership form is like the old one, except the postcode field now fills in your suburb automatically. Nothing else has moved, so if you renewed last year you'll find every question in the same place. It should take about two minutes."""
+
+# ---------------------------------------------------------------- 27 marketing-register optimise
+
+[[case]]
+id = "J3-17-007"
+rule = "17"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed minimal pair: ledger-as-diary analogy for a reader the same text expects to reconcile and lodge. Pair: J3-17-008"
+text = """## Monthly close\n\nThink of the general ledger as a diary for the club's money: every dollar in or out gets an entry. Reconcile the bank feed in Xero every Friday, code the unmatched lines to the right accounts, and export the BAS worksheet to the shared folder before the 28th."""
+
+[[case]]
+id = "J3-17-008"
+rule = "17"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed minimal pair: the same analogy in a guide that says its reader has never kept accounts. Pair: J3-17-007"
+text = """## Before you start\n\nThis guide is for volunteers who have never kept accounts. Think of the general ledger as a diary for the club's money: every dollar in or out gets an entry with the date, the amount and what it was for. Your first job each month is to write up the receipts from the cash tin in that diary."""
+
+[[case]]
+id = "J3-27-001"
+rule = "27"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'optimise your social presence' in marketing register."
+text = """Before you spend a cent on ads, optimise your social presence. Post on the same day each week and answer every comment within a day. A café down the road from me did exactly that for a winter and stopped boosting posts altogether."""
+
+[[case]]
+id = "J3-27-002"
+rule = "27"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: 'optimise her content strategy' in marketing register."
+text = """A café owner asked me last week how to optimise her content strategy for winter. My answer was to post a photo of the soup board every morning at 10, because that's when the office workers across the road start thinking about lunch."""
+
+[[case]]
+id = "J3-27-003"
+rule = "27"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "Constructed hard negative: a vendor's 'optimise member engagement' echoed, then deflated; quoted, not adopted. Minimal pair: J3-27-007"
+text = """The newsletter tool's new dashboard is meant to help clubs optimise member engagement. In practice it shows open rates by week, which is useful, and a 'health score' that nobody on our committee could explain."""
+
+[[case]]
+id = "J3-27-004"
+rule = "27"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'image optimisation' as a technical step with real file sizes."
+text = """The gallery pages were slow because every photo was a 6 MB original straight off the camera. Image optimisation fixed most of it: each file was resized to 1600 pixels wide and saved as WebP, which brought the average down to about 180 KB. The page now loads in under two seconds on a phone."""
+
+[[case]]
+id = "J3-27-005"
+rule = "27"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'query optimisation' in a database fix write-up."
+text = """The report page timed out once the members table passed 50,000 rows. The fix was ordinary query optimisation: an index on `joined_at` and a `LIMIT` on the dashboard query. Load time dropped from 14 seconds to 0.6."""
+
+[[case]]
+id = "J3-27-006"
+rule = "27"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: 'bid optimisation' as an ad-platform setting."
+text = """In the ad account, the campaign's bid strategy is set to Maximise Conversions, and the platform handles bid optimisation from there. Leave it alone for the first two weeks. Changing the budget or the strategy during that period resets the learning, and you'll be back to guessing."""
+
+[[case]]
+id = "J3-27-007"
+rule = "27"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed minimal pair for J3-27-003: the same vendor phrase, adopted in the writer's own voice with no pushback."
+text = """The newsletter tool's new dashboard helps clubs optimise member engagement, so the committee has asked every team manager to log in once a week and act on whatever it suggests."""

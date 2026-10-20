@@ -1,0 +1,7 @@
+ExampleLend Help Centre: Loan reminders
+
+ExampleLend sends the borrower a reminder email two days before a loan is due. You can change the timing on paid plans.
+
+Text message (SMS) reminders are available on the Standard and Pro plans only. The free plan sends email reminders only.
+
+Overdue notices are sent by email one day after the due date.

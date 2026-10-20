@@ -1,0 +1,27 @@
+# The shipped neutral voice: plain, honest, first person, en-AU.
+# To change it for one project, copy this file to .plainspoken/profiles/<name>.toml and edit the copy.
+[profile]
+name = "default"
+locale = "en-AU"
+flags = []
+
+[identity]
+pronoun = "I"
+
+[reader]
+persona = "a busy, capable adult who doesn't work in this field and may be reading on a phone"
+comprehension_floor = 7
+
+[thresholds]
+
+[lexicon]
+extra_bans = []
+
+[document]
+visible_frontmatter_keys = ["title", "description"]
+faq_frontmatter_key = ""
+resource_list_headings = []
+long_sentence_headings = []
+
+[rules]
+disabled = []

@@ -1,0 +1,11 @@
+[profile]
+name = "consulting_like"
+locale = "en-AU"
+
+[document]
+visible_frontmatter_keys = ["title", "description", "og_title", "og_description", "ogTitle", "ogDescription", "heroImageAlt"]
+faq_frontmatter_key = "faqs"
+resource_list_headings = ['^[*_]*tools\s*(?:&|&amp;|and)\s*resources\b']
+
+[lexicon]
+extra_bans = ["effortless", "turnkey", "overnight results", "zero risk"]

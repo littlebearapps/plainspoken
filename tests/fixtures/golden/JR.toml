@@ -1,0 +1,21 @@
+schema = 1
+group = "JR"
+
+[[case]]
+id = "JR-format-001"
+rule = "12e"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "constructed bold-first list justified as a parts list"
+kind = "format"
+reason = "The bold labels name the parts a reader has to buy, so the list is a shopping list, not decoration."
+evidence = [{line = 3, quote = "**Hinges:** two"}]
+text = """
+You need three parts for the gate.
+
+- **Hinges:** two galvanised strap hinges.
+- **Latch:** a gravity latch that closes on its own.
+- **Post:** one treated pine post, 100 by 100.
+"""

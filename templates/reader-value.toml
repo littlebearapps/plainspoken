@@ -1,0 +1,63 @@
+# A reader-value contract: the benefit a piece promises its reader, written before drafting and checked before it
+# ships. Keep it as this .toml file, or paste the fields (without these comments, if you like) into a fenced ```toml
+# block under a `## Reader Value Contract` heading in any markdown file, such as the draft's notes.
+#
+# Check it with `reader-value validate <file>`. The schema is data/schemas/reader-value.schema.json.
+#
+# Hard rules:
+#   * A call to action never counts as reader value. "Book a call" is not an outcome or a first action.
+#   * A specific effort, time or cost figure is a claim: put it in the claim ledger where it matters.
+#   * History and commentary aren't forced into steps: use type "evidence_trail" or "historical_interpretation".
+#
+# Everything below is an invented example (a plumbing business's how-to post). Replace every value.
+
+schema_version = 1   # always 1
+
+# What the reader gets from the piece. One of:
+#   task · decision · self_check            practical guides
+#   implementation · debugging_path         technical posts
+#   evidence_trail · historical_interpretation   history and commentary
+# task, implementation, debugging_path and self_check also need first_action, effort, success_signal and
+# stop_condition. decision needs decision. evidence_trail and historical_interpretation need evidence_trail.
+type = "task"
+
+# Who the piece is for, as specifically as you can say it.
+primary_reader = "A homeowner with a slow-draining kitchen sink"
+
+# Their problem or question, in their words.
+problem = "Can't tell whether a slow drain is a do-it-yourself job or needs a plumber"
+
+# The decision the piece helps them make. Required when type = "decision"; delete it otherwise.
+# decision = "Whether to clear the drain themselves or call a plumber"
+
+# What the reader has, knows or can do after reading. Never a call to action.
+promised_outcome = "A cleared drain, or a clear sign that it's a job for a licensed plumber"
+
+# An honest effort or time estimate.
+effort = "about 30 minutes"
+
+# What the reader needs before they start (optional).
+prerequisites = ["a bucket", "a sink plunger"]
+
+# How the reader knows it worked: the expected result.
+success_signal = "A full sink empties in under a minute"
+
+# When to stop, skip the step, or get help.
+stop_condition = "Stop and call a licensed plumber if water backs up into another fixture"
+
+# The author's real, specific contribution: a method, data or first-hand experience. Never "unique insights".
+original_value = "A three-check triage drawn from the call-outs the business attended last winter"
+
+# The sources, places or questions the piece equips the reader to explore. Required for evidence_trail and
+# historical_interpretation; optional otherwise.
+# evidence_trail = ["the council's building permit file, 1924", "walk: the old depot yard"]
+
+# Confirms that promised_outcome and original_value leave every call to action out. Must be true.
+cta_excluded_confirmed = true
+
+# The reader's own first useful step: a verb, the thing it acts on, and where. Required for task, implementation,
+# debugging_path and self_check. Never "contact us".
+[first_action]
+verb = "remove"
+object = "the sink strainer and trap cap"
+location = "under the kitchen sink"

@@ -1,0 +1,602 @@
+schema = 1
+group = "J1"
+
+# ---------------------------------------------------------------- 5b Meta-commentary
+
+[[case]]
+id = "J1-5b-001"
+rule = "5b"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author's calibration of their own published post (2026-09-27): fail agreed by the author (anonymised)"
+text = '''
+A developer I follow put it well back in November 2024: "Coding while walking the dog is an underrated benefit of AI tooling." He never wrote the detailed post. So here it is.
+'''
+
+[[case]]
+id = "J1-5b-002"
+rule = "5b"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author-approved fix from a published post: intro roadmap cut (anonymised)"
+text = '''
+A $2,500 retainer can be excellent value or mostly reporting theatre. A $700 one can be a genuine starter package or ten minutes of software output with an invoice attached.
+
+So instead of another price list, this is a guide to reading the quote itself. What the numbers should break down into, the questions that expose a thin package, and the red flags that both search engines and the consumer watchdog have effectively written down for you.
+'''
+
+[[case]]
+id = "J1-5b-003"
+rule = "5b"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author-approved fix from a published post: resources-section preface cut (anonymised)"
+text = '''
+## Tools & Resources
+
+Everything referenced above, in one place.
+
+### Free tools
+- **[Keyword planner guide](https://example.com/planner)** - the ad platform's guide to its search and cost estimates for the searches you'd bid on
+- **[About payment settings](https://example.com/payments)** - the platform's explanation of payment thresholds, including where to find yours
+'''
+
+[[case]]
+id = "J1-5b-004"
+rule = "5b"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author-approved fix from a published post: TL;DR meta sentence cut (body TL;DR version)"
+text = '''
+> **TL;DR:** When I checked what SEO providers advertise in Australia in July 2026, rates ran from about $400 a month to $15,000+, and the price alone tells you almost nothing. What matters is what the quote itemises: the hours, the named tasks, and how results will be reported. This is a plain-English guide to reading an SEO quote - the arithmetic, the questions, and the red flags that should end the conversation.
+'''
+
+[[case]]
+id = "J1-5b-005"
+rule = "5b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "cycling-club post; framing sentence about the rest of the post. Minimal pair: J1-5b-011"
+text = '''
+Our club has run the Sunday social ride from the boathouse since 2019, and most weeks it goes off without a hitch. The odd week it doesn't, it's usually the weather or a puncture. In the sections below, I'll walk you through what you can expect from the rest of this post. First, the route: we head north along the river trail and turn back at the second footbridge, about 32 km all up.
+'''
+
+[[case]]
+id = "J1-5b-006"
+rule = "5b"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "CLI README section with two pure frames. Minimal pair: J1-5b-008"
+text = '''
+## Configuration
+
+This section covers how configuration works. The tool reads `tidyfs.toml` from the project root, then falls back to `~/.config/tidyfs/config.toml`. Values given on the command line win over both files. Now for the important part. Any key you set to an empty string counts as unset, so `exclude = ""` won't clear a list you inherited from the global file.
+'''
+
+[[case]]
+id = "J1-5b-007"
+rule = "5b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a 'Here's the pattern:' lead-in that carries the finding itself"
+text = '''
+For a fortnight I logged every phone call the bakery missed. Here's the pattern: almost all of them came between 7 and 8 am, when both of us were at the ovens. Moving the flour delivery to 9 freed one pair of hands for that hour, and missed calls dropped from about twenty a week to four.
+'''
+
+[[case]]
+id = "J1-5b-008"
+rule = "5b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J1-5b-006 with both frames removed"
+text = '''
+## Configuration
+
+The tool reads `tidyfs.toml` from the project root, then falls back to `~/.config/tidyfs/config.toml`. Values given on the command line win over both files. Any key you set to an empty string counts as unset, so `exclude = ""` won't clear a list you inherited from the global file.
+'''
+
+[[case]]
+id = "J1-5b-009"
+rule = "5b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a meta phrase quoted as a mention in a writing-advice newsletter"
+text = '''
+My first editor struck out any sentence that began "In this article, I will", and she was right about nearly all of them. In my old drafts the worst offender always sat in the second paragraph. Cutting it made every opening shorter, and in six years no reader has written in to miss it.
+'''
+
+[[case]]
+id = "J1-5b-010"
+rule = "5b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: FAQ answer describing a different publication's contents, not the article's"
+text = '''
+Yes. The printed walking guide the historical society sells at the library desk covers all 14 plaques on the main street, with a fold-out map on the back page. It costs $5, and every dollar goes to the plaque repair fund.
+'''
+
+[[case]]
+id = "J1-5b-011"
+rule = "5b"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J1-5b-005 with the framing sentence removed"
+text = '''
+Our club has run the Sunday social ride from the boathouse since 2019, and most weeks it goes off without a hitch. The odd week it doesn't, it's usually the weather or a puncture. The route heads north along the river trail and turns back at the second footbridge, about 32 km all up.
+'''
+
+# ---------------------------------------------------------------- 5d Scope disclaimers
+
+[[case]]
+id = "J1-5d-001"
+rule = "5d"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "library e-book post opening with a general completeness disclaimer. Minimal pair: J1-5d-007"
+text = '''
+This isn't meant to be a complete comparison, and I'm simplifying a fair bit along the way. Of the two lending apps our branch supports, the first lets you borrow up to ten titles at once and the second caps you at six. The second one is the only one that still runs on older e-readers, though.
+'''
+
+[[case]]
+id = "J1-5d-002"
+rule = "5d"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "community-garden newsletter with a blanket rough-guide disclaimer. Minimal pair: J1-5d-006"
+text = '''
+Every garden is different, so treat all of this as a rough guide rather than the full picture. Our community plot sits on heavy clay, and we've had the best results sowing broad beans in late April. We water them twice a week until the first flowers show, then leave them to the rain.
+'''
+
+[[case]]
+id = "J1-5d-003"
+rule = "5d"
+label = "fail"
+content_type = "social"
+source = "constructed"
+status = "provisional"
+origin = "LinkedIn-style post about onboarding a café casual, with a scratches-the-surface disclaimer"
+text = '''
+Something I learned the hard way about training a new casual at the café. I'm sure I've missed plenty here, and this barely scratches the surface. Give them two shifts shadowing before they open on their own, and tape the coffee recipes to the wall beside the grinder.
+'''
+
+[[case]]
+id = "J1-5d-004"
+rule = "5d"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a concrete statement of what the guide leaves out"
+text = '''
+This guide is for regular groups booking the community hall. It doesn't cover one-off events like weddings or birthday parties, which go through the events officer and carry a separate bond. If your group meets at least monthly, book through the portal at least ten days ahead.
+'''
+
+[[case]]
+id = "J1-5d-005"
+rule = "5d"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a concrete testing-scope caveat in a README"
+text = '''
+I've run the installer on macOS and on two Linux distributions, and nobody has reported results from FreeBSD yet. On the systems I've tried, the install takes about a minute and the first run builds a cache in `~/.cache/tidyfs`.
+'''
+
+[[case]]
+id = "J1-5d-006"
+rule = "5d"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J1-5d-002: the blanket disclaimer swapped for a concrete soil caveat"
+text = '''
+Our community plot sits on heavy clay, and we've had the best results sowing broad beans in late April. We water them twice a week until the first flowers show, then leave them to the rain. Sandy soil drains faster, so if that's what you've got, you'll need to water more often.
+'''
+
+[[case]]
+id = "J1-5d-007"
+rule = "5d"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J1-5d-001: disclaimer replaced by a named scope limit"
+text = '''
+I've only compared the two lending apps our branch supports. The first lets you borrow up to ten titles at once and the second caps you at six. The second one is the only one that still runs on older e-readers, though.
+'''
+
+# ---------------------------------------------------------------- 11 Unsolicited summary
+
+[[case]]
+id = "J1-11-001"
+rule = "11"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "bike co-op post ending in a recap block and sign-off. Minimal pair: J1-11-007"
+text = '''
+## When we're open
+
+The co-op opens every Saturday from 10 until 2 in the old church hall. The stands, pumps and spanners are free to use, and you pay only for parts.
+
+## How it works
+
+A volunteer shows you how to do the repair rather than doing it for you. Most people fix their own flat on their first visit.
+
+## In conclusion
+
+To sum up: we're open Saturdays, the tools are free, and our volunteers teach rather than fix. Hope this helps!
+'''
+
+[[case]]
+id = "J1-11-002"
+rule = "11"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "bakery customer email that closes by restating its one change"
+text = '''
+From Monday 3 March, our pick-up window moves to the afternoon. You can collect orders from 3 to 6 pm on weekdays, and anything ordered before noon will be ready the same day. Saturday pick-up stays at 8 to 11 am.
+
+The bottom line is that you can now collect same-day orders in the afternoon on any weekday.
+'''
+
+[[case]]
+id = "J1-11-003"
+rule = "11"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "local-history piece closing with a key-takeaways recap of facts already given"
+text = '''
+The tram line along Mill Road opened in 1916 and carried shift workers to the brickworks for four decades. It closed in 1957, when the brickworks did. The old depot sat empty until the council turned it into the branch library in 1983.
+
+**Key takeaways:** the line opened in 1916, closed in 1957 with the brickworks, and its depot is now the library.
+'''
+
+[[case]]
+id = "J1-11-004"
+rule = "11"
+label = "pass"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "hard negative: TL;DR at the top, article stops on its last fact"
+text = '''
+**TL;DR:** the outdoor pool reopens on Saturday 1 November with shorter weekday hours.
+
+The retiling finished a week early, so the pool reopens on 1 November instead of the 8th. Weekday hours are 6 am to 7 pm until Christmas, an hour shorter than last summer, because the council couldn't fill the evening lifeguard shifts. Weekend hours don't change.
+'''
+
+[[case]]
+id = "J1-11-005"
+rule = "11"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: club post that ends on something new rather than a recap"
+text = '''
+The Sunday ride now leaves at 7:30 from the boathouse, and it regroups at the top of the quarry hill so nobody gets dropped. We average about 25 km an hour on the flat.
+
+Next month we're trialling a slower group that leaves at 8 and stops at the bakery halfway. If Sunday's pace put you off, that one's for you.
+'''
+
+[[case]]
+id = "J1-11-006"
+rule = "11"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: market post that ends with a short FAQ, which the rubric exempts"
+text = '''
+The farmers' market moves to the primary school oval for the winter, from the first Sunday in June. Stalls open at 8 and pack down at 12:30.
+
+## FAQ
+
+### Is there parking?
+
+Yes, in the school car park off Rowe Street. It fills by about 9.
+
+### Can I bring my dog?
+
+Yes, on a short lead, but not into the food tent.
+'''
+
+[[case]]
+id = "J1-11-007"
+rule = "11"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J1-11-001 with the recap section removed; it just stops"
+text = '''
+## When we're open
+
+The co-op opens every Saturday from 10 until 2 in the old church hall. The stands, pumps and spanners are free to use, and you pay only for parts.
+
+## How it works
+
+A volunteer shows you how to do the repair rather than doing it for you. Most people fix their own flat on their first visit.
+'''
+
+# ---------------------------------------------------------------- 18 Conclusion recycling
+
+[[case]]
+id = "J1-18-001"
+rule = "18"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "club-membership article whose final section restates the intro. Minimal pair: J1-18-004"
+text = '''
+Most new riders who give up on our club do it within their first month. When we went back through two years of sign-ups, the ones who stayed had almost all been paired with a regular on their first ride.
+
+## What the sign-up records showed
+
+Of the 41 people who joined in 2024, 23 were still riding a year later. Nineteen of those 23 had a named buddy on day one.
+
+## Why it matters
+
+Ultimately, keeping new members comes down to that first month. In the end, pairing a newcomer with a regular is what made people stay. This matters because every club depends on new riders to survive.
+'''
+
+[[case]]
+id = "J1-18-002"
+rule = "18"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "library post on late opening whose closing section only recycles the intro"
+text = '''
+Since February the branch library has stayed open until 8 pm on Thursdays, and the late session has quickly become our busiest. Students and shift workers who couldn't get here before 6 now can.
+
+## Who comes on Thursdays
+
+Average Thursday visits rose from 140 to 310 between February and May. Most of the extra visitors borrow from the study collection and use the quiet room.
+
+## Final thoughts
+
+In the end, the late Thursday session has shown how much people value access after hours. Opening until 8 has made the library available to students and shift workers. That's why it matters so much to the community.
+'''
+
+[[case]]
+id = "J1-18-003"
+rule = "18"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "compost-bay article; last section is restate + summarise + broad-implications gesture"
+text = '''
+Our community garden used to send six wheelie bins of green waste to landfill every month. Building three compost bays behind the shed cut that to one.
+
+## How the bays work
+
+Each bay holds about a cubic metre. We turn the active bay every Saturday, and when it's full we start the next one and leave the first to finish.
+
+## The bigger picture
+
+Ultimately, the compost bays have turned a landfill problem into a resource. In the end, six bins a month became one. This matters because small changes like this add up across the whole neighbourhood.
+'''
+
+[[case]]
+id = "J1-18-004"
+rule = "18"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J1-18-001: final section adds a new step instead of restating"
+text = '''
+Most new riders who give up on our club do it within their first month. When we went back through two years of sign-ups, the ones who stayed had almost all been paired with a regular on their first ride.
+
+## What the sign-up records showed
+
+Of the 41 people who joined in 2024, 23 were still riding a year later. Nineteen of those 23 had a named buddy on day one.
+
+## What we're changing
+
+From this term the sign-up form has a buddy box. Tick it, and a ride leader emails you before your first Sunday with their phone number and where to meet.
+'''
+
+[[case]]
+id = "J1-18-005"
+rule = "18"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "library post whose final section asks readers for a decision they didn't have before"
+text = '''
+Since February the branch library has stayed open until 8 pm on Thursdays, and the late session has quickly become our busiest. Students and shift workers who couldn't get here before 6 now can.
+
+## Who comes on Thursdays
+
+Average Thursday visits rose from 140 to 310 between February and May. Most of the extra visitors borrow from the study collection and use the quiet room.
+
+## Should we add Tuesday?
+
+The budget covers one more late night from July, or a longer Saturday. The survey at the front desk closes on 30 May, and the branch committee will go with whichever gets more votes.
+'''
+
+[[case]]
+id = "J1-18-006"
+rule = "18"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "compost article whose last section echoes the intro but adds a new fact and offer"
+text = '''
+Our community garden used to send six wheelie bins of green waste to landfill every month. Building three compost bays behind the shed cut that to one.
+
+## How the bays work
+
+Each bay holds about a cubic metre. We turn the active bay every Saturday, and when it's full we start the next one and leave the first to finish.
+
+## Taking some home
+
+The first bay finished in March and gave us more compost than our beds could use. Members can fill two buckets each on the first Saturday of the month, and you'll need to bring your own buckets.
+'''
+
+# ---------------------------------------------------------------- 26 Announcement openers
+
+[[case]]
+id = "J1-26-001"
+rule = "26"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author-approved fix from a published post: table preface cut (anonymised)"
+text = '''
+Here's what's being advertised. In July 2026 I went through page one of Australian search results for "SEO cost Australia" - which is almost entirely agencies publishing their own pricing guides - and the advertised rates clustered like this:
+
+| Tier (as advertised) | Advertised monthly range |
+|---|---|
+| Entry / basic | ~$400 - $1,500 |
+| Small business / growth | ~$1,500 - $5,000 |
+'''
+
+[[case]]
+id = "J1-26-002"
+rule = "26"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author-approved fix from a published post: emphasis opener cut (anonymised)"
+text = '''
+One wrinkle worth knowing: the map results and the main results don't always agree. A profile can appear on the map but not in the main results, or the other way around, especially while it's new or recently edited. If you're in that in-between state, the [timing section](#how-long) below is probably your answer.
+'''
+
+[[case]]
+id = "J1-26-003"
+rule = "26"
+label = "fail"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "author-approved fix from a published post: list preface cut (anonymised)"
+text = '''
+## Tools & Resources
+
+Everything referenced above, in one place.
+
+### Free tools
+- **[Business profile dashboard](https://example.com/profile)** - where every check in this article happens: verification status, location settings, categories
+- **[Profile appeals tool](https://example.com/appeals)** - for suspended profiles: shows the violated policy and takes your evidence
+'''
+
+[[case]]
+id = "J1-26-004"
+rule = "26"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hall-hire rules with a deletable emphasis opener. Minimal pair: J1-26-008"
+text = '''
+The hall is yours from the start of your booking to the end of it, including setting up and packing down. Importantly, the floor must be swept and the chairs stacked before you leave. Groups that leave it untidy lose their slot for the next term.
+'''
+
+[[case]]
+id = "J1-26-005"
+rule = "26"
+label = "fail"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "web-hosting renewal post with a deletable list preface"
+text = '''
+Your hosting renews on the same date every year, and most plans renew at a higher price than the one you signed up on. Below are some of the things worth looking at before you renew.
+
+- The renewal price, not the introductory one
+- Whether daily backups are included or extra
+- How long they keep your site after you cancel
+- Who owns the domain name
+'''
+
+[[case]]
+id = "J1-26-006"
+rule = "26"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: 'Critically' used literally in a vet clinic FAQ"
+text = '''
+Critically ill animals are seen first, whatever time they arrive. Everyone else is seen in booking order, so a 10 am appointment can start a little late on a busy morning. If your pet's condition changes while you wait, tell the front desk straight away.
+'''
+
+[[case]]
+id = "J1-26-007"
+rule = "26"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: a 'Here are' sentence that carries the content itself"
+text = '''
+Here are the two fees the hall charges community groups: $22 an hour for the main room and $9 an hour for the kitchen. Both are billed monthly, and the first hour of any booking under two hours is free.
+'''
+
+[[case]]
+id = "J1-26-008"
+rule = "26"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair of J1-26-004 with the emphasis opener removed"
+text = '''
+The hall is yours from the start of your booking to the end of it, including setting up and packing down. The floor must be swept and the chairs stacked before you leave. Groups that leave it untidy lose their slot for the next term.
+'''
+
+[[case]]
+id = "J1-26-009"
+rule = "26"
+label = "pass"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "hard negative: 'Below' used literally (place) in a local-history piece"
+text = '''
+Below the old grandstand are the original change rooms, still with their 1920s timber benches and a row of brass coat hooks. The football club used them until 1974, when the new pavilion opened at the other end of the ground. Members of the historical society run tours on the last Sunday of each month.
+'''

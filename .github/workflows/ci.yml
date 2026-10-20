@@ -1,0 +1,76 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      # The whole tests/ folder, so this includes the free, engine-side eval tests (golden format, prompts and
+      # reply parsing, metrics, the panel runner with fakes, rewrite graders, blind pairs, history). Nothing in this
+      # workflow calls a model: the paid suites run only by hand, from evals.yml.
+      - run: python -m unittest discover -s tests -t . -v
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      # The private names live in the PLAINSPOKEN_LEAK_LIST secret (the list's content), never in the repo; its
+      # hits are logged as private#<line>, never by the term. Keyed entries also need PLAINSPOKEN_LEAK_KEY. On this
+      # repo a missing secret fails the job; a fork's CI, or a pull request from a fork (which gets no secrets),
+      # skips what it can't check and says so in the log. An empty secret writes an empty file, read as missing.
+      - name: Leak guard
+        run: |
+          umask 077
+          printf '%s\n' "$LEAK_LIST" > "$RUNNER_TEMP/leak-list.txt"
+          export PLAINSPOKEN_LEAK_LIST="$RUNNER_TEMP/leak-list.txt"
+          python scripts/dev/leak_guard.py .
+        env:
+          PLAINSPOKEN_LEAK_KEY: ${{ secrets.PLAINSPOKEN_LEAK_KEY }}
+          LEAK_LIST: ${{ secrets.PLAINSPOKEN_LEAK_LIST }}
+      - run: python scripts/dev/check_links.py .
+      - run: python scripts/dev/lint_frontmatter.py .
+      - run: python scripts/dev/check_release_version.py .
+      - run: python lib/run.py eval golden validate --require-counts
+      - name: Agent Skills validation (portable copy, Claude-only fields stripped)
+        run: |
+          python -m pip install --quiet skills-ref==0.1.1
+          out="$RUNNER_TEMP/portable"
+          python -m scripts.dev.portable_export . "$out"
+          for d in "$out"/*/; do if [ -d "$d" ]; then agentskills validate "$d"; fi; done
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - run: npm install -g @anthropic-ai/claude-code@2.1.296
+      - run: claude plugin validate . --strict
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Always-on token budget
+        run: python -m scripts.dev.token_budget .
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: trufflesecurity/trufflehog@4dd8831c5f12599465d4d45c3c447b4018a34c85 # v3.97.9
+        with:
+          version: 3.97.9
+          extra_args: --results=verified,unknown

@@ -1,0 +1,609 @@
+schema_version = 1
+article_id = "TOOL-LIBRARY-FIRST-YEAR"
+article_slug = "tool-library-first-year"
+source_file = "posts/tool-library-first-year.md"
+source_content_hash = "sha256:cf732c0d99cf347b30b7725a3ed616980921596195db7a73f7e5b0b390004d2c"
+checked_at = "2026-10-14T14:48:00+11:00"
+checked_by = "claims skill"
+coverage_status = "complete"
+coverage_notes = "Scaffold candidates reviewed; title, description, headings and body read for unledgered claims. The title and description frame the article and carry no checkable claim beyond those ledgered. Sources: the library's year-one annual report and ExampleLend's reminders help page, both saved 2026-10-14. Scaffold C002 ('the first', part of the period phrase 'in the first year', held by C001) and C005 (duplicate of the '$3,200' value held by C004) were deleted. Second pass, 2026-10-14: the owner decided the six claims left for them. C009, C011, C023, the tile-cutter clause (C003) and the ringing clause (C018) were cut; C015 was reworded so the article no longer says which system the library uses (now C030), and the section heading and description changed to match. Re-read the whole article after the edits; no new claims."
+
+# ---------- verified ----------
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C006"
+text = "Northbank Tool Library opened on 1 March 2025 in a shed behind the community hall."
+claim_type = "date"
+prominence = "high"
+subject = "Northbank Tool Library"
+status = "verified"
+
+[[claims.locations]]
+kind = "body"
+anchor = "opening paragraph"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "About us"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "Northbank Tool Library opened on 1 March 2025 in a shed behind the Northbank community hall."
+passage_sha256 = "sha256:f58bbc369f262f113b468eedbaa0ecbf6d734d30817ba6055b2e6eb62e730768"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C007"
+text = "Twelve months later it had 214 members and 380 tools on the shelves, almost all of them donated."
+claim_type = "count"
+prominence = "high"
+subject = "Northbank Tool Library"
+period = "at 28 February 2026, the end of year one"
+status = "verified"
+notes = "'Twelve months later' after 1 March 2025 matches the report's count date of 28 February 2026."
+
+[[claims.locations]]
+kind = "body"
+anchor = "opening paragraph"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "The year in numbers"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "At 28 February 2026 the library had 214 members and 380 tools on the shelves. Almost all of the tools were donated by local households and two hardware stores."
+passage_sha256 = "sha256:56a9c957fe1378709581f8c2e18f7afac862811e4f5c05b7ce76c8d03d540340"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C001"
+text = "Members took out 1,146 loans in the first year"
+claim_type = "count"
+prominence = "medium"
+subject = "Northbank Tool Library loans"
+period = "year one, 1 March 2025 to 28 February 2026"
+status = "verified"
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "The year in numbers"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "Members borrowed 1,146 times during the year."
+passage_sha256 = "sha256:1848917a56f5d9bbf13681a3688fef56be613ab482df93e710e7fff75fb66e8a"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C010"
+text = "The volunteer coordinator, Sam Okafor, put it plainly in the annual report: \"We've had more drills borrowed than any other tool, by a long way.\""
+claim_type = "quotation"
+prominence = "medium"
+subject = "Sam Okafor, volunteer coordinator"
+status = "verified"
+notes = "Quoted words appear verbatim in the report; the article quotes the first sentence only."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "From the volunteer coordinator"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "\"We've had more drills borrowed than any other tool, by a long way. Ladders came second, and the pressure washer has a waiting list,\" said Sam Okafor, volunteer coordinator."
+passage_sha256 = "sha256:194e43f779d90567436985b7c6744080af4eccff9f65b19c2b082def555fcadb"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C012"
+text = "Nine tools were never returned, and the library's committee wrote them off in February 2026."
+claim_type = "count"
+prominence = "medium"
+subject = "Northbank Tool Library unreturned tools"
+period = "year one; written off February 2026"
+status = "verified"
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "The year in numbers"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "Nine tools were never returned; the committee wrote them off in February 2026."
+passage_sha256 = "sha256:bfdd63272da5e378785233c2050e7bddf15e72fa528c504b38a16e8ac6f19370"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C004"
+text = "A $3,200 grant from the local council covered public liability insurance and the booking software for the first year."
+claim_type = "price"
+prominence = "medium"
+subject = "Northbank Council grant"
+period = "year one"
+status = "verified"
+notes = "Reworded from 'The library ran on a $3,200 grant', which implied the grant was the library's whole funding; see C028."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Paying for it"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "Funding"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "A $3,200 grant from Northbank Council covered public liability insurance and the booking software for the first year."
+passage_sha256 = "sha256:2f68b27f1a78613f8f97cf9cda7ac54e4b3ba09f37ce1b660510d25cf41a1173"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C014"
+text = "Members pay nothing to join."
+claim_type = "price"
+prominence = "medium"
+subject = "Northbank Tool Library membership"
+status = "verified"
+notes = "The year-one report is the latest saved source; present tense matches its 'Membership is free.'"
+
+[[claims.locations]]
+kind = "body"
+anchor = "Paying for it"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "About us"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "Membership is free."
+passage_sha256 = "sha256:7904e53e16589565bf047b62255e4f5416cb446ea867334bce21b72414bedd3a"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C030"
+text = "ExampleLend is one example of an online lending platform."
+claim_type = "product_feature"
+prominence = "high"
+subject = "ExampleLend"
+status = "verified"
+notes = "Replaces C015 on the owner's decision: the article no longer says which system the library uses. The help page shows ExampleLend sends borrowers emails about loans and sells paid plans; the claim says no more than what kind of service it is."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What a booking system can do"
+
+[claims.source]
+url = "https://example.com/examplelend/help/reminders"
+title = "ExampleLend Help Centre: Loan reminders"
+publisher = "ExampleLend"
+source_tier = "primary"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "ExampleLend sends the borrower a reminder email two days before a loan is due. You can change the timing on paid plans."
+passage_sha256 = "sha256:e487549abf2451708254ae474faf9a7bc6f203385ee7717f3b19a1541cf405e5"
+source_text_sha256 = "sha256:284f5d78172c55fb2629735c3cf2f9ceaec5b7501c0f6e2d0ab3b443df3fbae2"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/examplelend-help-reminders.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C016"
+text = "It sends each borrower a reminder email two days before a loan is due."
+claim_type = "platform_behaviour"
+prominence = "high"
+subject = "ExampleLend loan reminders"
+status = "verified"
+notes = "The help page adds that paid plans can change the timing; two days is what it sends unless changed."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What a booking system can do"
+
+[claims.source]
+url = "https://example.com/examplelend/help/reminders"
+title = "ExampleLend Help Centre: Loan reminders"
+publisher = "ExampleLend"
+source_tier = "primary"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "ExampleLend sends the borrower a reminder email two days before a loan is due."
+passage_sha256 = "sha256:82a691b6d76c29417791b613a93e2903e7a518748e72e82f5fd31d61de71dda6"
+source_text_sha256 = "sha256:284f5d78172c55fb2629735c3cf2f9ceaec5b7501c0f6e2d0ab3b443df3fbae2"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/examplelend-help-reminders.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C017"
+text = "As of October 2026, its free plan doesn't send text messages"
+claim_type = "platform_behaviour"
+prominence = "medium"
+subject = "ExampleLend free plan"
+period = "as of October 2026 (help page accessed 2026-10-14)"
+refresh_after = "2027-04-14"
+status = "verified"
+notes = "Negative claim carried by an explicit statement on the platform's own help page, not by silence. Dated in the article after checker run 2026-10-14-r1 (warning, negative_claim)."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What a booking system can do"
+
+[claims.source]
+url = "https://example.com/examplelend/help/reminders"
+title = "ExampleLend Help Centre: Loan reminders"
+publisher = "ExampleLend"
+source_tier = "primary"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "Text message (SMS) reminders are available on the Standard and Pro plans only. The free plan sends email reminders only."
+passage_sha256 = "sha256:91d20c3b3856113e286173a09301a445fe7c8f38a817a8a14e045a68476b0878"
+source_text_sha256 = "sha256:284f5d78172c55fb2629735c3cf2f9ceaec5b7501c0f6e2d0ab3b443df3fbae2"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/examplelend-help-reminders.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C021"
+text = "The second year starts with a waiting list for the pressure washer"
+claim_type = "historical"
+prominence = "medium"
+subject = "Northbank Tool Library pressure washer"
+period = "end of year one / start of year two"
+status = "verified"
+notes = "The coordinator's statement in the year-one report says the pressure washer has a waiting list."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What comes next"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "From the volunteer coordinator"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "\"We've had more drills borrowed than any other tool, by a long way. Ladders came second, and the pressure washer has a waiting list,\" said Sam Okafor, volunteer coordinator."
+passage_sha256 = "sha256:194e43f779d90567436985b7c6744080af4eccff9f65b19c2b082def555fcadb"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C022"
+text = "a plan to open on Wednesday evenings as well as Saturdays"
+claim_type = "forecast"
+prominence = "medium"
+subject = "Northbank Tool Library opening hours"
+period = "from March 2026"
+status = "verified"
+
+[[claims.locations]]
+kind = "body"
+anchor = "What comes next"
+
+[claims.source]
+url = "https://example.com/northbank-tool-library/annual-report-2026"
+title = "Northbank Tool Library: Annual Report, Year One (1 March 2025 to 28 February 2026)"
+publisher = "Northbank Tool Library"
+source_tier = "primary"
+locator = "Next year"
+accessed_at = "2026-10-14T14:33:00+11:00"
+
+[claims.binding]
+passage = "The committee plans to open on Wednesday evenings as well as Saturday mornings from March 2026."
+passage_sha256 = "sha256:2eae98afde1bd439ebb3b2bb709bf74f6cdefd2a8e48cb1d8f69ebb7b04b85da"
+source_text_sha256 = "sha256:0f5a64e165a53decb29c151cc77327ac1dc404bceb90160f2cc44c878cf3fdf8"
+retrieved_at = "2026-10-14T14:33:00+11:00"
+source_snapshot = ".plainspoken/sources/northbank-annual-report-2026.txt"
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+# ---------- derived ----------
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C008"
+text = "which works out to about five loans per member"
+claim_type = "derived_metric"
+prominence = "medium"
+status = "derived"
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[claims.derivation]
+method = "1,146 loans (C001) divided by 214 members at year end (C007) is 5.36, rounded down to 'about five'. The denominator is the year-end membership count, as the report gives no average."
+inputs = ["TOOL-LIBRARY-FIRST-YEAR-C001", "TOOL-LIBRARY-FIRST-YEAR-C007"]
+
+# ---------- opinion_or_inference ----------
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C013"
+text = "That's a loss rate I'd guess most lenders would envy"
+claim_type = "comparison"
+prominence = "low"
+status = "opinion_or_inference"
+notes = "Labelled as the writer's guess ('I'd guess'); softened from the unlabelled 'That's a loss rate most lenders would envy'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C019"
+text = "If you run something similar, I'd use a reminder like this from day one."
+claim_type = "premise"
+prominence = "medium"
+status = "opinion_or_inference"
+notes = "Recommendation in the writer's voice. Reworded from 'I'd turn the reminder on', which implied the reminder is an off-by-default setting; see C029."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What a booking system can do"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C020"
+text = "In my view it does more for returns than any late fee would."
+claim_type = "causal"
+prominence = "medium"
+status = "opinion_or_inference"
+notes = "Labelled 'In my view'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What a booking system can do"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C024"
+text = "As I see it, none of this needed a big budget. It needed a shed, a booking system that nags people politely, and a handful of volunteers who don't mind talking about drills."
+claim_type = "premise"
+prominence = "medium"
+status = "opinion_or_inference"
+notes = "Closing judgement, labelled 'As I see it'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What comes next"
+
+# ---------- removed ----------
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C009"
+text = "Most of those were small jobs: a drill for a weekend, a ladder for gutters, a pressure washer before a sale."
+claim_type = "statistic"
+prominence = "medium"
+status = "removed"
+resolution = "Neither saved source says what loans were used for or that most were small jobs; the report only ranks drills first and ladders second. The owner decided to cut the sentence; cut on 2026-10-14. Appeared only in 'Who borrowed what'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C011"
+text = "That matched what the volunteers saw at the counter every Saturday morning."
+claim_type = "first_hand"
+prominence = "low"
+status = "removed"
+resolution = "No saved source records what volunteers saw at the counter, and it had no first-hand scope. The owner decided to cut the sentence; cut on 2026-10-14. Appeared only in 'Who borrowed what'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C003"
+text = "it still stung when one of the nine was the only tile cutter"
+claim_type = "first_hand"
+prominence = "low"
+status = "removed"
+resolution = "The report says nine tools were never returned but doesn't name them, and says nothing about a tile cutter. The owner decided to cut the clause; on 2026-10-14 the sentence was ended after 'envy' (the remainder is C013). The tile cutter also appeared in C023, cut at the same time."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C015"
+text = "The library books loans through ExampleLend, an online lending platform."
+claim_type = "historical"
+prominence = "high"
+status = "removed"
+resolution = "The report mentions 'the booking software' but never names it, and the ExampleLend page doesn't mention the library. The owner decided the article shouldn't say which system the library uses. On 2026-10-14 the sentence was reworded to present ExampleLend as one example of an online lending platform (C030), and the heading changed from 'What the booking system does' to 'What a booking system can do', with the description's 'what the booking system does for you' changed to match."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What the booking system does"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C018"
+text = "As of October 2026, its free plan doesn't send text messages, so the volunteers ring anyone who is more than a week late."
+claim_type = "first_hand"
+prominence = "medium"
+status = "removed"
+resolution = "The 'so' clause implied the library is on ExampleLend's free plan and said volunteers phone borrowers more than a week late; neither source says either. The owner decided to cut 'so the volunteers ring anyone who is more than a week late'; cut on 2026-10-14. The dated platform fact that remains is C017. Appeared only here."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What the booking system does"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C023"
+text = "The volunteers are also asking for a second tile cutter, for obvious reasons."
+claim_type = "first_hand"
+prominence = "low"
+status = "removed"
+resolution = "No saved source mentions a request for a tile cutter, and 'for obvious reasons' pointed back to the unsupported C003. The owner decided to cut the sentence; cut on 2026-10-14. Appeared only in 'What comes next'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What comes next"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C025"
+text = "Northbank Tool Library opened its roller door on 1 March 2025 in a borrowed shed behind the community hall."
+claim_type = "historical"
+prominence = "high"
+status = "removed"
+resolution = "The report says the library opened 'in a shed behind the Northbank community hall'; it doesn't say the shed was borrowed or has a roller door. Cut 'its roller door' and 'borrowed' on 2026-10-14; the supported remainder is C006. Appeared only in the opening."
+
+[[claims.locations]]
+kind = "body"
+anchor = "opening paragraph"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C026"
+text = "the library wrote them off in February rather than keep chasing"
+claim_type = "causal"
+prominence = "low"
+status = "removed"
+resolution = "The report says the committee wrote the nine tools off in February 2026, not why. Cut the motive 'rather than keep chasing' on 2026-10-14 and added the year the report gives; the remainder is C012. Appeared only here."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Who borrowed what"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C027"
+text = "Donations of tools did the rest."
+claim_type = "causal"
+prominence = "low"
+status = "removed"
+resolution = "The report says almost all tools were donated (C007) but not that donations covered every cost the grant didn't. Cut on 2026-10-14. Appeared only in 'Paying for it'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Paying for it"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C028"
+text = "The library ran on a $3,200 grant from the local council in its first year"
+claim_type = "price"
+prominence = "medium"
+status = "removed"
+resolution = "'Ran on' implied the grant was the library's whole funding; the report says only what the grant covered. Reworded on 2026-10-14 to what the report says (C004). Appeared only in 'Paying for it'."
+
+[[claims.locations]]
+kind = "body"
+anchor = "Paying for it"
+
+[[claims]]
+claim_id = "TOOL-LIBRARY-FIRST-YEAR-C029"
+text = "If you run something similar, I'd turn the reminder on from day one."
+claim_type = "platform_behaviour"
+prominence = "medium"
+status = "removed"
+resolution = "'Turn the reminder on' implied ExampleLend's reminder is a setting that starts off; the help page says only that it sends one. Reworded on 2026-10-14 to 'I'd use a reminder like this from day one' (C019). Appeared only here."
+
+[[claims.locations]]
+kind = "body"
+anchor = "What the booking system does"

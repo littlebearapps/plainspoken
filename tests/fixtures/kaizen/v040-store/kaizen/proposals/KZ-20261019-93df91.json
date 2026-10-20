@@ -1,0 +1,36 @@
+{
+  "action": "loosen",
+  "adapter": "file",
+  "base_sha256": "61bca4c24bba94cd176abfa2a13143f4945d942565967e7539294d9b66cd615f",
+  "bump": "minor",
+  "created": "2026-10-19T01:00:00+00:00",
+  "diff": "--- a/rules.toml\n+++ b/rules.toml\n@@ -21,7 +21,7 @@\n ing_opener_section_warn = 3\n ing_opener_consecutive_block = 3\n trailing_ing_section_block = 2\n-filler_warn = 3\n+filler_warn = 4\n vague_quantifier_warn = 3\n ttr_min = 0.4\n mattr_min = 0.46\n",
+  "edits": [
+    {
+      "key": "filler_warn",
+      "kind": "set_threshold",
+      "new": 4,
+      "old": 3,
+      "table": "default"
+    }
+  ],
+  "effect": {
+    "corpus": "not measured (no corpus)",
+    "golden": "not available until Phase 6"
+  },
+  "evidence": {
+    "fixture": "v0.4.0 store"
+  },
+  "id": "KZ-20261019-93df91",
+  "key": "38d4609d8a3f",
+  "profile": null,
+  "ref": ".plainspoken/kaizen/proposals/KZ-20261019-93df91.md",
+  "rule": "23",
+  "ruleset_version": "4.1.0",
+  "summary": "rule 23: loosen (fixture B: approved, not applied): filler_warn 3 → 4",
+  "targets": [
+    "ruleset",
+    "profile"
+  ],
+  "trigger": "fp"
+}

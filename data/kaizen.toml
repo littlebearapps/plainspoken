@@ -1,0 +1,126 @@
+# plainspoken kaizen calibration: the trigger thresholds and the knobs calibrate may turn (Phase 5).
+# Calibrate only proposes. A proposal changes the ruleset only through `kaizen apply`, after a person approves it.
+# A project can't override these values in this phase.
+
+[triggers]
+fp_min_fires = 20        # effective FP above 10% with 20 or more fires
+fp_rate = 0.10
+kept_min_docs = 3        # justified (or kept to publication) in 3 or more docs, WARN rules only
+missed_min_docs = 2      # repeated `missed` on the same rule or pattern
+dormant_days = 90        # zero fires in 90 days (needs 90 days of ledger)
+cycle_days = 28          # one calibrate cycle between retirement steps
+cooldown_days = 60       # a rejected proposal (same rule + action) isn't proposed again for this long
+max_proposals = 3
+
+# Narrow knobs first: a facet knob is used when at least half the evidence spans carry that facet value
+# (for term knobs: every term seen in the evidence).
+[[knobs]]
+rule = "4b"
+facet = "term"
+direction = "loosen"
+edit = { kind = "list_add", list = "density_total_only" }
+
+[[knobs]]
+rule = "7d"
+facet = "section"
+value = "faq"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "staccato_faq_short_run", step = 2 }
+
+[[knobs]]
+rule = "7d"
+facet = "form"
+value = "no-long"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "staccato_long_sentence", step = -3 }
+
+[[knobs]]
+rule = "7d"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "staccato_short_run", step = 1 }
+
+[[knobs]]
+rule = "12d"
+facet = "section"
+value = "faq"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "paragraph_uniform_faq_run", step = 1 }
+
+[[knobs]]
+rule = "12f"
+facet = "metric"
+value = "mattr"
+direction = "demote"
+edit = { kind = "set_threshold", key = "mattr_blocking", value = false }
+
+[[knobs]]
+rule = "12f"
+facet = "metric"
+value = "mattr"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "mattr_min", step = -0.02 }
+
+# Broad knobs: one per rule, used when no narrow knob fits the evidence.
+[[knobs]]
+rule = "1"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "em_dash_max", step = 1 }
+
+[[knobs]]
+rule = "2b"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "claude_warn_total", step = 1 }
+
+[[knobs]]
+rule = "4a2"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "conversational_warn", step = 1 }
+
+[[knobs]]
+rule = "4b"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "transition_single_max", step = 1 }
+
+[[knobs]]
+rule = "7"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "uniform_sentence_run", step = 1 }
+
+[[knobs]]
+rule = "12d"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "paragraph_uniform_run", step = 1 }
+
+[[knobs]]
+rule = "12e"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "bold_bullet_run", step = 1 }
+
+# Rule 21 (synonym cycling) is a judged rule with no lint threshold, so it has no knob.
+[[knobs]]
+rule = "23"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "filler_warn", step = 1 }
+
+[[knobs]]
+rule = "25"
+direction = "loosen"
+edit = { kind = "set_threshold", key = "vague_quantifier_warn", step = 1 }
+
+# Tell mining (`kaizen mine`): drafts a skill wrote from the fixed briefs in evals/briefs/, one folder per model id,
+# compared with a human corpus. Mining only queues proposals (local, never sent through github or trello); it never
+# edits the ruleset and never calls a model.
+[mining]
+ngram_min = 2              # phrases of 2 to 4 words, within one sentence
+ngram_max = 4
+min_draft_share = 0.5      # in at least half of one model's drafts
+min_drafts = 2             # and in at least 2 of them
+ratio = 4.0                # draft rate per 1,000 words ≥ ratio × (corpus rate + smoothing)
+smoothing_per_1k = 0.1
+max_candidates = 5         # in total, across models, ranked by ratio × share
+target_list = "newer_model_words"   # a mined phrase is proposed for this list
+target_rule = "32"                  # and its model id for this rule's `models`
+# Lists of function words, contraction forms and human markers: their entries aren't tells, so a phrase that contains
+# one isn't "already covered", and a brief may use their words.
+not_tell_lists = ["repeat_stopwords", "title_case_function_words", "ing_stop", "ban_exempt_terms",
+                  "density_extra_openers", "density_total_only", "expanded_forms", "opinion_markers"]

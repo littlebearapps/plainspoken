@@ -1,0 +1,17 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "plainspoken",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
+      ],
+      "include-component-in-tag": false,
+      "bump-minor-pre-major": true
+    }
+  }
+}

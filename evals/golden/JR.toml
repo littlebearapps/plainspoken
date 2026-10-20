@@ -1,0 +1,952 @@
+schema = 1
+group = "JR"
+
+# ================================================================ ACCEPT: quote
+
+[[case]]
+id = "JR-2b-001"
+rule = "2b"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "pool committee report; all four WARN words sit inside a quotation from minutes. Since 0.5.0 the lint doesn't flag it: JR only. Contrast: JR-2b-003"
+text = '''
+The pool committee met on Tuesday to vote on the winter hours. The council's aquatics officer opened with a statement, which the minutes record word for word:
+
+"We are genuinely trying to keep the outdoor pool open into May, particularly for the squad swimmers. It's a meaningful cost, but the new heat pump makes it more straightforward than last year."
+
+The committee voted six to one to trial the longer season. The one vote against came from the treasurer, who wants the heating bill reported monthly.
+'''
+kind = "quote"
+reason = "All four WARN words are in the aquatics officer's statement on line 3, a verbatim quotation from the meeting minutes; the author's own lines 1 and 5 use none of them."
+evidence = [
+  {line = 3, quote = "genuinely"},
+  {line = 3, quote = "particularly"},
+  {line = 3, quote = "meaningful"},
+  {line = 3, quote = "straightforward"},
+]
+
+[[case]]
+id = "JR-7c-001"
+rule = "7c"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "cycling club post; the negative parallelism is a third party's quoted line. Contrast: JR-7c-005 (self-quote)"
+text = '''
+Our Saturday social ride leaves the bakery corner at 7.30 and rolls at about 22 km/h, with a regroup at the top of every climb.
+
+When new members ask whether they'll be dropped, I point them to what our ride captain wrote in the autumn newsletter: "It's not a race, it's a ride, and nobody gets left on the side of the road."
+
+She meant it. Last month two of us waited 20 minutes at the reservoir while a first-timer fixed a flat.
+'''
+kind = "quote"
+reason = "The 'not X, it's Y' line is the ride captain's sentence, quoted verbatim in double quotes from the autumn newsletter; the author's own sentences around it don't use the pattern."
+evidence = [{line = 3, quote = "It's not a race, it's a ride"}]
+
+[[case]]
+id = "JR-12b-001"
+rule = "12b"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "baker's newsletter answering a reader; the unnamed 'studies show' is inside the reader's quoted email. Contrast: JR-12b-002"
+text = '''
+A reader emailed this week with a question I get every few months:
+
+"Studies show sourdough is easier to digest than supermarket bread, so should I switch for my kids?"
+
+I'm a baker, not a dietitian, so I can't tell you what suits your kids. What I can tell you is how my loaf is made: flour, water, salt and a starter, fermented for about 18 hours. If digestion is the worry, a GP or an accredited practising dietitian is the person to ask.
+'''
+kind = "quote"
+reason = "The unattributed 'studies show' claim is the reader's own words, quoted verbatim from their email on line 3; the article never adopts the claim and answers by declining to make it."
+evidence = [{line = 3, quote = "Studies show sourdough is easier to digest"}]
+
+[[case]]
+id = "JR-15-001"
+rule = "15"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "local-history piece quoting a 1962 by-law; every uncontracted form is inside the quoted clause"
+text = '''
+The old sign by the baths gate came down in 1987, but the shire kept a copy of the 1962 by-law it was painted from. Clause 14 reads:
+
+"Persons shall not enter the water within one hour of a meal. It is not permitted to bring glass onto the lawn. Dogs are not to be admitted at any time. Bathers who do not hold a season ticket must pay at the gate. It is the duty of the attendant to enforce this clause."
+
+The glass rule's still there. The one-hour rule isn't, and nobody I've asked can remember when it went.
+'''
+kind = "quote"
+reason = "Every uncontracted form flagged is in the 1962 by-law clause quoted verbatim on line 3; the author's own lines 1 and 5 use contractions (rule's, isn't, I've)."
+evidence = [
+  {line = 3, quote = "Persons shall not enter the water"},
+  {line = 3, quote = "It is not permitted"},
+  {line = 3, quote = "Dogs are not to be admitted"},
+  {line = 3, quote = "Bathers who do not hold a season ticket"},
+  {line = 3, quote = "It is the duty of the attendant"},
+]
+
+# ================================================================ ACCEPT: load_bearing
+
+[[case]]
+id = "JR-12-001"
+rule = "12"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "leisure centre notice; the 'while' clause carries the closure and reopening date. Contrast: JR-12-004 (partial)"
+text = '''
+## Winter hours
+
+While the main pool is closed for retiling until 14 March, the learners' pool and the gym keep their usual hours. Lap swimmers can use the 25-metre pool at the Eastside centre on the same membership card.
+
+Bookings for the March reopening open on 1 March at the front desk or online.
+'''
+kind = "load_bearing"
+reason = "The 'while' clause is the only place the notice says the main pool is shut and when it reopens; without it, lap swimmers aren't told why they're being sent to Eastside or for how long."
+evidence = [{line = 3, quote = "While the main pool is closed for retiling until 14 March"}]
+
+[[case]]
+id = "JR-10-001"
+rule = "10"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "solar buyer's guide; each hedge marks a real per-reader variable and is followed by how to check it"
+text = '''
+## Before you book an installer
+
+Whether you need a permit depends on your council. Search your council's website for 'minor works' and the answer is on the planning page.
+
+Your feed-in credit may be lower than the figures above if you're on a time-of-use tariff. The tariff name is printed on the first page of your bill.
+
+The system size that suits you depends on how much power you use between 9 am and 3 pm. Your retailer's app shows usage by the hour if you scroll past the monthly chart.
+'''
+kind = "load_bearing"
+reason = "Each hedge marks something that really differs by reader (their council, their tariff, their daytime use) and is followed straight away by where to check it, so cutting the hedges would turn three variable answers into false promises."
+evidence = [
+  {line = 3, quote = "Whether you need a permit depends on your council."},
+  {line = 5, quote = "may be lower than the figures above"},
+  {line = 7, quote = "depends on how much power you use between 9 am and 3 pm"},
+]
+
+[[case]]
+id = "JR-7c-002"
+rule = "7c"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "cycling club route note; the same-shape run is the three real routes and distances"
+text = '''
+The club runs three routes from the boat shed every Sunday, and you pick one at the start.
+
+The flat loop is 32 km. The river loop is 58 km. The hills loop is 85 km.
+
+They all regroup at the dam wall kiosk, so if you've overcooked the hills loop you can peel off there and roll home on the river path.
+'''
+kind = "load_bearing"
+reason = "The three same-shape sentences on line 3 are the club's three actual Sunday routes and their distances, the choice riders make at the start; cutting any one drops a route."
+evidence = [{line = 3, quote = "The flat loop is 32 km. The river loop is 58 km. The hills loop is 85 km."}]
+
+# ================================================================ ACCEPT: false_positive
+
+[[case]]
+id = "JR-5e-001"
+rule = "5e"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "tennis club booking page; the three -ing starts are gerund subjects. Contrast: JR-5e-003 (participles claimed as gerunds)"
+text = '''
+## Booking a court
+
+Booking a court online takes about a minute once you've made an account.
+Paying at the front desk still works if you'd rather not store a card.
+Cancelling inside 24 hours costs the full fee, so set a reminder if your week is uncertain.
+
+Courts 5 and 6 have lights until 10 pm; the others close at dusk.
+'''
+kind = "false_positive"
+reason = "In all three sentences the -ing word is the grammatical subject (Booking... takes, Paying... works, Cancelling... costs), and the 5e entry says a gerund subject isn't an opener."
+evidence = [
+  {line = 3, quote = "Booking a court online takes about a minute"},
+  {line = 4, quote = "Paying at the front desk still works"},
+  {line = 5, quote = "Cancelling inside 24 hours costs the full fee"},
+]
+
+[[case]]
+id = "JR-16-001"
+rule = "16"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "council path-opening notice; 'from X to Y' names the path's two real ends. Contrast: JR-16-002"
+text = '''
+The new shared path opens on Saturday. It runs from the boat ramp on Shell Street to the footbridge behind Riverside station, about 3.4 km, with lighting the whole way.
+
+Bikes and walkers share it, so keep left and ring before you pass. Dogs need to be on a lead between the playground and the footbridge, where the path narrows to 2.5 metres.
+
+The council will add a water tap at the halfway seat in spring.
+'''
+kind = "false_positive"
+reason = "The 'from... to...' names the path's two physical ends, with the distance between them, which is the real place range the 16 entry passes."
+evidence = [{line = 1, quote = "from the boat ramp on Shell Street to the footbridge behind Riverside station"}]
+
+[[case]]
+id = "JR-12-002"
+rule = "12"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "scout group notice; 'while' means 'during', not a both-sides concession"
+text = '''
+The scout hall is being rewired in June, so the Tuesday meetings need a new home for four weeks.
+
+While the electricians are in, Cubs will meet in the library annexe on Mair Street from 6.30 to 8 pm. Scouts will meet at the same time at the bowls club, which has lent us its back room.
+
+We'll be back in the hall from 1 July. Parents, please use the annexe car park, not the library's.
+'''
+kind = "false_positive"
+reason = "This 'while' means 'during' (the four weeks the electricians are working), not a balancing concession, and the 12 entry says to reject a 'while' that means 'during'."
+evidence = [{line = 3, quote = "While the electricians are in, Cubs will meet in the library annexe"}]
+
+[[case]]
+id = "JR-27-001"
+rule = "27"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "small online shop update; both optimisation hits are technical (image, database query). Contrast: JR-27-002"
+text = '''
+Two fixes made the shop's product pages load faster this month.
+
+First, I switched on the plugin's image optimisation, which resizes every upload to 1600 px wide and serves WebP. The largest photo on the home page dropped from 2.1 MB to 240 KB.
+
+Second, the slow cart page turned out to be one database call. After query optimisation by the host's support team, it loads in about a second.
+'''
+kind = "false_positive"
+reason = "Both hits are technical: 'image optimisation' is a plugin setting that resizes and recompresses uploads, and 'query optimisation' is a database fix, the kinds of use the 27 entry passes."
+evidence = [
+  {line = 3, quote = "image optimisation"},
+  {line = 5, quote = "query optimisation"},
+]
+
+[[case]]
+id = "JR-21-001"
+rule = "21"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "family-history how-to; catalogue, newspaper archive and reading room are three different services. Contrast: JR-21-002"
+text = '''
+If you're tracing a family member in the 1920s, you'll probably use three different parts of the State Library.
+
+The catalogue tells you what exists and which call number to ask for. The newspaper archive is online and free, and it's where most death notices turn up. The reading room is where you go for anything that hasn't been digitised, like rate books and church registers.
+
+Book a reading room seat a week ahead in school holidays. They fill up.
+'''
+kind = "false_positive"
+reason = "'Catalogue', 'newspaper archive' and 'reading room' are three separate services of the library, each named for what it does, so the 21 entry's pass for names that mean different things applies."
+evidence = [
+  {line = 3, quote = "The newspaper archive is online and free"},
+  {line = 3, quote = "The reading room is where you go"},
+]
+
+[[case]]
+id = "JR-22-001"
+rule = "22"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "local news piece; the 'Looking ahead' section is built from dated, sourced facts"
+text = '''
+## Looking ahead
+
+The shire adopted its 2026–27 budget on 23 June 2026, and page 14 sets aside $480,000 to replace the timber deck on the Wattle Creek bridge.
+
+Tenders closed on 9 September. The shire's works update of 2 October says the bridge will close to traffic from 12 January for about ten weeks, with the detour via Old Mill Road.
+
+If you run a business on the north side, the shire's economic development officer is taking calls about detour signage until the end of November.
+'''
+kind = "false_positive"
+reason = "The 'Looking ahead' section is made of dated, sourced facts (the 23 June budget and its page 14 line, the 9 September tender close, the 2 October works update and the 12 January closure), which the 22 entry passes."
+evidence = [{line = 1, quote = "Looking ahead"}]
+
+# ================================================================ ACCEPT: format
+
+[[case]]
+id = "JR-12e-001"
+rule = "12e"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "bread recipe glossary; bold term + definition is the glossary format. Contrast: JR-12e-002 (argument bullets)"
+text = '''
+## Words you'll see in the recipe
+
+- **Levain:** the portion of starter you mix the night before, fed and left to rise.
+- **Hydration:** water as a percentage of flour weight, so 750 g of water to 1 kg of flour is 75%.
+- **Bulk ferment:** the rise after mixing and before shaping, usually 4 to 6 hours at room temperature.
+- **Proof:** the final rise after shaping, often overnight in the fridge.
+'''
+kind = "format"
+reason = "The list is a glossary: each bold lead is the term being defined and the text after the colon is its definition, so the bold-first pattern is the glossary format itself."
+evidence = [
+  {line = 3, quote = "**Levain:**"},
+  {line = 4, quote = "**Hydration:**"},
+  {line = 5, quote = "**Bulk ferment:**"},
+  {line = 6, quote = "**Proof:**"},
+]
+
+[[case]]
+id = "JR-7d-001"
+rule = "7d"
+label = "accept"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "parkrun-style event page; the short-sentence run is the FAQ's one-line answers. Contrast: JR-7d-002"
+text = '''
+## FAQ
+
+### Can I bring my dog?
+Yes, on a lead. Water bowls are by the gate.
+### Is there parking?
+Yes. The gravel lot takes about 40 cars.
+### Do I need to book?
+No. Just turn up before 9.
+### What if it rains?
+We run anyway. Bring a jacket.
+'''
+kind = "format"
+reason = "The run of short sentences is the FAQ section's answers to four practical questions (dogs, parking, booking, rain), where a one-line answer is the format."
+evidence = [{line = 10, quote = "We run anyway. Bring a jacket."}]
+
+[[case]]
+id = "JR-7c-003"
+rule = "7c"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "coffee machine manual; same-shape imperatives are numbered procedure steps"
+text = '''
+## Descaling the machine
+
+1. Empty the drip tray and the water tank.
+2. Fill the tank with one sachet of descaler and 500 ml of water.
+3. Hold the steam button for five seconds to start the cycle.
+4. Rinse the tank and run one full tank of clean water through.
+
+The cycle takes about 25 minutes. Do it every three months if your water's hard.
+'''
+kind = "format"
+reason = "The same-shape imperative sentences are numbered steps 1 to 4 of the descaling procedure, done in that order; the repeated shape is the step format, which the 7c entry passes."
+evidence = [
+  {line = 3, quote = "Empty the drip tray and the water tank."},
+  {line = 4, quote = "Fill the tank with one sachet of descaler"},
+  {line = 5, quote = "Hold the steam button for five seconds"},
+]
+
+# ================================================================ ACCEPT: metric
+
+[[case]]
+id = "JR-12d-001"
+rule = "12d"
+label = "accept"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "hall-hire comparison; four paragraphs carry the same five facts per hall. Contrast: JR-12d-002 (generic reason)"
+text = '''
+## The four halls
+
+Bellfield Hall is at 12 Park Street. It seats 120, has a kitchen with a commercial dishwasher, and costs $85 an hour on weekends. Bookings go through the shire's online form, and you need public liability cover for events over 50 people.
+
+The Guides Hall on Rowe Street seats 60 and has a small kitchen but no dishwasher. Hire is $40 an hour, any day. You book by emailing the group leader, and the hall's own insurance covers most private parties.
+
+Mechanics' Institute, 3 High Street, seats 90 in the main room and 20 in the library upstairs. It's $65 an hour, with a $200 bond. Bookings are by phone on weekday mornings, and the stairs mean the upstairs room isn't step-free.
+
+The church hall behind the op shop seats 80 and has the best kitchen of the four. Hire is $50 an hour, and alcohol isn't allowed. The parish office takes bookings by phone, and it closes over January.
+'''
+kind = "metric"
+reason = "Each paragraph gives one hall's capacity, kitchen, hourly rate, booking method and one condition; a removal-only pass could vary the lengths only by deleting one of those facts for one hall, and readers comparing the four need the same facts for each."
+evidence = [
+  {line = 3, quote = "Bellfield Hall is at 12 Park Street."},
+  {line = 5, quote = "The Guides Hall on Rowe Street seats 60"},
+  {line = 7, quote = "Mechanics' Institute, 3 High Street, seats 90"},
+  {line = 9, quote = "The church hall behind the op shop seats 80"},
+]
+
+[[case]]
+id = "JR-12f-001"
+rule = "12f"
+label = "reject"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "sourdough starter guide (~300 words); reason blames recipe nouns, but one feeding step is copied out three times. Contrast: JR-12f-002"
+text = '''
+A starter is flour and water that you keep alive by feeding it. To start one, mix 50 grams of wholemeal flour with 50 grams of water in a clean jar, stir it hard, and put the lid on loosely. Leave the jar somewhere warm, around 24 degrees, and mark the level on the jar with a rubber band.
+
+For the next five days, feed the starter once a day. Tip out all but 50 grams of starter, add 50 grams of flour and 50 grams of water, stir, and mark the new level. On day two or three the starter may rise and then go flat. That's normal: the first bacteria to grow aren't the ones you want, and they die back.
+
+By day five or six the starter should double within six to eight hours of a feed and smell sour, like yoghurt. If it doesn't, keep feeding it. Switching from wholemeal flour to white flour at this point is fine, and some bakers find a white flour starter easier to read because the bubbles show through the jar.
+
+Once the starter doubles reliably, you can bake with it. Feed it the night before, and use it when it has doubled and before it falls. A spoonful of starter dropped into a glass of water should float. If it sinks, give the starter another hour or two in the warm spot.
+
+Between bakes, keep the jar in the fridge and feed the starter once a week: tip out all but 50 grams, add 50 grams of flour and 50 grams of water, and leave it on the bench for an hour before it goes back in. A neglected starter usually recovers after two or three feeds at room temperature.
+
+If you bake twice a week, keep the starter on the bench and feed it every day instead: tip out all but 50 grams of starter, add 50 grams of flour and 50 grams of water, stir, and mark the new level on the jar.
+'''
+kind = "metric"
+reason = "The repeats pulling vocabulary variety down are the recipe's working nouns and quantities (starter, flour, water, jar, 50 grams); a removal-only pass would have to cut quantities or steps, and swapping the nouns for synonyms would trade the metric for synonym cycling."
+evidence = [
+  {line = 3, quote = "feed the starter once a day"},
+  {line = 9, quote = "add 50 grams of flour and 50 grams of water"},
+]
+
+[[case]]
+id = "JR-7-001"
+rule = "7"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "community centre timetable; five similar-length sentences are five sessions. Contrast: JR-7-002 (one filler sentence in the run)"
+text = '''
+## The week at the centre
+
+The seniors' strength class runs at 9.30 on Mondays in the studio. Toddler swim lessons start at 10 on Tuesdays in the warm pool. On Wednesdays the walking group leaves the front doors at 8 sharp. Thursday's beginner squad for women swims at 6.30 in lane four. Open court basketball runs in the hall on Fridays from 4 until 6.
+
+Everything except the walking group needs a booking through the app, and the app opens bookings a week ahead at 7 am, so the Tuesday swim lessons, which have eight places, usually fill within the first hour.
+'''
+kind = "metric"
+reason = "Each of the five similar-length sentences is one weekday session with its time and place; a removal-only pass could vary their lengths only by deleting a session or one of its details, and nothing in the run is filler to cut."
+evidence = [
+  {line = 3, quote = "The seniors' strength class runs at 9.30 on Mondays in the studio."},
+  {line = 3, quote = "Open court basketball runs in the hall on Fridays from 4 until 6."},
+]
+
+# ================================================================ REJECT: voice
+
+[[case]]
+id = "JR-2b-002"
+rule = "2b"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "bookshop newsletter; 'voice' used to excuse WARN-list words with no calibration section named"
+text = '''
+I've been running the bookshop's kids' reading hour for six years, and it's genuinely the best hour of my week.
+
+This term I'm particularly keen to try picture books with no words at all. It's a straightforward idea: the kids tell the story, and I just turn the pages.
+
+The first session was meaningfully different from a normal week. Two quiet kids talked more than I've ever heard them.
+'''
+kind = "voice"
+reason = "These words are how I actually talk, and regular readers of the newsletter know my voice."
+evidence = [
+  {line = 1, quote = "genuinely"},
+  {line = 3, quote = "particularly"},
+  {line = 3, quote = "straightforward"},
+  {line = 5, quote = "meaningfully"},
+]
+
+[[case]]
+id = "JR-7c-004"
+rule = "7c"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "repair café newsletter; 'voice' used to keep a 'not just X, it's Y' line"
+text = '''
+Our repair café runs on the second Saturday of the month at the community centre.
+
+It's not just about fixing toasters. It's about keeping things out of landfill and getting to know your neighbours.
+
+Last month the volunteers fixed 31 of the 44 items people brought in, mostly lamps and kettles.
+'''
+kind = "voice"
+reason = "Punchy contrast lines are part of my newsletter voice and give the piece some energy."
+evidence = [{line = 3, quote = "It's not just about fixing toasters. It's about keeping things out of landfill"}]
+
+[[case]]
+id = "JR-12-003"
+rule = "12"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "accounting firm blog; 'voice' used to keep a self-posed 'The upshot?' question"
+text = '''
+We trialled a four-day week at the practice from February to June.
+
+The upshot? Nobody missed a lodgement deadline, and two staff who'd been talking about leaving decided to stay.
+
+We've kept it for the admin team. The tax agents are back on five days during the July to October rush.
+'''
+kind = "voice"
+reason = "Asking the reader a quick question is part of the conversational voice this blog uses."
+evidence = [{line = 3, quote = "The upshot?"}]
+
+[[case]]
+id = "JR-23-001"
+rule = "23"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "bowls club notice; 'voice' (formal audience) used to excuse filler phrases"
+text = '''
+Members are reminded that the club rooms will be closed on Monday 6 April in order to allow the floors to be resurfaced.
+
+Due to the fact that the sealant needs 48 hours to cure, the bar will also be closed on Tuesday.
+
+In the event that the work runs over, the committee will email all members by Tuesday afternoon.
+'''
+kind = "voice"
+reason = "Most members are retirees who expect a formal register in club notices, so the formal wording suits the audience."
+evidence = [
+  {line = 1, quote = "in order to"},
+  {line = 3, quote = "Due to the fact that"},
+  {line = 5, quote = "In the event that"},
+]
+
+[[case]]
+id = "JR-5e-002"
+rule = "5e"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "local-history anecdote; three non-consecutive participial openers excused as 'storytelling voice'"
+text = '''
+## The night the hall flooded
+
+Arriving at the hall just after nine, the caretaker found water across the stage. He didn't wait. Wading to the switchboard, he cut the power before anyone else came in. The stage lights went dark. Calling the president from the car park, he said only that the piano was gone.
+
+It wasn't. The piano tuner dried it out over a month, and it's still there.
+'''
+kind = "voice"
+reason = "Opening with participles builds momentum in a story, which suits my storytelling voice."
+evidence = [
+  {line = 3, quote = "Arriving at the hall just after nine"},
+  {line = 3, quote = "Wading to the switchboard"},
+  {line = 3, quote = "Calling the president from the car park"},
+]
+
+# ================================================================ REJECT: quote
+
+[[case]]
+id = "JR-2b-003"
+rule = "2b"
+label = "reject"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "library maker-space post; 'quote' true of two WARN words, not the other two. Since 0.5.0 the lint counts 2 (no flag): JR only. Contrast: JR-2b-001"
+text = '''
+The library's new maker space opened last week, and the head librarian put it well at the launch: "We wanted a room that's genuinely useful. It's there particularly for kids without a workbench at home."
+
+Bookings are straightforward. You reserve the laser cutter or the 3D printer online, in two-hour blocks, and a volunteer shows you the safety steps on your first visit.
+
+It's a meaningful change for a branch that used to be mostly shelves.
+'''
+kind = "quote"
+reason = "The WARN words are in the head librarian's quoted words from the launch, not mine."
+evidence = [
+  {line = 1, quote = "genuinely"},
+  {line = 1, quote = "particularly"},
+  {line = 3, quote = "straightforward"},
+  {line = 5, quote = "meaningful"},
+]
+
+[[case]]
+id = "JR-12b-002"
+rule = "12b"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "café marketing tip; ghost citation claimed as a quotation but it's unquoted author prose. Contrast: JR-12b-001"
+text = '''
+If your café doesn't reply to reviews, you're missing an easy way to show people who's behind the counter.
+
+Research has found that most diners read the owner's replies before they book a table.
+
+So set aside ten minutes on Monday mornings to answer the week's reviews, good and bad.
+'''
+kind = "quote"
+reason = "This line is quoted from a hospitality industry survey."
+evidence = [{line = 3, quote = "Research has found that most diners read the owner's replies"}]
+
+[[case]]
+id = "JR-7c-005"
+rule = "7c"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "cycling club fees post; author quotes their own line, not third-party text. Contrast: JR-7c-001"
+text = '''
+New riders often ask why the club charges $120 a year when the rides themselves are free.
+
+As I tell everyone at the first coffee stop, "it's not a fee, it's your share of the insurance."
+
+The insurance covers every member on every club ride, and it's about $95 of the $120. The rest pays for the first-aid kits and the end-of-year barbecue.
+'''
+kind = "quote"
+reason = "The contrast sits inside quotation marks, so it's a quotation rather than the article's own prose."
+evidence = [{line = 3, quote = "it's not a fee, it's your share of the insurance"}]
+
+# ================================================================ REJECT: load_bearing
+
+[[case]]
+id = "JR-7c-006"
+rule = "7c"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "allotment newsletter; load_bearing used to keep a negative parallelism whose fact survives without the frame"
+text = '''
+A lot of new allotment holders think compost is just rubbish left to rot.
+
+Compost isn't just waste, it's the cheapest fertiliser you'll ever buy.
+
+Our bays take green waste on the left and dry leaves on the right. Turn the pile every fortnight and it's ready in about three months.
+'''
+kind = "load_bearing"
+reason = "The contrast corrects a misconception new members actually hold, so the reader needs it."
+evidence = [{line = 3, quote = "Compost isn't just waste, it's the cheapest fertiliser"}]
+
+[[case]]
+id = "JR-23-002"
+rule = "23"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "trailer-hire explainer in the author's own words; filler phrases defended as precise"
+text = '''
+The trailer hire agreement runs to four pages. Here's what the three conditions that catch people out mean in plain terms.
+
+In the event that the trailer comes back late, you pay for another day.
+The hirer has the ability to cancel for free up to 48 hours before pickup.
+Due to the fact that the insurance covers sealed roads only, any damage on gravel is yours to pay for.
+'''
+kind = "load_bearing"
+reason = "In a hire agreement the exact conditions matter, so the full wording is needed for readers to understand them."
+evidence = [
+  {line = 3, quote = "In the event that"},
+  {line = 4, quote = "has the ability to"},
+  {line = 5, quote = "Due to the fact that"},
+]
+
+[[case]]
+id = "JR-12c-001"
+rule = "12c"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "local news on a 400 m bike lane; load_bearing used to keep era-defining framing"
+text = '''
+From 1 May the council will paint a bike lane on the 400-metre stretch of Station Street between the school and the shops.
+
+This reflects a fundamental shift in how our suburb thinks about getting around, and it will define the next era of local transport.
+
+Parking on that stretch goes from 22 spaces to 14. The council's notice says the loading zone outside the bakery stays.
+'''
+kind = "load_bearing"
+reason = "The sentence tells readers why the change matters, which they need to understand its importance."
+evidence = [{line = 3, quote = "This reflects a fundamental shift in how our suburb thinks about getting around"}]
+
+[[case]]
+id = "JR-12-004"
+rule = "12"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "gym membership page; reason true of one 'while' clause (price gap) but not the empty second one. Contrast: JR-12-001"
+text = '''
+## Choosing a membership
+
+While the off-peak pass is $14 a week cheaper, it only covers 9 am to 4 pm on weekdays, so it suits shift workers and retirees.
+
+While both passes have their merits, the full pass is the one most members end up on.
+
+You can switch between them once a year without a fee.
+'''
+kind = "load_bearing"
+reason = "Each 'while' clause gives readers information they need to choose between the passes: the price gap and the hours."
+evidence = [
+  {line = 3, quote = "While the off-peak pass is $14 a week cheaper"},
+  {line = 5, quote = "While both passes have their merits"},
+]
+
+# ================================================================ REJECT: false_positive
+
+[[case]]
+id = "JR-12-005"
+rule = "12"
+label = "reject"
+content_type = "article"
+source = "owner"
+status = "confirmed"
+origin = "bakery update; 'The result?' claimed as a genuine reader question, which the 12 entry names as a fail"
+text = '''
+We moved the bakery's ordering from phone calls to a simple online form in March.
+
+The result? Fewer wrong orders and a lot less time on the phone at 6 am.
+
+Wholesale customers still ring for changes after 4 pm, and that's fine.
+'''
+kind = "false_positive"
+reason = "This is a genuine question readers would ask after hearing about the change, which the rule allows."
+evidence = [{line = 3, quote = "The result?"}]
+
+[[case]]
+id = "JR-16-002"
+rule = "16"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "market stallholder workshop notice; audience gesture 'from X to Y' claimed as a real range. Contrast: JR-16-001"
+text = '''
+The workshop is for anyone who sells at weekend markets, from first-time stallholders to seasoned traders.
+
+We'll cover card readers, pricing your stock, and what to do when it rains. Bring a laptop if you have one.
+
+It's two hours on Thursday 12 March at the town hall, and it's free for registered stallholders.
+'''
+kind = "false_positive"
+reason = "This names a real range of people: stallholders at both ends of their experience."
+evidence = [{line = 1, quote = "from first-time stallholders to seasoned traders"}]
+
+[[case]]
+id = "JR-5e-003"
+rule = "5e"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "heritage walk guide; participial openers wrongly called gerund subjects. Contrast: JR-5e-001"
+text = '''
+## Walking the old tram route
+
+Starting at the depot gates, the route follows the old track bed east. The rails were lifted in 1958. Passing the brickworks chimney, you'll see where the double track narrowed to one. Crossing the creek on the footbridge, look left for the line's old embankment.
+
+The walk is about 4 km and flat the whole way.
+'''
+kind = "false_positive"
+reason = "These -ing words are gerund subjects, which the 5e entry says don't count as openers."
+evidence = [
+  {line = 3, quote = "Starting at the depot gates"},
+  {line = 3, quote = "Passing the brickworks chimney"},
+  {line = 3, quote = "Crossing the creek on the footbridge"},
+]
+
+[[case]]
+id = "JR-27-002"
+rule = "27"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "physio marketing tip; marketing-register 'optimise your presence' claimed as technical. Contrast: JR-27-001"
+text = '''
+Most physios I talk to post on Instagram when they remember to, which is fine.
+
+If you want to optimise your social presence, post one short clip a week answering a question patients ask in the clinic.
+
+Keep it under a minute and film it on your phone. Nobody expects studio lighting from a physio.
+'''
+kind = "false_positive"
+reason = "'Optimise' is used in its technical sense here, meaning improving a measurable channel."
+evidence = [{line = 3, quote = "optimise your social presence"}]
+
+[[case]]
+id = "JR-21-002"
+rule = "21"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "council app post; one app renamed app/platform/tool/solution, defended as different components. Contrast: JR-21-001"
+text = '''
+Our council has a free app for reporting potholes, dumped rubbish and broken streetlights.
+
+The app lets you drop a pin and attach a photo. The platform then sends the report to the right crew, and the tool texts you when the job's closed. Residents who've tried the solution say it's quicker than ringing.
+
+It's on both app stores; search for the council's name.
+'''
+kind = "false_positive"
+reason = "Each name refers to a different part of the service: the phone app, the back-end system and the SMS notifications."
+evidence = [
+  {line = 3, quote = "The platform then sends the report"},
+  {line = 3, quote = "the tool texts you"},
+  {line = 3, quote = "Residents who've tried the solution"},
+]
+
+# ================================================================ REJECT: format
+
+[[case]]
+id = "JR-12e-002"
+rule = "12e"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "farmers' market post; bold-first argument bullets defended as list format. Contrast: JR-12e-001 (glossary)"
+text = '''
+## Why the market is moving to Sundays
+
+- **Foot traffic:** It's higher on Sundays. The Saturday sports crowd went straight past us.
+- **Stallholders:** They asked for it. Twenty-two of thirty said Sunday suited them better.
+- **Parking:** It's free. The school lets us use it on Sundays at no charge.
+
+The first Sunday market is on 3 May.
+'''
+kind = "format"
+reason = "It's a bulleted list, and bold lead-ins are standard formatting for lists."
+evidence = [
+  {line = 3, quote = "**Foot traffic:**"},
+  {line = 4, quote = "**Stallholders:**"},
+  {line = 5, quote = "**Parking:**"},
+]
+
+[[case]]
+id = "JR-7d-002"
+rule = "7d"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "personal blog narrative; staccato run defended as Q&A format, but the section is prose. Contrast: JR-7d-001"
+text = '''
+## Why I switched to a standing desk
+
+My back hurt. Sitting made it worse. I tried a cushion first. That didn't help. Then I borrowed a friend's standing desk for a week. By Friday the ache was gone. I ordered one that night.
+
+It cost $640, and I still sit for about half the day.
+'''
+kind = "format"
+reason = "This section is in a short question-and-answer format, where brief sentences are expected."
+evidence = [{line = 3, quote = "By Friday the ache was gone."}]
+
+# ================================================================ REJECT: metric
+
+[[case]]
+id = "JR-12d-002"
+rule = "12d"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "community garden open-day post; generic metric reason. Contrast: JR-12d-001"
+text = '''
+The community garden's open day is on Saturday 18 April, from 10 until 2. Everyone is welcome, and it's a great chance to see what the members have been growing over the summer and autumn.
+
+There will be a plant stall near the front gate selling seedlings and cuttings. Prices start at $2, and all the money goes back into the garden for tools, seed and the water bill each year.
+
+Kids can plant a bean in a recycled pot to take home. The volunteers running the table will show them how to water it, and there will be stickers for anyone who wants one at the end.
+
+Tea and scones will be served in the shed from 11 o'clock. If you'd like to bake something for the table, let the coordinator know by the Wednesday before, so we can plan the space.
+'''
+kind = "metric"
+reason = "The paragraph lengths are a natural result of the content and don't need changing."
+evidence = [{line = 1, quote = "The community garden's open day is on Saturday 18 April"}]
+
+[[case]]
+id = "JR-7-002"
+rule = "7"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "zoo visitor page; reason says every sentence is a needed fact, but the run opens with a deletable filler line. Contrast: JR-7-001"
+text = '''
+## Getting there
+
+This is something a lot of visitors ask us about. The number 19 tram stops right outside the main gate. The car park opens at 8 and costs $6 a day. Bike racks are next to the ticket office entrance. The nearest train station is a twelve-minute walk away.
+
+Accessible parking bays are at the north end of the car park, closest to the lift, and you'll need to display a valid permit on the dashboard the whole time you're parked there.
+'''
+kind = "metric"
+reason = "Every sentence in the run carries a travel fact visitors need, so a removal-only pass can't vary the lengths without dropping one."
+evidence = [
+  {line = 3, quote = "This is something a lot of visitors ask us about."},
+  {line = 3, quote = "The nearest train station is a twelve-minute walk away."},
+]
+
+[[case]]
+id = "JR-12f-002"
+rule = "12f"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "worm-farm guide (~300 words); reason blames topic words but the repeats are generic intensifiers. Contrast: JR-12f-001"
+text = '''
+Worm farms are a really great way to deal with kitchen scraps, and they're really easy to set up. You don't need much space, and the worms do most of the work for you. A lot of people think they're messy or smelly, but if you get a few things right they're really not a problem at all.
+
+The first thing is the bedding. Shredded newspaper and a bit of coir work really well, and it's a great idea to soak them first so they're damp but not dripping. The worms need it moist, so this is one of the most important things to get right early on.
+
+The next thing is what you feed them. Fruit and vegie scraps are great, and so are coffee grounds and tea leaves. Things to avoid are citrus, onion, meat and dairy. Chopping scraps smaller is a really good idea too, because the worms get through them much faster that way.
+
+Where you put the farm is another thing that really matters. Somewhere shady is great, because worms don't like heat, and a spot near the back door makes it easy to empty the scrap bucket. In summer, a wet hessian bag over the top is a great trick for keeping things cool.
+
+After a couple of months you'll have worm castings and liquid you can use on the garden. Both are great for plants, and the liquid is really easy to use: dilute it with water until it looks like weak tea. It's a great little system once it's going, and the worms really don't need much from you.
+
+If things go wrong, it's usually too wet or too much food. Add dry newspaper, feed less for a week, and things usually settle down. It's really not a big thing, and it's a really great thing to get the kids to help with, because it's really easy and it's really a great thing for the garden.
+'''
+kind = "metric"
+reason = "The low variety comes from topic words a worm-farm guide has to repeat, like worms, scraps and bedding; changing them would only be synonym cycling."
+evidence = [
+  {line = 1, quote = "really great way"},
+  {line = 3, quote = "work really well"},
+  {line = 7, quote = "a great trick for keeping things cool"},
+]
+
+[[case]]
+id = "JR-25-001"
+rule = "25"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "restaurant update; 'metric' kind claimed for vague quantifiers, which aren't an article-level metric"
+text = '''
+The menu has changed a lot since we took over the kitchen in January.
+
+We now buy from various growers around the valley, and there are numerous dishes that change with the season. A variety of local wines sits alongside the beers on tap.
+
+Bookings are open for Friday and Saturday nights. Walk-ins are welcome at lunch.
+'''
+kind = "metric"
+reason = "Vague quantifiers are counted across the whole article, so this is an article-level metric that a removal-only pass can't move without losing content."
+evidence = [
+  {line = 3, quote = "various growers"},
+  {line = 3, quote = "numerous dishes"},
+  {line = 3, quote = "A variety of local wines"},
+]

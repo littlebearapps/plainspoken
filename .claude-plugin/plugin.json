@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "plainspoken",
+  "displayName": "plainspoken",
+  "version": "0.5.0",
+  "description": "Write like a person, not an AI: anti-AI-tells engine with isolated judges, voice profiles, plain language, claims integrity and built-in kaizen.",
+  "author": {
+    "name": "Little Bear Apps",
+    "email": "hello@littlebearapps.com"
+  },
+  "homepage": "https://github.com/littlebearapps/plainspoken",
+  "repository": "https://github.com/littlebearapps/plainspoken",
+  "license": "MIT",
+  "keywords": [
+    "writing",
+    "anti-ai",
+    "voice",
+    "plain-language",
+    "editing",
+    "kaizen"
+  ],
+  "userConfig": {
+    "profile": {
+      "type": "string",
+      "title": "Voice profile",
+      "description": "Profile name or path to a profile TOML. \"default\" uses the shipped default profile.",
+      "default": "default"
+    },
+    "locale": {
+      "type": "string",
+      "title": "Spelling locale",
+      "description": "English variant used for spelling and word lists.",
+      "options": [
+        "en-AU",
+        "en-GB",
+        "en-US"
+      ],
+      "default": "en-AU"
+    },
+    "targets": {
+      "type": "string",
+      "title": "Files to lint",
+      "description": "Globs the lint-watch hook checks after edits.",
+      "multiple": true,
+      "default": [
+        "**/*.md"
+      ]
+    },
+    "strictness": {
+      "type": "string",
+      "title": "Gate strictness",
+      "description": "watch = report only, warn = warn before publish, block = block publish without a current PASS.",
+      "options": [
+        "watch",
+        "warn",
+        "block"
+      ],
+      "default": "watch"
+    },
+    "ledger_excerpts": {
+      "type": "boolean",
+      "title": "Store excerpts in the kaizen ledger",
+      "description": "Off keeps raw text out of the ledger (hashes only).",
+      "default": false
+    },
+    "kaizen_adapter": {
+      "type": "string",
+      "title": "Where kaizen proposals go",
+      "description": "file = markdown in .plainspoken/, github = issues, trello = cards (project config supplies IDs).",
+      "options": [
+        "file",
+        "github",
+        "trello"
+      ],
+      "default": "file"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+First pass:
+
+```json
+{"article": "article", "article_sha256": "{{article_sha256}}", "ledger_sha256": "{{ledger_sha256}}", "matrix_sha256": "{{matrix_sha256}}", "result": "PASS", "findings": []}
+```
+
+Second pass:
+
+```json
+{"article": "article", "article_sha256": "{{article_sha256}}", "ledger_sha256": "{{ledger_sha256}}", "matrix_sha256": "{{matrix_sha256}}", "result": "BLOCKED", "findings": []}
+```

@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/littlebearapps/plainspoken/data/schemas/reader-value.schema.json",
+  "title": "Reader-value contract",
+  "description": "The defined human benefit an article promises before drafting and must deliver before it ships. It lives in a fenced block under '## Reader Value Contract' in any markdown file, or in a standalone .toml or .json file. The sales CTA NEVER counts as reader value. Procedural fields are required only for procedural types: history and commentary aren't forced into steps. Generalised from a blog workspace's contract: the field set is unchanged; the descriptions no longer name particular sites.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "type",
+    "primary_reader",
+    "problem",
+    "promised_outcome",
+    "original_value",
+    "cta_excluded_confirmed"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "type": {
+      "enum": [
+        "task",
+        "decision",
+        "self_check",
+        "debugging_path",
+        "implementation",
+        "evidence_trail",
+        "historical_interpretation"
+      ],
+      "description": "Practical guides favour task/decision/self_check; technical posts favour implementation/debugging_path; history favours evidence_trail/historical_interpretation."
+    },
+    "primary_reader": {
+      "type": "string",
+      "minLength": 5
+    },
+    "problem": {
+      "type": "string",
+      "minLength": 5,
+      "description": "The reader's problem or question, in their words."
+    },
+    "decision": {
+      "type": "string",
+      "description": "The decision the article helps the reader make (required for type=decision)."
+    },
+    "promised_outcome": {
+      "type": "string",
+      "minLength": 5,
+      "description": "What the reader has/knows/can do after reading. Never a CTA."
+    },
+    "first_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "object",
+        "location"
+      ],
+      "properties": {
+        "verb": {
+          "type": "string",
+          "minLength": 2
+        },
+        "object": {
+          "type": "string",
+          "minLength": 2
+        },
+        "location": {
+          "type": "string",
+          "minLength": 2
+        }
+      }
+    },
+    "effort": {
+      "type": "string",
+      "description": "Honest effort/time estimate. If stated as a specific figure it is a claim — ledger it where material."
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "success_signal": {
+      "type": "string",
+      "description": "How the reader knows it worked / expected output."
+    },
+    "stop_condition": {
+      "type": "string",
+      "description": "When to stop, skip, or seek help."
+    },
+    "original_value": {
+      "type": "string",
+      "minLength": 5,
+      "description": "The author's real, specific contribution, not 'unique perspective'."
+    },
+    "evidence_trail": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The sources, places or questions the piece equips the reader to explore."
+    },
+    "cta_excluded_confirmed": {
+      "const": true,
+      "description": "Assertion that the promised outcome and value calculation exclude every sales CTA."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "task",
+              "implementation",
+              "debugging_path",
+              "self_check"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "first_action",
+          "effort",
+          "success_signal",
+          "stop_condition"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "decision"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "decision"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "evidence_trail",
+              "historical_interpretation"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "evidence_trail"
+        ]
+      }
+    }
+  ]
+}

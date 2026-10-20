@@ -1,0 +1,17 @@
+# plainspoken leak guard: the public part of the denylist (python3 -m scripts.dev.leak_guard).
+# Private and client names live outside the repo, in the file named by PLAINSPOKEN_LEAK_LIST (locally
+# ~/.config/plainspoken/leak-denylist.txt, mode 600; in CI the PLAINSPOKEN_LEAK_LIST secret). Never add one here.
+#
+# Line formats (both files):
+#   # ...                      a comment; blank lines are ignored
+#   regex:<pattern>            a Python regex, case-sensitive
+#   hmac:<words>:<hex>         HMAC-SHA256 of the casefolded, whitespace-collapsed name, keyed by
+#                              PLAINSPOKEN_LEAK_KEY or the git-ignored .leak-guard-key (make one with --hash -)
+#   sha256:<words>:<hex>       the older unkeyed hash (turn it into hmac: with --convert -)
+#   hmac-key-check:<hex>       catches a wrong or old key; needed in whichever file has hmac: lines
+#   anything else              a literal, case-insensitive, any run of whitespace between its words
+#
+# Only generic patterns that name nothing belong here.
+
+# A 24-hex object ID (a git SHA is 40 hex, so it doesn't match).
+regex:\b[0-9a-f]{24}\b

@@ -1,0 +1,82 @@
+# The model panel for `plainspoken eval` (Phase 6): the judges measured against the golden set, and the blind
+# readers. Models are configuration, not code: slugs and prices drift, so check this file against the gateway's
+# free catalogue with `plainspoken eval panel check` before a run, and update it when that reports a problem.
+#
+# Prices are US$ per million tokens (the catalogue's per-token price × 1,000,000), taken from the OpenRouter
+# catalogue on 2026-10-17. `claude-cli` models run on the Claude subscription through `claude -p`: nothing is billed,
+# so their prices are 0. OpenRouter models are billed: a run needs --yes and stays under --max-cost-usd.
+# A model may set its own `transport`; the rest use the gateway's.
+#
+# The panel (chosen 2026-10-17): one model per family, none from Anthropic, picked for writing quality per dollar on
+# the EQ-Bench creative-writing and LMArena creative-writing leaderboards. glm, openai, gemini, deepseek and glimmer
+# are the default five; grok is an optional sixth for a stronger check. Name the ones a run uses with --models.
+
+max_out_tokens = 6000  # room for a reasoning model to think, then answer (the 2026-10-17 pilot: DeepSeek, Qwen and
+                       # Muse Glimmer spent all of 2,000 thinking on a JR prompt); also the estimate's output size.
+                       # Billing follows the tokens a model actually writes, not this ceiling.
+
+[gateway]
+transport = "openrouter"
+base_url = "https://openrouter.ai/api/v1"
+key_env = "OPENROUTER_API_KEY"
+# Privacy: the blind test sends the author's own writing. "deny" routes only to providers that don't store prompts;
+# zdr = true further limits routing to zero-data-retention endpoints. A model with no such endpoint fails its calls
+# with the gateway's message, and the run records them as errors.
+data_collection = "deny"
+zdr = true
+
+[[model]]
+name = "claude-opus"
+vendor = "Anthropic"
+transport = "claude-cli"
+model = "claude-opus-5-5"
+price_in = 0
+price_out = 0
+
+[[model]]
+name = "glm"
+vendor = "Z.ai"
+model = "z-ai/glm-5.3"
+price_in = 0.079
+price_out = 4.8
+
+[[model]]
+name = "openai"
+vendor = "OpenAI"
+model = "openai/gpt-6-luna"
+price_in = 0.1
+price_out = 0.5
+# The owner's account enforces zero retention, so OpenAI's only route is Azure, which answers every JR prompt with a
+# canned refusal (2026-10-17 run: 41 of 42). OpenAI therefore judges J1-J4 only (owner's decision, 2026-10-17).
+# zdr = false asks for the normal route where the account allows it (no training; short retention).
+# TODO when it appears on OpenRouter: switch to GPT-6.1 Luna (owner, 2026-10-17); `eval panel check` won't flag it.
+zdr = false
+groups = ["J1", "J2", "J3", "J4"]
+
+[[model]]
+name = "gemini"
+vendor = "Google"
+model = "google/gemini-3.8-flash"
+price_in = 0.825
+price_out = 4.125
+
+[[model]]
+name = "deepseek"
+vendor = "DeepSeek"
+model = "deepseek/deepseek-v4.1-flash"
+price_in = 0.032
+price_out = 0.144
+
+[[model]]
+name = "glimmer"
+vendor = "Meta"
+model = "meta/muse-glimmer-30b"  # open weights: served by third-party hosts (DeepInfra, Together), not by Meta
+price_in = 0.3
+price_out = 1.2
+
+[[model]]
+name = "grok"
+vendor = "xAI"
+model = "x-ai/grok-4.7"
+price_in = 2
+price_out = 6

@@ -1,0 +1,123 @@
+# A voice profile. Copy this file to .plainspoken/profiles/<name>.toml and edit the copy, or run
+# /plainspoken:voice build with five to ten of your own writing samples and let it fill this in.
+# Switch it on with [engine] profile = "<name>" in .plainspoken/config.toml.
+#
+# Every value below is an invented example (a volunteer who writes a community-garden newsletter).
+# Each key says who reads it: "drafting" (write, adapt, voice apply), "voice check" (voice check),
+# "register-check", or "checker" (the lint and judges, which enforce it). Skills see a key only if the CLI prints it.
+# Names you never want in print go in [lexicon] extra_bans: the checker enforces that list.
+
+[profile]
+name = "my-voice"          # checker: names the profile in reports. Lowercase letters, digits, - and _.
+locale = "en-AU"           # checker: spelling and date conventions. Must match a file in data/locales.
+flags = []                 # checker: "narrative" relaxes the sentence-rhythm rules for story writing.
+
+[identity]
+pronoun = "I"   # drafting, voice check, register-check: "I", "we" or "either".
+writer = "A volunteer who runs the community garden newsletter."  # drafting, voice check: who is speaking.
+
+[voice]
+# drafting, voice check: things the author does. Each one should point at a sample.
+principles = [
+  "Names the plant, the bed and the date.",
+  "Says what went wrong before what went well.",
+  "Gives one job per paragraph.",
+]
+opinion_pattern = "States the view first, then the reason, then admits what might change it."  # drafting, voice check
+humour = "dry, sparing"    # drafting, voice check
+emoji_max = 0              # drafting, voice check
+exclamation_max = 1        # drafting, voice check
+
+[voice.tone]
+# drafting, voice check: 0 to 1 on each scale.
+formal_casual = 0.7
+serious_funny = 0.3
+reserved_enthusiastic = 0.5
+
+[voice.tone_notes]
+# drafting, voice check: one line per scale above, with the sample that shows it.
+formal_casual = "Writes like a note on the shed door (March newsletter, the roster paragraph)."
+serious_funny = "Jokes once per piece, usually about the compost."
+reserved_enthusiastic = "Warm about people, flat about weather."
+
+[rhythm]
+# drafting, voice check: measured from your samples by /plainspoken:voice build (run.py voice-stats). A guide, not a target.
+sentence_mean = 14.2
+sentence_sd = 7.5
+burstiness = 0.5
+long_share = 0.12
+short_share = 0.28
+notes = "Short answers, then one longer sentence that walks through the job."
+
+[reader]
+# drafting, voice check, plain-language: who reads it. Fill this from what you know of your readers, not a guess.
+persona = "a neighbour who gardens on weekends and has never read a soil report"  # register-check reads this too.
+comprehension_floor = 7    # drafting: the school year a reader needs to follow the text (1 to 12).
+# glossary = "glossary.md"  # plain-language: a file next to this profile with plain-word swaps for jargon.
+knows = ["seasons", "watering"]   # not read by any skill yet (v0.2): what the reader already knows.
+
+[blends]
+# drafting: "answer-first" or "narrative", per kind of writing (article, page, email, social).
+article = "answer-first"
+social = "narrative"
+
+[formatting]
+# drafting: one line per kind of writing.
+email = "Plain text. One ask. No bullet lists."
+social = "No hashtags. One link at most."
+
+[avoid]
+# topics: drafting, voice check. moves: what the author never does; printed for every skill, used by the voice check.
+topics = ["local council politics"]
+moves = [
+  "Opens with a dictionary definition.",
+  "Ends with a call to action when the piece has nothing to ask.",
+]
+
+[lexicon]
+# starters, fillers, closers: drafting and voice check; use words you saw at least twice in your samples.
+starters = ["Right,"]
+fillers = ["mind you"]
+closers = ["See you at the working bee."]
+# extra_bans: checker. Words or names you never want in print, matched as whole words.
+extra_bans = []
+
+[[registers]]
+# register-check: a way of writing for one setting (email to members, notice board, social). Its pronoun and
+# formality reach the register-check checklist (--register email); drafting doesn't see registers in v0.2.
+name = "email"
+pronoun = "I"
+formality = "casual-professional"
+notes = "Sign off with a first name."
+
+[[anchors]]
+# drafting, voice check: passages in your own voice, quoted verbatim. Tag each by section type:
+# opening, explainer, opinion, story, list-intro, closing. Use text, or path + lines for a file in the project.
+id = "opening-1"
+tags = ["opening"]
+text = "The tomatoes in bed four are finished, and I should have pulled them a fortnight ago."
+source = "newsletter, March"
+
+[[anchors]]
+id = "explainer-1"
+tags = ["explainer"]
+text = "Mulch does one job: it keeps the water in the soil. Lay it two fingers deep and keep it off the stems."
+source = "newsletter, May"
+
+# [thresholds]
+# checker: override a numeric limit for this profile, by the name the ruleset uses. Leave empty to keep the defaults.
+
+# [document]
+# checker: how documents are read. These are the defaults.
+# visible_frontmatter_keys = ["title", "description"]
+# faq_frontmatter_key = ""
+# resource_list_headings = []
+# long_sentence_headings = []
+
+# [rules]
+# checker: rule ids to switch off for this profile.
+# disabled = []
+
+# [judges]
+# checker: a notes file (next to this profile) the judges read. The file must exist before you switch this on.
+# calibration_notes = "calibration.md"

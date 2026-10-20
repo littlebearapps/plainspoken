@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {"matcher": "startup|resume|clear|compact", "hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session_brief.py"], "timeout": 5}
+      ]}
+    ],
+    "SubagentStart": [
+      {"hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session_brief.py"], "timeout": 5}
+      ]}
+    ],
+    "PostToolUse": [
+      {"matcher": "Write|Edit", "hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/lint_watch.py"], "timeout": 15},
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/integrity.py"], "timeout": 15}
+      ]},
+      {"matcher": "SubagentHandback", "hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/kaizen_backstop.py"], "timeout": 10}
+      ]}
+    ],
+    "SubagentStop": [
+      {"hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/kaizen_backstop.py"], "timeout": 10}
+      ]}
+    ],
+    "Stop": [
+      {"hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/kaizen_nudge.py"], "timeout": 10}
+      ]}
+    ],
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/publish_gate.py"], "timeout": 15}
+      ]}
+    ]
+  }
+}

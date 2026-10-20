@@ -1,0 +1,1031 @@
+# plainspoken ruleset. Bumped only by `kaizen apply` with a recorded human approval.
+# No human-readable rule reference ships yet: guides/ holds no per-rule text, and Phase 6 added none.
+# Ported from the author's earlier private ruleset (v4).
+version = "4.3.0"
+
+[thresholds."default"]
+em_dash_max = 3
+claude_warn_total = 4
+conversational_warn = 3
+conversational_block = 6
+however_max = 2
+transition_total_max = 8
+transition_single_max = 3
+uniform_sentence_run = 5
+uniform_tolerance = 0.2
+staccato_long_sentence = 25
+staccato_short_run = 5
+staccato_short_len = 12
+staccato_faq_short_run = 7
+paragraph_uniform_run = 4
+paragraph_uniform_faq_run = 4
+bold_bullet_run = 3
+ing_opener_section_warn = 3
+ing_opener_consecutive_block = 3
+trailing_ing_section_block = 2
+filler_warn = 3
+vague_quantifier_warn = 3
+ttr_min = 0.4
+mattr_min = 0.46
+mattr_blocking = false
+burstiness_min = 0.3
+opening_top3_max = 0.25
+capsule_transition_max = 0.5
+paragraph_sd_min = 25
+mattr_window = 500
+repeat_min = 5
+repeat_top = 8
+triplets_per_1000w_candidate = 3
+bold_spans_per_100w_warn = 1.5
+narrative_paragraph_short = 20
+narrative_paragraph_long = 80
+stock_significance_warn = 2
+
+# Short-form social posts (anti-AI tells severity table, "Social" column): the numeric caps only.
+# Severity changes for social (BLOCK vs WARN) aren't modelled; adding them needs a kaizen proposal.
+[thresholds.social]
+em_dash_max = 1
+transition_total_max = 3
+transition_single_max = 2
+conversational_block = 2
+uniform_sentence_run = 3
+staccato_short_run = 4
+staccato_short_len = 8
+
+[[rules]]
+id = "1"
+name = "Em dashes"
+method = "lint"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "2"
+name = "Hard-ban vocabulary"
+method = "lint+judge"
+group = "J3"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "2b"
+name = "Claude WARN vocabulary"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "3"
+name = "Markdown in short-form social"
+method = "n/a"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "4a"
+name = "Academic transitions"
+method = "lint"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "4a2"
+name = "Conversational transitions"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "4b"
+name = "Transition density"
+method = "lint"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "5b"
+name = "Meta-commentary"
+method = "lint+judge"
+group = "J1"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "5c"
+name = "Copula avoidance"
+method = "lint+judge"
+group = "J3"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "5d"
+name = "Scope disclaimers"
+method = "lint+judge"
+group = "J1"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "5e"
+name = "-ing sentence openers"
+method = "lint+judge"
+group = "J4"
+severity = "WARN"
+judge_may_block = true
+era = "pre-2026"
+
+[[rules]]
+id = "6"
+name = "Rule of three"
+method = "lint+judge"
+group = "J2"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "7"
+name = "Uniform sentence length"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "7b"
+name = "Press-release opener"
+method = "lint+judge"
+group = "J2"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "7c"
+name = "Parallel constructions"
+method = "lint+judge"
+group = "J2"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "7d"
+name = "Staccato rhythm"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "8"
+name = "Sycophancy"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "9"
+name = "Zero informality"
+method = "judge"
+group = "J4"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "10"
+name = "Hedging everything"
+method = "lint+judge"
+group = "J3"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "11"
+name = "Unsolicited summary"
+method = "lint+judge"
+group = "J1"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "12"
+name = "Compulsive balance / rhetorical Q"
+method = "lint+judge"
+group = "J2"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "12b"
+name = "Ghost citations"
+method = "lint+judge"
+group = "J3"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "12c"
+name = "Stakes inflation"
+method = "lint+judge"
+group = "J3"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "12d"
+name = "Uniform paragraph length"
+method = "lint"
+severity = "WARN"
+content_types = ["article"]
+era = "pre-2026"
+
+[[rules]]
+id = "12e"
+name = "Bold-first bullets"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "12f"
+name = "Quantified slop metrics"
+method = "lint"
+severity = "BLOCK"
+content_types = ["article"]
+era = "pre-2026"
+
+[[rules]]
+id = "13"
+name = "Title Case headings"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "14"
+name = "Stock filler phrases"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "15"
+name = "Contraction avoidance"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "16"
+name = "From X to Y ranges"
+method = "lint+judge"
+group = "J2"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "17"
+name = "Patronising analogies"
+method = "judge"
+group = "J3"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "18"
+name = "Conclusion recycling"
+method = "judge"
+group = "J1"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "19"
+name = "Trailing -ing fake depth"
+method = "lint+judge"
+group = "J4"
+severity = "BLOCK"
+judge_may_block = true
+era = "pre-2026"
+
+[[rules]]
+id = "20"
+name = "Knowledge-cutoff / chatbot artefacts"
+method = "lint"
+severity = "BLOCK"
+era = "pre-2026"
+
+[[rules]]
+id = "21"
+name = "Synonym cycling"
+method = "judge"
+group = "J2"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "22"
+name = "Challenges / Future outlook"
+method = "lint+judge"
+group = "J2"
+severity = "WARN"
+judge_may_block = true
+content_types = ["article"]
+era = "pre-2026"
+
+[[rules]]
+id = "23"
+name = "Filler phrases"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "24"
+name = "Typography tells"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "25"
+name = "Vague quantifiers"
+method = "lint"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "26"
+name = "Announcement openers"
+method = "lint+judge"
+group = "J1"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "27"
+name = "Marketing-register optimise"
+method = "lint+judge"
+group = "J3"
+severity = "WARN"
+era = "pre-2026"
+
+[[rules]]
+id = "HM"
+name = "Human writing markers"
+method = "lint"
+severity = "WARN"
+content_types = ["article"]
+era = "pre-2026"
+
+[[rules]]
+id = "PB"
+name = "Profile ban list"
+method = "lint"
+severity = "BLOCK"
+requires = "lexicon:extra_bans"
+era = "pre-2026"
+
+[[rules]]
+id = "NR-1"
+name = "Narrative em-dash cap"
+method = "lint"
+severity = "BLOCK"
+requires = "flag:narrative"
+era = "pre-2026"
+
+[[rules]]
+id = "NR-2"
+name = "Narrative staccato relaxation"
+method = "lint"
+severity = "WARN"
+requires = "flag:narrative"
+era = "pre-2026"
+
+[[rules]]
+id = "NR-3"
+name = "Narrative proper-noun density"
+method = "judge"
+group = "J4"
+severity = "WARN"
+requires = "flag:narrative"
+era = "pre-2026"
+
+[[rules]]
+id = "NR-4"
+name = "Narrative long sentences protected"
+method = "judge"
+group = "J4"
+severity = "WARN"
+requires = "flag:narrative"
+era = "pre-2026"
+
+[[rules]]
+id = "NR-5"
+name = "Narrative paragraph variation"
+method = "lint"
+severity = "WARN"
+requires = "flag:narrative"
+era = "pre-2026"
+
+[[rules]]
+id = "NR-6"
+name = "Narrative opinion delivery"
+method = "lint+judge"
+group = "J4"
+severity = "WARN"
+requires = "flag:narrative"
+era = "pre-2026"
+
+[[rules]]
+id = "28"
+name = "Salience flags"
+method = "lint"
+severity = "WARN"
+status = "shadow"
+era = "2026"
+models = ["claude-opus-5.5"]
+source = "Arize, 2026-09-29 (vendor post, n=80): salience flags among the moves readers flag most"
+
+[[rules]]
+id = "29"
+name = "Sincerity markers"
+method = "lint"
+severity = "WARN"
+status = "shadow"
+era = "2026"
+source = "plainspoken research update 2026-10-10: 'honest answer' as a current-model tell"
+
+[[rules]]
+id = "30"
+name = "Signposting openers"
+method = "lint"
+severity = "WARN"
+status = "shadow"
+era = "2026"
+source = "Arize, 2026-09-29 (vendor post, n=80): signposts"
+
+[[rules]]
+id = "31"
+name = "Gotcha framing"
+method = "lint"
+severity = "WARN"
+status = "shadow"
+era = "2026"
+source = "Arize, 2026-09-29 (vendor post, n=80): gotcha framing"
+
+[[rules]]
+id = "32"
+name = "Newer model-era words"
+method = "lint"
+severity = "WARN"
+status = "shadow"
+era = "2026"
+models = ["claude-opus-5.5", "gpt-6"]
+source = "Graphite 2026-10-01 ('can help you' 8x in Opus 5.5); Wikipedia 'Signs of AI writing' oldid 1379367647"
+
+[[rules]]
+id = "33"
+name = "Stock significance phrases"
+method = "lint"
+severity = "WARN"
+status = "shadow"
+era = "2026"
+source = "owner review sheet 2, 2026-10-18: a grey area, not a ban; Wikipedia 'Signs of AI writing' flags the family (undue emphasis on significance and broader trends)"
+
+# A profile rule that re-thresholds a universal rule: a justification for either covers both.
+[aliases]
+"NR-1" = "1"
+"NR-2" = "7d"
+
+# Lists whose words get both -ise/-ize and -yse/-yze spellings at load, so every locale catches both.
+[spelling]
+expand = ["ban_literal", "ban_qualified", "claude_warn"]
+
+[lists]
+salience_flags = ["here's the thing", "this matters", "why this matters", "here's why this matters", "the key thing", "what matters here", "it's worth remembering"]
+sincerity_markers = ["honest answer", "to be honest", "the honest truth", "let's be honest", "truth be told"]
+signposting_openers = ["let's walk through", "let's look at", "here's what", "here's how", "the short version", "the long answer"]
+gotcha_framing = ["here's the catch", "but here's the twist", "plot twist", "the kicker"]
+newer_model_words = ["quietly", "dependable", "can help you", "earns its keep", "does the heavy lifting", "load-bearing"]
+
+ban_literal = [
+  "delve",
+  "tapestry",
+  "nuanced",
+  "multifaceted",
+  "intricate",
+  "meticulous",
+  "realm",
+  "paradigm",
+  "synergy",
+  "pivotal",
+  "crucial",
+  "robust",
+  "comprehensive",
+  "spearheaded",
+  "fostered",
+  "cultivate",
+  "palpable",
+  "camaraderie",
+  "streamline",
+  "noteworthy",
+  "invaluable",
+  "versatile",
+  "elevate",
+  "bolster",
+  "harness",
+  "groundbreaking",
+  "cutting-edge",
+  "game-changing",
+  "game-changer",
+  "beacon",
+  "cornerstone",
+  "testament",
+  "utilise",
+  "facilitate",
+  "elucidate",
+  "encompass",
+  "catalyse",
+  "revolutionise",
+  "unleash",
+  "supercharge",
+  "empower",
+  "seamless",
+  "innovative",
+  "scalable",
+  "dynamic",
+  "unprecedented",
+  "holistic",
+  "profound",
+  "vibrant",
+  "significantly",
+  "fundamentally",
+  "remarkably",
+  "nestled",
+  "breathtaking",
+  "stunning",
+  "renowned",
+  "must-visit",
+  "in the heart of",
+  "interplay",
+  "garner",
+  "focal point",
+  "setting the stage for",
+  "indelible mark",
+  "deeply rooted",
+  "key turning point",
+  "myriad",
+  "plethora",
+  "ideate",
+  "circle back",
+  "move the needle",
+]
+ban_exempt_terms = [
+  "Dynamic Search Ads",
+  "dynamic content injection",
+  "test harness",
+  "test harnesses",
+  "fault-injection harness",
+  "landscaper",
+  "landscapers",
+  "landscaping",
+]
+ban_qualified = [
+  "landscape",
+  "ecosystem",
+  "framework",
+  "navigate",
+  "unlock",
+  "underscore",
+  "leverage",
+  "showcase",
+  "enduring",
+]
+claude_warn = [
+  "genuinely",
+  "particularly",
+  "meaningful",
+  "meaningfully",
+  "straightforward",
+  "arguably",
+  "broadly",
+  "interestingly",
+  "essentially",
+  "nuance",
+  "thoughtful",
+  "thoughtfully",
+  "potentially",
+]
+academic_transitions = [
+  "furthermore",
+  "moreover",
+  "additionally",
+  "nevertheless",
+  "consequently",
+  "as a result",
+  "it's worth noting that",
+  "it is worth noting that",
+  "it's important to note",
+  "it is important to note",
+  "in the ever-evolving world of",
+  "at its core",
+  "when it comes to",
+  "having said that",
+  "with that in mind",
+  "that being said",
+  "therefore",
+]
+academic_opener_only = [
+  "nevertheless",
+  "consequently",
+  "as a result",
+  "having said that",
+  "with that in mind",
+  "that being said",
+  "therefore",
+]
+academic_transition_patterns = [
+  "\\bin today's \\w+",
+]
+conversational_transitions = [
+  "specifically",
+  "in particular",
+  "for instance",
+  "for example",
+  "however",
+  "in fact",
+  "notably",
+  "in contrast",
+  "namely",
+  "similarly",
+  "meanwhile",
+  "that said",
+  "in other words",
+]
+density_extra_openers = [
+  "also",
+  "plus",
+  "still",
+  "then",
+  "so",
+  "now",
+  "here",
+  "meanwhile",
+  "next",
+  "instead",
+  "otherwise",
+]
+density_total_only = [
+  "then",
+  "so",
+  "now",
+]
+repeat_stopwords = [
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "if",
+  "so",
+  "of",
+  "to",
+  "in",
+  "on",
+  "at",
+  "by",
+  "for",
+  "from",
+  "with",
+  "as",
+  "into",
+  "about",
+  "than",
+  "then",
+  "that",
+  "this",
+  "these",
+  "those",
+  "it",
+  "its",
+  "it's",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "am",
+  "do",
+  "does",
+  "did",
+  "have",
+  "has",
+  "had",
+  "will",
+  "would",
+  "can",
+  "could",
+  "should",
+  "may",
+  "might",
+  "must",
+  "not",
+  "no",
+  "yes",
+  "i",
+  "i'm",
+  "i've",
+  "i'd",
+  "i'll",
+  "me",
+  "my",
+  "you",
+  "your",
+  "you're",
+  "we",
+  "our",
+  "they",
+  "their",
+  "them",
+  "he",
+  "she",
+  "his",
+  "her",
+  "what",
+  "which",
+  "who",
+  "when",
+  "where",
+  "why",
+  "how",
+  "there",
+  "here",
+  "all",
+  "any",
+  "some",
+  "one",
+  "just",
+  "also",
+  "more",
+  "most",
+  "very",
+  "up",
+  "out",
+  "over",
+  "only",
+  "own",
+  "same",
+  "other",
+  "such",
+  "get",
+  "got",
+  "don't",
+  "doesn't",
+  "isn't",
+  "can't",
+  "won't",
+  "that's",
+  "there's",
+  "what's",
+]
+meta_commentary = [
+  "i should note",
+  "it's worth mentioning",
+  "let me explain",
+  "let me break this down",
+  "let me walk through",
+  "what i find interesting",
+  "this is where it gets interesting",
+  "in this article",
+  "as we discussed",
+  "before we get into",
+  "before we dive in",
+  "i want to be transparent",
+]
+copula_candidates = [
+  "serves as",
+  "stands as",
+  "functions as",
+  "acts as",
+  "represents",
+  "offers",
+  "features",
+  "boasts",
+  "marks",
+]
+scope_disclaimers = [
+  "this analysis has",
+  "not an exhaustive",
+  "there are, of course, important caveats",
+  "this is a simplified view",
+  "i'm oversimplifying",
+  "it's important to acknowledge",
+  "i should caveat",
+]
+sycophancy = [
+  "great question",
+  "absolutely!",
+  "certainly!",
+  "you're absolutely right",
+  "thoughtful point",
+  "you raise a good point",
+  "you raise a fair point",
+  "you raise an excellent point",
+  "i appreciate you bringing this up",
+  "excellent question",
+  "you're spot on",
+]
+conclusion_markers = [
+  "in conclusion",
+  "to sum up",
+  "key takeaways",
+  "the bottom line is",
+  "hope this helps",
+  "in summary",
+]
+balance_patterns = [
+  "\\bon (the )?one hand\\b",
+  "\\bgood arguments on both sides\\b",
+  "^while [^,]{3,80}, ",
+]
+rhetorical_question = [
+  "(?:^|\\s)(?:the )?(?:result|answer|catch|problem|reason|twist)\\?\\s",
+]
+ghost_citations = [
+  "studies show",
+  "research has found",
+  "research shows",
+  "experts agree",
+  "industry observers note",
+  "according to research",
+  "it's well-documented that",
+  "it is well documented that",
+]
+stakes_inflation = [
+  "will define the next era",
+  "marks a pivotal moment",
+  "symbolic of broader trends",
+  "reflects a fundamental shift",
+  "underscores the importance of",
+  "has far-reaching implications",
+  "represents a paradigm shift",
+]
+stock_filler = [
+  "let's unpack this",
+  "let's dive in",
+  "no fluff",
+  "at the end of the day",
+  "here's the deal",
+  "here's the thing",
+  "it's no secret that",
+]
+cutoff_disclaimers = [
+  "as of my last update",
+  "as of my knowledge cutoff",
+  "specific details are limited",
+  "details are scarce",
+  "based on available information",
+  "not extensively documented",
+  "here is an overview of",
+  "would you like me to expand",
+]
+filler_phrases = [
+  "in order to",
+  "due to the fact that",
+  "at this point in time",
+  "in the event that",
+  "has the ability to",
+  "it is important to note that",
+]
+vague_quantifiers = [
+  "various",
+  "numerous",
+  "countless",
+  "a range of",
+  "a variety of",
+]
+announcement_openers = [
+  "importantly",
+  "crucially",
+  "critically",
+]
+announcement_patterns = [
+  "^here are (the )?(top )?\\d+",
+  "^below are (some )?",
+]
+hedges = [
+  "it depends",
+  "results may vary",
+  "several factors to consider",
+  "tends to be",
+  "in many contexts",
+]
+optimise_forms = [
+  "optimise",
+  "optimize",
+  "optimisation",
+  "optimization",
+]
+trailing_ing_verbs = [
+  "highlighting",
+  "ensuring",
+  "reflecting",
+  "underscoring",
+  "showcasing",
+  "emphasising",
+  "emphasizing",
+  "demonstrating",
+  "illustrating",
+  "signalling",
+  "signaling",
+  "cementing",
+  "making it",
+  "creating",
+  "fostering",
+  "contributing",
+  "marking",
+  "paving",
+]
+ing_stop = [
+  "nothing",
+  "something",
+  "everything",
+  "anything",
+  "during",
+  "morning",
+  "evening",
+  "king",
+  "spring",
+  "string",
+  "thing",
+  "things",
+  "bring",
+  "ceiling",
+  "building",
+  "wedding",
+  "pudding",
+]
+expanded_forms = [
+  "it is",
+  "do not",
+  "does not",
+  "cannot",
+  "will not",
+  "would not",
+  "should not",
+  "is not",
+  "are not",
+  "i am",
+  "i have not",
+  "that is",
+  "there is not",
+]
+title_case_function_words = [
+  "a",
+  "an",
+  "and",
+  "as",
+  "at",
+  "but",
+  "by",
+  "for",
+  "from",
+  "how",
+  "in",
+  "into",
+  "of",
+  "on",
+  "or",
+  "the",
+  "to",
+  "with",
+  "your",
+  "you",
+  "is",
+  "are",
+  "it",
+  "its",
+  "what",
+  "why",
+  "when",
+]
+opinion_markers = [
+  "i think",
+  "i reckon",
+  "i guess",
+  "to me",
+  "anyway",
+  "that's how i see it",
+]
+challenges_skeleton = [
+  "despite its [^.]{2,60}, [^.]{2,60} faces several challenges",
+  "despite these challenges, [^.]{2,60} continues to thrive",
+]
+challenges_headings = [
+  "challenges",
+  "future outlook",
+  "looking ahead",
+  "future prospects",
+]
+stock_significance = ["far-reaching implications", "pivotal moment", "reflects broader trends", "plays a vital role", "a testament to", "marks a significant", "broader implications", "cannot be overstated"]
