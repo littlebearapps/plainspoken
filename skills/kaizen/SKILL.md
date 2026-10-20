@@ -8,6 +8,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py kaizen review*), Ba
 
 # plainspoken kaizen
 
+> Running in Codex or Hermes Agent? Read `../../hosts/codex.md` or `../../hosts/hermes.md` (relative to this
+> skill's folder) once before step 1. In Claude Code, skip this note.
+
 ## Core rules
 
 These hold for the whole run. Re-read them after any compaction.

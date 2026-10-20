@@ -351,7 +351,7 @@ class _Reader:
 
 def load(text: str) -> dict:
     """Parse frontmatter text (between the --- lines). An empty block is {}; a non-mapping is an error."""
-    text = text.lstrip("﻿").replace("\r\n", "\n")
+    text = text.lstrip("\ufeff").replace("\r\n", "\n")
     reader = _Reader(text)
     j = reader._next_content(0)
     if j >= len(reader.lines):

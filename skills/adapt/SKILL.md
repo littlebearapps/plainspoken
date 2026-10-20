@@ -8,6 +8,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspo
 
 # plainspoken adapt
 
+> Running in Codex or Hermes Agent? Read `../../hosts/codex.md` or `../../hosts/hermes.md` (relative to this
+> skill's folder) once before step 1. In Claude Code, skip this note.
+
 ## Core rules
 
 - Drafts only. Never post, schedule, submit or call a platform's API. Posting is out of scope: the writer copies a

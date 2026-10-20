@@ -8,6 +8,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspo
 
 # plainspoken copy-audit
 
+> Running in Codex or Hermes Agent? Read `../../hosts/codex.md` or `../../hosts/hermes.md` (relative to this
+> skill's folder) once before step 1. In Claude Code, skip this note.
+
 ## Core rules
 
 - This skill audits. It doesn't draft. A rewrite happens only when the user asks for one, and then the

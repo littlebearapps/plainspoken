@@ -6,6 +6,9 @@ license: MIT (adapted from blader/humanizer v3.1.0; see NOTICE.md)
 
 # Humanize (plainspoken)
 
+> Running in Codex or Hermes Agent? Read `../../hosts/codex.md` or `../../hosts/hermes.md` (relative to this
+> skill's folder) once before step 1. In Claude Code, skip this note.
+
 Calibration — these override anything below:
 1. **Remove, never add.** A fix deletes or plainly restates what is there. Never add a fact, number, name, date,
    quote, example, opinion or reaction that isn't already in the text or given by the user. If a sentence needs a

@@ -158,7 +158,7 @@ def load_contract(path: Path) -> dict:
     any other (markdown) file. Unreadable files raise OSError or UnicodeDecodeError; a missing or malformed contract
     raises `ContractError`."""
     path = Path(path)
-    text = path.read_text(encoding="utf-8").lstrip("﻿")
+    text = path.read_text(encoding="utf-8").lstrip("\ufeff")
     suffix = path.suffix.lower()
     if suffix == ".toml":
         return _parse(path, "toml", text, 0)

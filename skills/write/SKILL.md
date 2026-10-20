@@ -7,6 +7,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *)
 
 # plainspoken write
 
+> Running in Codex or Hermes Agent? Read `../../hosts/codex.md` or `../../hosts/hermes.md` (relative to this
+> skill's folder) once before step 1. In Claude Code, skip this note.
+
 ## Core rules
 
 - Research first. With no sources and no brief, stop and ask for them. Facts, numbers, names, dates and quotes come

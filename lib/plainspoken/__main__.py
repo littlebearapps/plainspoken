@@ -1,4 +1,4 @@
-"""CLI: python3 -m plainspoken {check|profile|config|paths|merge|justify|judge-input|judge-record|anchors|voice-stats|
+"""CLI: python3 -m plainspoken {check|profile|config|paths|merge|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
 register-checklist|claims|reader-value|kaizen|eval} …
 Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), invalid justifications or nothing to review
 (justify), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
@@ -31,7 +31,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, evalcli,
-                         extraction, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
+                         extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
                          reader_value, register, report, voice)
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError
@@ -161,6 +161,12 @@ def _main(argv: list[str] | None) -> int:
     ji.add_argument("--reports", type=Path)
     ji.add_argument("--profile")
     ji.add_argument("--plugin-profile")
+    ag = sub.add_parser("agent-prompt", help="print an agent's self-contained prompt with stdin as its input, for "
+                                             "hosts without plugin agents (Codex, Hermes)")
+    ag.add_argument("name", choices=list(hosts.AGENTS))
+    ag.add_argument("--line", type=int, help="use only the Nth non-blank input line (1 = J1 from judge-input)")
+    sub.add_parser("agent-reply", help="cut the JSON object out of an agent's output on stdin (host CLIs add a "
+                                       "session line or a fence); the record step still validates it")
     jr = sub.add_parser("judge-record", help="record a judge's JSON reply (from --from FILE, else stdin)")
     jr.add_argument("path", type=Path)
     jr.add_argument("--group", required=True, choices=[*judges.GROUPS, "JR"])
@@ -296,6 +302,20 @@ def _main(argv: list[str] | None) -> int:
             return _input_error(args.path, e, "prepare judge input for")
         for item in items:
             print(json.dumps(item, ensure_ascii=False))
+        return 0
+    if args.cmd == "agent-prompt":
+        try:
+            sys.stdout.write(hosts.agent_prompt(args.name, sys.stdin.read(), args.line))
+        except _INPUT_ERRORS as e:
+            print(f"plainspoken: can't build the {args.name} prompt: {_first_line(e)}", file=sys.stderr)
+            return 2
+        return 0
+    if args.cmd == "agent-reply":
+        try:
+            sys.stdout.write(hosts.agent_reply(sys.stdin.read()))
+        except ValueError as e:
+            print(f"plainspoken: no agent reply: {_first_line(e)}", file=sys.stderr)
+            return 2
         return 0
     if args.cmd == "judge-record":
         if args.reply_file is not None:

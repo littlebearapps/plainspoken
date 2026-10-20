@@ -8,6 +8,16 @@
           "type": "json",
           "path": ".claude-plugin/plugin.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "yaml",
+          "path": ".hermes-plugin/plugin.yaml",
+          "jsonpath": "$.version"
         }
       ],
       "include-component-in-tag": false,
