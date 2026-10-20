@@ -3,6 +3,7 @@ name: evals
 # only by hand, after the owner has OK'd the run. PRs stay free: ci.yml runs the engine-side eval tests, which call
 # no model. The US$5 ceiling is checked before each run launches, so one invocation spends about US$5 plus up to 4
 # runs already in flight (-j 4); `all` is two invocations, so about twice that. See guides/evals.md.
+# This repository sets no ANTHROPIC_API_KEY secret, so here the job skips with a notice; a fork can add its own.
 on:
   workflow_dispatch:
     inputs:

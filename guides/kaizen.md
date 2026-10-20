@@ -11,8 +11,9 @@ Each subcommand prints its own `--help`.
 
 Capture happens as you work, without a separate step:
 
-- `check` records one `fired` event per BLOCK or WARN finding. When it saves a new lint for an edited article, it
-  also records a `fixed` event for each finding the edit removed.
+- `check` records one `fired` event per BLOCK or WARN finding, with `--no-save` and `--out` too. When it saves a new
+  lint for an edited article, it also records a `fixed` event for each finding the edit removed. There's no
+  read-only lint flag yet (planned: [#1](https://github.com/littlebearapps/plainspoken/issues/1)).
 - The lint-watch hook records `fired` when a file's result changes after an edit.
 - `merge` records each judge's own verdict, whether the judge agreed with the lint on rules both look at, and each
   justification the JR judge accepted or rejected. An INCOMPLETE merge, and a judge reply `judge-record` refuses,
@@ -147,6 +148,11 @@ bumps the ruleset version and adds an entry to `RULESET-CHANGELOG.md` beside the
 Where it writes: the ruleset of a plainspoken checkout (`--rules <path>`, or the plugin's own when it's a git
 checkout), or, for a threshold-only proposal, your project profile (`--target profile`; the profile must be a file
 in your project, such as `.plainspoken/profiles/<name>.toml`). It won't write into an installed plugin's own files.
+With `--target profile`, apply edits the profile the project resolves when you run it (`PLAINSPOKEN_PROFILE`, else
+`[engine] profile`), not the profile the proposal was made for, and per-folder `[engine] profiles` globs aren't
+consulted. In a project with several profiles, check the path `--dry-run` prints first, or set
+`PLAINSPOKEN_PROFILE` for the run. Editing the proposal's own profile is planned
+([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
 If you use the installed plugin, send the evidence upstream instead (section 9). It never edits the rubrics: when it
 removes a judged rule, it names the rubric section left behind, for you to delete in the same change.
 

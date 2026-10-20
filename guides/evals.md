@@ -102,7 +102,8 @@ claude plugin eval . --tag rewrite --runs 1 -j 4 \
 The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm. The
 rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The
 same two suites run from GitHub through the manual `evals` workflow (`.github/workflows/evals.yml`), which skips with
-a notice when the repository has no `ANTHROPIC_API_KEY` secret.
+a notice when the repository has no `ANTHROPIC_API_KEY` secret. This repository doesn't set one, so here the workflow
+skips; run the suites locally, or from a fork that adds its own key. Pull requests never need it.
 
 ## The golden set and its labels
 

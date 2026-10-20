@@ -11,7 +11,17 @@ Status: v0.5, the first public release. It has:
 - the kaizen loop: a ledger of what the checks flagged and what you did, calibrate, and approval-gated `kaizen apply`;
 - evals: a 232-case golden set, a cross-vendor judge panel, rewrite evals, a blind reader test and ablations.
 
-Next: running the blind reader test, then v1.0.
+A production host has already moved its own checks over to it.
+
+Next:
+- **v1.0.0:** run the tier-2 blind reader test once (the model panel; it needs samples of the author's unassisted
+  writing) and record the results. Tier 1, with human readers, comes later.
+- **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
+  ([#1](https://github.com/littlebearapps/plainspoken/issues/1)), and `kaizen apply --target profile` editing the
+  proposal's own profile rather than the one the project resolves now
+  ([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
+- **After v1.0:** an editor agent that can rewrite, not only cut. Support for AI tools other than Claude Code is
+  planned for v2.0.
 
 ## Use
 
@@ -23,8 +33,8 @@ Install it from the Little Bear Apps marketplace:
     /plugin marketplace add littlebearapps/lba-plugins
     /plugin install plainspoken@lba-plugins
 
-The marketplace entry pins a release tag, so a new version reaches you when that entry moves to the next tag.
-Background auto-update is off for third-party marketplaces until you turn it on: in `/plugin`, open
+The marketplace entry pins a release (v0.5.0 now), so a new version reaches you when that entry moves to the next
+release. Background auto-update is off for third-party marketplaces until you turn it on: in `/plugin`, open
 **Marketplaces**, select `lba-plugins` and choose **Enable auto-update** (or set `"autoUpdate": true` on the
 marketplace's `extraKnownMarketplaces` entry in a project's `.claude/settings.json`).
 
@@ -236,13 +246,14 @@ or are billed, and a person OKs each billed run. What each one measures, what it
 **Results so far** (`docs/acceptance/p6-evals.md`):
 - On the golden set, Claude Opus as judge meets the 0.8 bar in every group in 3 of 3 runs. That's an upper bound,
   because most cases were built and labelled by Claude.
-- A five-vendor panel judged all 226 cases through OpenRouter for US$3.86: GLM-5.3, GPT-6 Luna (J1–J4 only), Gemini
-  3.8 Flash, DeepSeek V4.1 Flash and Muse Glimmer 30B.
+- A five-vendor panel judged all 226 cases then in the set through OpenRouter for US$3.86: GLM-5.3, GPT-6 Luna
+  (J1–J4 only), Gemini 3.8 Flash, DeepSeek V4.1 Flash and Muse Glimmer 30B.
   - Its majority vote was right on 222 of 225 decided cases.
   - On the 17 cases backed by the owner's own decisions, DeepSeek got 16 right and Claude 15.
 - Four other models were screened and left out: Cohere Command A+, Inception Mercury 2.5, Writer Palmyra X5 and
   Mistral Large 4.
-- The blind reader test waits for samples of the author's unassisted writing.
+- The blind reader test hasn't run yet. Its tier-2 run is the remaining v1.0.0 item, and it needs samples of the
+  author's unassisted writing.
 
 **Always-on token cost.** Measured 2026-10-19 with Claude Code CLI 2.1.303: `claude --plugin-dir . plugin details
 plainspoken` reports `Always-on: ~1,042 tok`. That figure counts the seven manual-only skills (about 560 tokens),

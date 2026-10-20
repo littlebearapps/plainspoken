@@ -1,5 +1,5 @@
-# register-check items (flags only). v0.2 ships this generic checklist only: a host can't add its own items yet
-# (an extension point for hosts' regulated-claims checks is planned for a later version).
+# register-check items (flags only). The plugin ships this generic checklist only, and a host can't add its own items.
+# Regulated claims are checked by the claims skill, against the host's own matrix (`[claims] regulated_matrix`).
 version = 1
 
 [[items]]
