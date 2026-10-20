@@ -33,7 +33,8 @@ here too.
 
    ```bash
    T=$(mktemp -d)
-   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' | RUN agent-prompt tells-judge --line 1 > "$T/J1.prompt"
+   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"
+   RUN agent-prompt tells-judge --line 1 < "$T/input.jsonl" > "$T/J1.prompt"    # and --line 2, 3, 4
    ```
 
    The claims checker's input comes from `RUN claims checker-input …`, the delivery checker's from

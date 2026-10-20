@@ -22,9 +22,8 @@ Codex; the skill still decides *what* to do.
 ## Agents (the judges and checkers)
 
 When a skill says to start a `plainspoken:<agent>` subagent (`tells-judge`, `claims-checker`, `delivery-checker`,
-`cold-reader`), run that agent as its own Codex process instead. It gets a fresh context and a read-only sandbox,
-so it never sees this session. Never do an agent's job yourself: the skills' rule that you don't award your own
-pass holds here too.
+`cold-reader`), give that agent a fresh context so it never sees this session. Never do an agent's job yourself:
+the skills' rule that you don't award your own pass holds here too.
 
 1. Build the prompt. Pipe the agent's input into `RUN agent-prompt <agent>`, which prepends the agent's
    instructions and the opener the skill names. For the check skill's judges, `--line N` picks judge N from
@@ -32,24 +31,25 @@ pass holds here too.
 
    ```bash
    T=$(mktemp -d)
-   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' | RUN agent-prompt tells-judge --line 1 > "$T/J1.prompt"
+   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"
+   RUN agent-prompt tells-judge --line 1 < "$T/input.jsonl" > "$T/J1.prompt"    # and --line 2, 3, 4
    ```
 
    The claims checker's input comes from `RUN claims checker-input …`, the delivery checker's from
    `RUN reader-value deliver-input …` (no `--line` for either), and the cold reader's is its two lines
    (`Reader: …`, `File: …`) passed on stdin.
-2. Run it:
+2. Run it with `spawn_agent` and `fork_turns: "none"` (a clean context; the default copies your whole session),
+   giving the prompt file's contents as the agent's whole task, nothing added. Start the four judges together and
+   wait for all four. The agent's "never edit a file" rule is an instruction here, not a sandbox.
+
+   When this session runs outside Codex's sandbox (or the user approves running it there), a separate process gives
+   the agent a real read-only sandbox instead. Inside the sandbox it fails, because Codex's own folder is read-only:
 
    ```bash
    codex exec --sandbox read-only --ephemeral --skip-git-repo-check -C "$PWD" -o "$T/J1.out" - < "$T/J1.prompt"
-   RUN agent-reply < "$T/J1.out" > "$T/J1.json"
    ```
-
-   The four judges can run at once (end each `codex exec` line with `&`, then `wait`). Each takes a minute or so.
-   `codex exec` needs the network, so your own sandbox may ask for approval to run it. If it can't run at all, start
-   the agent with `spawn_agent` and `fork_turns: "none"`, giving it the prompt file's contents as its whole task, and
-   tell the user its read-only rule is an instruction only.
-3. Record it with the skill's own record step, reading from your file instead of the `reply` path:
+3. Save the agent's reply to a file and cut it to the JSON object: `RUN agent-reply < "$T/J1.out" > "$T/J1.json"`.
+   Then record it with the skill's own record step, reading from that file instead of the `reply` path:
    `RUN judge-record "FILE" --group J1 --from "$T/J1.json"` (or `claims record … --from`, `reader-value deliver …
    --from`). The record step validates the reply; a stale or invalid one means starting that agent again, as the
    skill says.

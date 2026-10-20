@@ -62,8 +62,11 @@ Hermes Agent:
 
     hermes plugins install littlebearapps/plainspoken --enable
 
-Then start a new session (or `/reset`). Hermes loads `.hermes-plugin/`, which registers the skills as
-`plainspoken:<name>` and tells the model where the plugin lives. To add it to one Hermes profile only, name the
+Hermes scans a plugin before it installs it. It rates plainspoken "caution", mostly because the skills carry
+Claude Code's load-time commands (`` !`python3 …` ``) and the engine runs Python, so it asks you to confirm. Over
+SSH or in a script, where it can't ask, it refuses: review the findings and add `--force`. Then start a new session
+(or `/reset`). Hermes loads `.hermes-plugin/`, which registers the skills as `plainspoken:<name>` and tells the
+model where the plugin lives. To add it to one Hermes profile only, name the
 profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`.
 
 What's missing outside Claude Code in this version: the hooks (no lint after each edit, no publish gate, no kaizen
