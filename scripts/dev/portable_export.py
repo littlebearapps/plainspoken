@@ -13,7 +13,7 @@ from scripts.dev.lint_frontmatter import CLAUDE_ONLY_FIELDS
 
 
 def _strip(text: str) -> str:
-    lines = text.lstrip("﻿").splitlines(keepends=True)
+    lines = text.lstrip("\ufeff").splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":
         return text
     out = [lines[0]]

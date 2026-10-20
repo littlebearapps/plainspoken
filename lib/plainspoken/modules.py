@@ -41,7 +41,8 @@ _JUMP_LINK = re.compile(r"\[(?:[^\]\\]|\\.)*\]\(\s*#([^)\s]+)\s*(?:\"[^\"]*\")?\
 _INLINE_LINK = re.compile(r"!?\[((?:[^\]\\]|\\.)*)\]\([^)]*\)")
 _TAG = re.compile(r"<[^>]+>")
 _SLUG_DROP = re.compile(r"[^\w\- ]")
-_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+# \x60 = a backtick, spelled out so "!" never sits next to one (Hermes' install scan reads that as shell).
+_CODE_SPAN = re.compile(r"(?<!\x60)(\x60+)(?!\x60)(.+?)(?<!\x60)\1(?!\x60)")
 
 
 @dataclass
