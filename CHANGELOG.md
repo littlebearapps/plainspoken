@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/littlebearapps/plainspoken/compare/v0.5.0...v0.6.0) (2026-10-20)
+
+
+### Features
+
+* install in Codex and Hermes Agent ([b86c174](https://github.com/littlebearapps/plainspoken/commit/b86c174e2c27630e2564d9166530df7073ce6f2b))
+* install in Codex and Hermes Agent ([875c23e](https://github.com/littlebearapps/plainspoken/commit/875c23ed872fa74cc1b4662ce0df17dad75138c1))
+
+
+### Bug Fixes
+
+* clear the Hermes install scan's avoidable HIGH findings ([987afd5](https://github.com/littlebearapps/plainspoken/commit/987afd567b94d623679b78fd11157bd6fea0d444))
+
 ## 0.5.0 — first public release (2026-10-20)
 
 plainspoken is a Claude Code plugin that helps Claude write like a person: specific, honest and plain, in a stated
