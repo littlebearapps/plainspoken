@@ -1,0 +1,57 @@
+name: stable
+# Publishes a commit from main to `stable`, the default branch. Hosts that install from the default branch (Hermes
+# Agent without --ref) follow it, so they only ever see released code. The release workflow calls this after each
+# release; run it by hand to republish. stable is protected like any default branch, so the move goes through a
+# merge PR, never a push.
+on:
+  workflow_call:
+    inputs:
+      sha:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Full 40-character commit on main to publish"
+        required: true
+        type: string
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: stable
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge the commit into stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sha must be a full 40-character commit"; exit 1; }
+          on_main=$(gh api "repos/$REPO/compare/main...$SHA" --jq .status)
+          [[ "$on_main" == behind || "$on_main" == identical ]] \
+            || { echo "::error::$SHA is not on main ($on_main)"; exit 1; }
+          if [[ "$(gh api "repos/$REPO/compare/stable...$SHA" --jq .ahead_by)" == 0 ]]; then
+            echo "stable already has $SHA"
+            exit 0
+          fi
+          branch="stable-publish/${SHA:0:12}"
+          gh api "repos/$REPO/git/refs" -f ref="refs/heads/$branch" -f sha="$SHA" > /dev/null
+          number=$(gh api "repos/$REPO/pulls" -f base=stable -f head="$branch" \
+            -f title="chore(stable): publish ${SHA:0:7}" \
+            -f body="Publishes \`$SHA\` from main to stable (workflow \`stable\`)." --jq .number)
+          for attempt in 1 2 3 4 5; do
+            if gh api -X PUT "repos/$REPO/pulls/$number/merge" -f merge_method=merge > /dev/null; then
+              merged=1
+              break
+            fi
+            sleep 5
+          done
+          gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" > /dev/null || true
+          [[ "${merged:-}" == 1 ]] || { echo "::error::could not merge PR #$number"; exit 1; }
+          echo "stable now has $SHA (PR #$number)"

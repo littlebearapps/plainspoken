@@ -67,7 +67,16 @@ Claude Code's load-time commands (`` !`python3 …` ``) and the engine runs Pyth
 SSH or in a script, where it can't ask, it refuses: review the findings and add `--force`. Then start a new session
 (or `/reset`). Hermes loads `.hermes-plugin/`, which registers the skills as `plainspoken:<name>` and tells the
 model where the plugin lives. To add it to one Hermes profile only, name the
-profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`.
+profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`. The install also warns
+that the repo root has no `plugin.yaml`; that's expected, because the Hermes manifest sits in `.hermes-plugin/`.
+
+Updates: this install follows the `stable` branch, which only moves when a release ships. Hermes checks for a new
+commit once a day (`plugins.auto_update_check_hours`), `hermes plugins check-updates` checks now, and Hermes
+Desktop shows an **Update** button. Apply it with `hermes plugins update plainspoken`. The update is scanned
+again and asks "Update anyway?" for the same caution rating; add `--force` where it can't ask, such as a cron job.
+For the same reason `plugins.auto_apply: true` doesn't update plainspoken yet: unattended updates don't accept a
+caution rating. To stay on one release instead, pin its full commit with `--ref <sha>` (Hermes takes no tags or
+branches there); `update` then leaves it alone, and `install --force --ref <new-sha>` moves it.
 
 What's missing outside Claude Code in this version: the hooks (no lint after each edit, no publish gate, no kaizen
 nudges), so run the check yourself before anything goes out; the install-time settings (pick a profile with
@@ -296,6 +305,10 @@ about 30; shorter cold-reader, tells-judge and humanize descriptions took about 
 (`claude plugin details plainspoken` without `--plugin-dir` only finds an installed copy.)
 
 ## Develop
+
+Work happens on `main`: open pull requests against it, and release-please cuts releases from it. The default
+branch, `stable`, holds the latest release only; the release workflow moves it (`.github/workflows/stable.yml`), so
+never open a pull request against it.
 
     claude --plugin-dir .                 # load for one session
     claude plugin validate . --strict     # manifest + components
