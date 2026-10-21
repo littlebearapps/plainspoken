@@ -19,8 +19,8 @@
   not in the project.
 - `${user_config.profile}` may stay as the literal text when the plugin loads with `--plugin-dir`. The CLI treats the
   literal as the shipped default profile, so the skill still runs. See `docs/claude-code-facts.md`, section 3.
-- Plugin options may not reach the shell the injection line or the commands run in, so pass the profile on the
-  command line (`--plugin-profile '${user_config.profile}'`). See `docs/claude-code-facts.md`, section 4.
+- Plugin options may not reach the shell the commands run in, so pass the profile on the command line
+  (`--plugin-profile '${user_config.profile}'`). See `docs/claude-code-facts.md`, section 4.
 - The skill drafts only. It never posts, sends or publishes; a request to publish is outside it.
 - Run each `anchors` call on its own. A shell loop (`for t in …; do …; done`) is refused with "A variable in this
   command can't be checked before it runs"; the same goes for looping `cat` over the reference files (use Read).

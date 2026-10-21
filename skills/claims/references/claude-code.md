@@ -21,5 +21,5 @@
   `.plainspoken/claims/`, and the checker reply under `.plainspoken/reports/`. A `[claims] ledger_dir` or
   `sources_dir` set elsewhere, and any edit to the article itself, asks for permission as usual.
 - `${user_config.profile}` may stay as the literal text when the plugin loads with `--plugin-dir`. The CLI treats the
-  literal as the shipped default profile, so the injection line still runs. See `docs/claude-code-facts.md`,
-  section 3. The `claims` subcommands don't read the profile.
+  literal as the shipped default profile, so the first step's profile call still runs. See
+  `docs/claude-code-facts.md`, section 3. The `claims` subcommands don't read the profile.

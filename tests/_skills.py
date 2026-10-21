@@ -10,7 +10,11 @@ from scripts.dev.lint_frontmatter import parse_frontmatter
 REPO = Path(__file__).resolve().parents[1]
 AUTO = {"check", "humanize", "write", "plain-language"}
 MARK = "<!-- plainspoken: quotes tells on purpose -->"
-INJECT = re.compile(r"(?m)^!`python3 \$\{CLAUDE_PLUGIN_ROOT\}/lib/run\.py profile .*\|\| true`$")
+# #12: no load-time command; the skill's first step runs the profile call explicitly (same command, same flags).
+FIRST_STEP = "**First, before any other step:** run"
+PROFILE_CALL = "`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}'`"
+# The load-time form Hermes rates high (`inline_shell_exec`), written with \x60 so this file never matches it.
+LOAD_LINE = re.compile("!\x60[^\x60\\s][^\x60\\n]*\x60")
 TOOL_NAMES = re.compile(r"\b(Agent|Task|Bash|Read|Write|Edit|Grep|Glob) tool\b")
 
 
@@ -26,6 +30,20 @@ def headings(text: str) -> list[str]:
 def files(name: str) -> list[Path]:
     d = REPO / "skills" / name
     return [d / "SKILL.md", *sorted((d / "references").glob("*.md"))]
+
+
+def flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def assert_first_step(case, text: str, call: str) -> None:
+    """`text` names `call` as its explicit first step, before the first heading after Core rules."""
+    body = flat(text)
+    start = body.find(f"{FIRST_STEP} {call} and read what it prints")
+    case.assertNotEqual(start, -1, call)
+    case.assertIn("If the call fails, carry on without it.", body[start:start + 400])
+    later = [m.start() for m in re.finditer(r"## (?!Core rules)", body)]
+    case.assertTrue(later and start < later[0], "the first step must come before the skill's steps")
 
 
 class SkillBasics:
@@ -58,8 +76,12 @@ class SkillBasics:
         for name in self.REFERENCES:
             self.assertTrue((REPO / "skills" / self.NAME / "references" / name).is_file(), name)
 
-    def test_profile_injected(self):
-        self.assertRegex(self.text, INJECT)
+    def test_profile_read_first(self):
+        assert_first_step(self, self.text, PROFILE_CALL)
+
+    def test_no_load_time_command(self):
+        for f in files(self.NAME):
+            self.assertIsNone(LOAD_LINE.search(f.read_text(encoding="utf-8")), f.name)
 
     def test_placeholder_never_double_quoted(self):
         for f in files(self.NAME):

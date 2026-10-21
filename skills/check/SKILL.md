@@ -27,15 +27,16 @@ Core rules (these hold for the whole run):
   `judge-record`, exit 2 means stop and report the engine's message (only `judge-input` has its own exit-2 step).
 - Run every call from the same working directory (the project root); report files are keyed to it.
 
-Active profile (injected when this skill loads):
-!`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}' || true`
+**First, before any other step:** run
+`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}'` and read what it prints.
+That's the active profile the steps below use. If the call fails, carry on without it.
 
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. These calls take
 `--plugin-profile '${user_config.profile}'` (single quotes, exactly so): check, judge-input, merge, justify, status
 and profile. `paths` and `judge-record` don't take it (argparse rejects it there with exit 2). `FILE` is the first
 argument; quote it in every command (`"drafts/my post.md"`). Pass `--content-type social` to `check` when the user
 asks for it or the file is a social post. When the project gives files their own profile (`[engine] profiles` in
-`.plainspoken/config.toml`), every call that takes FILE uses FILE's profile by itself; the summary injected above is
+`.plainspoken/config.toml`), every call that takes FILE uses FILE's profile by itself; the first step's summary is
 the project's default (`RUN config profile-for FILE` prints FILE's).
 Asked only for a quick lint that shouldn't count as kaizen evidence? Run step 1 with `--no-record` and stop there.
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,

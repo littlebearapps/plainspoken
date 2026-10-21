@@ -74,6 +74,8 @@ Same command as Q3.
   text substitution, not env, as the way to reach the plugin root from a skill.
 - Bash tool: `env | grep CLAUDE_PLUGIN_OPTION || echo none` printed `none`. No `CLAUDE_PLUGIN_OPTION_*` in the Bash
   tool environment (consistent with Q2: nothing is populated under `--plugin-dir`).
+- The skills no longer use injection (#12, 2026-10-21). Hermes' install scan rates any load-time command under
+  `skills/` high, so each skill now runs the same `run.py` call, with the same flags, as its explicit first step.
 
 ## 5. With `omitClaudeMd: true`, does a plugin agent see the project CLAUDE.md?
 
