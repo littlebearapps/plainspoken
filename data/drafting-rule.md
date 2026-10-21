@@ -7,5 +7,5 @@ messages or notes for yourself.
 - Long piece (a blog post, article, page, newsletter, anything over a few paragraphs) or one that's going out: use
   {write}, which drafts, runs the full check and fixes; for an existing draft, run {check} on it.
 - Rewriting someone's text so it sounds like a person: use {humanize}.
-- A fix removes or plainly restates. Never add a fact, number, name, quote or opinion that isn't in the source or
-  from the user; ask instead.
+- A fix cuts, joins or plainly restates what's there. Never add a fact, number, name, quote or opinion that isn't in
+  the source or from the user; ask instead.

@@ -67,8 +67,8 @@ fires. The report also shows unreadable ledger lines (skipped, never fatal) and 
 
 `kaizen calibrate` reads the ledger and looks for these, in this order (one candidate per rule):
 
-1. **Stuck**: a BLOCK a person dismissed as `unfixable`. Fixes only ever remove words, so if removing words can't
-   clear a BLOCK, the rule needs to change. The proposal demotes it.
+1. **Stuck**: a BLOCK a person dismissed as `unfixable`. Fixes never add content, so if cutting, joining or
+   restating can't clear a BLOCK, the rule needs to change. The proposal demotes it.
 2. **False positives**: 20 or more fires with an effective false-positive rate over 10%. The proposal loosens a
    threshold, or demotes or shadows the rule when there's no threshold to turn.
 3. **Missed**: the same rule or pattern recorded as missed in 2 or more documents. The proposal asks for a review.

@@ -96,9 +96,9 @@ When the piece recommends or reports findings, say how strong each one's evidenc
 
 Run `/plainspoken:check` on the saved draft with the mapped content type: add `--content-type social` only for
 `--type social`. Where one skill can't start another (or the project denies check), follow
-`${CLAUDE_PLUGIN_ROOT}/skills/check/SKILL.md` yourself. Its fix passes remove patterns only; they never add a fact.
-Step 6 ends where the check's own report step does: an UNRESOLVED merge goes through its fix-or-justify loop first
-(fix the WARN, or `justify` it). A WARN you keep without an accepted justification leaves the check UNRESOLVED.
+`${CLAUDE_PLUGIN_ROOT}/skills/check/SKILL.md` yourself. Its fix passes cut, join, split or restate; they never add a
+fact. Step 6 ends where the check's own report step does: an UNRESOLVED merge goes through its fix-or-justify loop
+first (fix the WARN, or `justify` it). A WARN you keep without an accepted justification leaves the check UNRESOLVED.
 
 ### 7. Claims
 

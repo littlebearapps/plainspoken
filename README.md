@@ -94,8 +94,8 @@ Check a draft:
     /plainspoken:check thread.md --content-type social
 
 The check lints the file, sends it to four isolated judges, merges their verdicts and runs up to two fix passes
-that only remove patterns. It ends with PASS, FAIL, UNRESOLVED or INCOMPLETE, and writes its files to
-`.plainspoken/reports/` in the project you run it from.
+that cut, join or restate and never add a fact. It ends with PASS, FAIL, UNRESOLVED or INCOMPLETE, and writes its
+files to `.plainspoken/reports/` in the project you run it from.
 
 Run the CLI from anywhere in the project: it finds the project root (the nearest folder with
 `.plainspoken/config.toml` or `.git`).

@@ -53,9 +53,10 @@ def message_strings(source: str) -> list[str]:
 
 
 def asks_for_a_long_sentence(message: str) -> bool:
-    """The staccato finding ("No sentence over 25 words in this section — let one thought run long") names the
-    check and asks for a longer sentence: the opposite of a cap, like a docs "How it's checked" section."""
-    return "run long" in message
+    """The staccato finding ("No sentence over 25 words in this section — join two short sentences that share a
+    thought") names the check and asks for a longer sentence: the opposite of a cap, like a docs "How it's checked"
+    section."""
+    return "join two short sentences" in message
 
 
 def code_messages() -> list[tuple[str, str]]:
@@ -91,7 +92,7 @@ class Contradictions(unittest.TestCase):
         msgs = message_strings(src)
         self.assertTrue(any(CAP.search(m) for m in msgs))
         self.assertTrue(any(FOURTH.search(m) for m in msgs))
-        staccato = 'MSG = f"No sentence over {n} words in this section — let one thought run long"\n'
+        staccato = 'MSG = f"No sentence over {n} words in this section — join two short sentences that share a thought"\n'
         self.assertTrue(all(asks_for_a_long_sentence(m) for m in message_strings(staccato) if CAP.search(m)))
 
     def test_no_blanket_sentence_cap(self):

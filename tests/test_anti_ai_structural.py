@@ -73,6 +73,20 @@ class Structural(unittest.TestCase):
         self.assertEqual([f.severity for f in run("HM", body)], ["WARN"])
         self.assertEqual(run("HM", "I think it's fine. But not always."), [])
 
+    def test_rhythm_remedies_fit_the_fix_rule(self):  # #30: a fix cuts, joins, splits or restates; it never adds
+        staccato = run("7d", "## A\n\nShort one here. Another short one. And a third.")
+        uniform = run("7", "One two three four five. " * 5)
+        bursty = [f for f in run("12f", " ".join(["The cat sat on the mat."] * 60)) if f.excerpt.startswith("burstiness")]
+        markers = run("HM", "The system processes requests. The system returns responses. Latency remains consistently low.")
+        messages = [f.message for f in staccato + uniform + bursty + markers]
+        self.assertEqual(len(messages), 4)
+        self.assertTrue(staccato[0].message.endswith("join two short sentences that share a thought"))
+        self.assertTrue(uniform[0].message.endswith("join or split one"))
+        self.assertIn("join or split sentences", bursty[0].message)
+        self.assertIn("add nothing new", markers[0].message)
+        for m in messages:
+            self.assertNotRegex(m.lower(), r"run long|vary the rhythm|\badd (?!nothing)")
+
     def test_narrative_paragraph_variation(self):
         para = " ".join(["word"] * 50)
         body = "\n\n".join([para + "."] * 4)
@@ -306,7 +320,7 @@ class SlopGate(unittest.TestCase):
         cfg = with_thresholds(opening_top3_max=0.0, paragraph_sd_min=1000, capsule_transition_max=1.0, mattr_min=0.0)
         (f,) = [x for x in run_cfg("12f", self.LOW_VOCAB, cfg) if "slop metrics tripped" in x.message]
         self.assertEqual(f.severity, "WARN")
-        self.assertRegex(f.message, r"^2 slop metrics tripped: opening repetition [\d.]+ > 0\.062; paragraph SD [\d.]+ < 1000$")
+        self.assertRegex(f.message, r"^2 slop metrics tripped: opening repetition [\d.]+ > 0\.062; paragraph SD [\d.]+ < 1000 — cut, join or split; never pad$")
         self.assertNotIn("capsule", f.message)
         self.assertNotIn("MATTR", f.message)
 
@@ -319,7 +333,7 @@ class SlopGate(unittest.TestCase):
     def test_long_piece_with_the_same_opening_habit_still_warns(self):  # #25
         # 1,020 words, 60 sentences, 18 open with "I": share 20/60 = 0.33 > 0.25 + 3/60 = 0.30, plus paragraph SD 0.
         (f,) = [x for x in run("12f", _openers_piece(15, 18)) if "slop metrics tripped" in x.message]
-        self.assertRegex(f.message, r"^2 slop metrics tripped: opening repetition 0\.333 > 0\.3; paragraph SD 0 < 25$")
+        self.assertRegex(f.message, r"^2 slop metrics tripped: opening repetition 0\.333 > 0\.3; paragraph SD 0 < 25 — cut, join or split; never pad$")
 
     def test_varied_prose_has_no_burstiness_block(self):
         f = run("12f", self.LOW_VOCAB)

@@ -1,6 +1,6 @@
 ---
 name: check
-description: "Checks a draft for AI writing tells with a fixed lint and four isolated judges, then fixes by removal only. Use before an article, page, email, post or script goes out, and whenever asked if any text, even one line, sounds like AI."
+description: "Checks a draft for AI writing tells with a fixed lint and four isolated judges, then fixes, never adding. Use before an article, page, email, post or script goes out, and whenever asked if any text, even one line, sounds like AI."
 argument-hint: <file> [--content-type social]
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspoken/reports/*.reply.json), Edit(.plainspoken/reports/*.justify.json)
 ---
@@ -14,10 +14,11 @@ Core rules (these hold for the whole run):
 - The engine decides. You run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py <subcommand>` and act on its exit codes;
   you never score, merge or name report files yourself (`run.py paths <file>` prints every path).
 - Judges are `plainspoken:tells-judge` subagents. They are read-only; you record their replies with `judge-record`.
-- Fixes remove patterns. You never edit an article to add a fact, number, name, quote or example that isn't already
-  in the text or given by the user. You never edit or add `anti-ai-allow` markers.
+- A fix cuts, joins or splits sentences, or restates plainly, using only what the text already says. You never edit
+  an article to add a fact, number, name, quote, example, opinion or detail that isn't already in the text or given
+  by the user. You never edit or add `anti-ai-allow` markers.
 - At most two fix passes, and fix passes come before justify: justify only what you keep after the last fix pass.
-  Before the judges start you may fix lint findings once, by removal, then rerun step 1; no judge has read that
+  Before the judges start you may fix lint findings once, the same way, then rerun step 1; no judge has read that
   text, so it isn't a fix pass. Once the judges start, every edit to FILE is a fix pass (after justify or JR too),
   and step 1 follows it. INCOMPLETE means an input is missing or stale: rerun what merge names, without editing the article; that rerun is
   not a fix pass. Still INCOMPLETE after one rerun → stop and report merge's problem lines.
@@ -57,8 +58,8 @@ run.py status.
    for WARNs you'll fix, step 7 for WARNs you'll keep.
 6. **Fix pass** (at most two in the whole run). Use `/plainspoken:humanize` on FILE with the list of failing rules
    and their evidence from `RUN paths FILE` → the `report` file. If it can't be started (the project may deny it),
-   follow `${CLAUDE_PLUGIN_ROOT}/skills/humanize/SKILL.md` yourself. Fix every BLOCK and every failing WARN by
-   removing the pattern. Then go back to step 1 (the hash changed, so all four judges rerun). When both passes are
+   follow `${CLAUDE_PLUGIN_ROOT}/skills/humanize/SKILL.md` yourself. Fix every BLOCK and every failing WARN under
+   the fix rule above. Then go back to step 1 (the hash changed, so all four judges rerun). When both passes are
    spent and merge still says FAIL → step 8 and report it. If it says UNRESOLVED → step 7, then step 8.
 7. **Justify what you kept** (after the last fix pass you'll make). When no BLOCK remains but a WARN still fails and you have a real reason to keep it,
    follow `references/fix-or-justify.md` (template → fill → review input → one JR judge → record → merge). A JR
