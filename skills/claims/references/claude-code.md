@@ -13,8 +13,8 @@
   exit code is what the step acts on.
 - Edit the ledger with the Edit tool only, one claim at a time: never a heredoc, a helper script or a `python3 -`
   call, even to move several anchors at once (the shell check refuses them, and the ledger is yours to read back).
-- The clock comes from the CLI: `RUN claims hash ARTICLE --stamp` prints the hash and a ready-to-paste
-  `checked_at` line. Don't run `date` for it; that call isn't allowed.
+- The hash and the clock come from the CLI: `RUN claims stamp ARTICLE` writes `source_content_hash`, `checked_at`
+  and `checked_by` into the ledger. Don't run `date` or write a script for them.
 - Fetch sources with the host's fetch tool (or a fetch MCP server you have), then save the text with the Write tool
   under `.plainspoken/sources/`. The skill itself never fetches.
 - Allowed without a prompt: the CLI, writes under `.plainspoken/sources/` and `.plainspoken/claims/`, edits under

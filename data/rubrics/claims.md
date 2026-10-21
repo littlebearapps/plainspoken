@@ -72,6 +72,9 @@ What counts as support, and what doesn't:
   `aggregator`, or whose pinned passage itself cites another study for the figure, isn't supported.
 - **First-hand markers cover one claim each.** "In my experience" or "on my own site" in front of one sentence
   doesn't make the next sentence's figure first-hand. Each first-hand claim needs its own ledger entry and scope.
+- **A brief speaks only for the person who gave it.** A source with `kind = "brief"` is the person's brief, saved
+  verbatim. It supports what they can speak for (their own organisation, work, prices and plans), never a figure or
+  statement about a platform, a law or anyone else.
 - **Citation proximity isn't support.** A link next to a sentence supports only what that link's pinned passage
   says. A sentence that sits beside a citation but says more than the passage is unsupported for the difference.
 - **Judgement is labelled.** A recommendation, estimate or hypothesis is fine when the article frames it as one

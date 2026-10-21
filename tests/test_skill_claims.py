@@ -50,7 +50,7 @@ class ClaimsSkill(SkillBasics, unittest.TestCase):
                     self.assertIn(flag, out, f"{f.name}: RUN {span}: {flag} isn't a flag of {' '.join(argv)}")
                 seen += 1
         self.assertGreaterEqual(seen, 8)
-        for sub in ("paths", "claims scaffold", "claims pin", "claims gaps", "claims hash", "claims checker-input",
+        for sub in ("paths", "claims scaffold", "claims pin", "claims gaps", "claims stamp", "claims checker-input",
                     "claims record", "claims status"):
             self.assertRegex(self.text, rf"`RUN {sub}\b", sub)
 
@@ -110,8 +110,20 @@ class ClaimsSkill(SkillBasics, unittest.TestCase):
     def test_an_edit_after_the_checker_goes_back_to_step_2(self):
         self.assertIn("go back to steps 2 to 6 for the claims you edited", self.step(7))
 
-    def test_checked_at_comes_from_the_cli(self):
-        self.assertIn("`RUN claims hash ARTICLE --stamp`", self.step(5))
+    def test_the_hash_and_checked_at_come_from_the_cli(self):  # issue #31: no hash copied by hand
+        self.assertIn("`RUN claims stamp ARTICLE`", self.step(5))
+        self.assertIn("Never copy a hash by hand", self.step(5))
+
+    def test_edit_and_stamp_order_is_stated(self):  # issue #31: an edit after the stamp makes the ledger stale
+        flat = " ".join(self.text.split())
+        self.assertIn("Any edit to the article after the stamp", flat)
+        self.assertIn("stamp again, then rerun the checker", flat)
+
+    def test_a_brief_is_a_saved_source(self):  # issue #31: brief-in-chat facts are pinned, not first-hand
+        self.assertIn("A brief the person gave in chat is a source too", " ".join(self.text.split()))
+        rules = " ".join((REFS / "evidence-rules.md").read_text(encoding="utf-8").split())
+        self.assertIn('`kind = "brief"`', rules)
+        self.assertIn("`verified` against the brief, not `first_hand`", rules)
 
     def test_lines_keep_the_file_width(self):
         body = self.text.split("\n---\n", 1)[1]
@@ -187,7 +199,7 @@ class ClaimsReferences(unittest.TestCase):
         self.assertIn("/plainspoken:claims", text)
         self.assertIn("one Bash call per command", text)
         self.assertIn("no shell loops", text.lower())
-        self.assertIn("claims hash ARTICLE --stamp", text)  # the clock comes from the CLI
+        self.assertIn("claims stamp ARTICLE", text)  # the hash and the clock come from the CLI
         self.assertIn("never a heredoc", text)
         self.assertIn("`; echo`", text)
 
