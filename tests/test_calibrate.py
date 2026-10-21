@@ -492,7 +492,8 @@ class Effect(TmpCase):
 
 
 def cli(*args, cwd: Path, env: dict | None = None):
-    e = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_"))}
+    # TRELLO_: with real credentials in the shell, the adapter tests would call Trello.
+    e = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_", "TRELLO_"))}
     e["PYTHONPATH"] = str(REPO / "lib")
     e.update(env or {})
     return subprocess.run([sys.executable, "-m", "plainspoken", *args], cwd=cwd, capture_output=True, text=True,
