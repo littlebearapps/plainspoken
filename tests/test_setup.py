@@ -37,7 +37,8 @@ class Command(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
         self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
         (self.project / ".git").mkdir()
-        self.env = {"HOME": str(self.home)}
+        # XDG_CONFIG_HOME beats HOME (CI runners set it), so pin both to the temp home
+        self.env = {"HOME": str(self.home), "XDG_CONFIG_HOME": str(self.home / ".config")}
 
     def run_setup(self, *args):
         return cli("setup", *args, cwd=self.project, env=self.env)
