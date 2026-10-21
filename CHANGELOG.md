@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/littlebearapps/plainspoken/compare/v0.6.1...v0.7.0) (2026-10-21)
+
+
+### Features
+
+* writing nudge, drafting rule, setup, hooks in Codex and Hermes, humanize trigger fix ([#14](https://github.com/littlebearapps/plainspoken/issues/14)) ([b7e883f](https://github.com/littlebearapps/plainspoken/commit/b7e883f9885d13adb993a6d3e22547e99ac75330))
+
 ## [0.6.1](https://github.com/littlebearapps/plainspoken/compare/v0.6.0...v0.6.1) (2026-10-21)
 
 

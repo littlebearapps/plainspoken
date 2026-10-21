@@ -27,12 +27,13 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, evalcli,
                          extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
-                         reader_value, register, report, voice)
+                         reader_value, register, report, setup, voice)
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError
 from plainspoken.registry import load_config
@@ -67,6 +68,63 @@ def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
                                      target if isinstance(target, Path) else None)
 
 
+def _setup(args: argparse.Namespace, root: Path) -> int:
+    wanted = {"nudge": args.nudge, "rule": args.rule, "lint_watch": args.lint_watch}
+    wanted = {k: (None if v is None else v == "on") for k, v in wanted.items()}
+    if args.status:
+        print("\n".join(setup.status(root, os.environ)))
+        return 0
+    if args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove:
+        print(setup.paste_text(args.host), end="")
+        return 0
+    try:
+        path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove)
+    except (setup.SetupError, OSError) as e:
+        print(f"plainspoken: setup: {e}", file=sys.stderr)
+        return 2
+    if after == before:
+        print(f"{path}: nothing to change")
+        return 0
+    if args.dry_run:
+        print(f"{path} would become:\n\n{after or '(deleted: nothing left in it)'}")
+        return 0
+    setup.apply(path, after)
+    print(f"{path}: updated")
+    print("\n".join(setup.status(root, os.environ)))
+    if args.host in setup.AFTER:
+        print(setup.AFTER[args.host])
+    return 0
+
+
+STDIN_SOCIAL_WORDS = 300  # a stdin draft under this many words lints as social unless --content-type says otherwise
+
+
+def _check_stdin(args: argparse.Namespace, root: Path) -> int:
+    """Lint a draft read from stdin: a chat reply, a text or a post that never becomes a file. Nothing is saved and
+    no kaizen event is recorded (there is no document to key them to)."""
+    if args.out is not None or args.reports is not None:
+        print("plainspoken: check - (stdin) saves nothing; drop --out/--reports, or write the draft to a file",
+              file=sys.stderr)
+        return 2
+    text = sys.stdin.read()
+    if not text.strip():
+        print("plainspoken: can't check stdin: the draft is empty", file=sys.stderr)
+        return 2
+    content_type = args.content_type or ("social" if len(text.split()) < STDIN_SOCIAL_WORDS else "article")
+    with tempfile.TemporaryDirectory(prefix="plainspoken-stdin-") as tmp:
+        draft = Path(tmp) / "draft.md"
+        draft.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+        args.path = None  # no file: the project's [engine] profiles entries don't apply
+        try:
+            prof = _profile(args, root)
+            lint = report.run_lint(draft, prof, content_type, load_config())
+        except _INPUT_ERRORS as e:
+            return _input_error(Path("<stdin>"), e)
+    lint["article"] = "<stdin>"
+    print(json.dumps(lint, indent=2, ensure_ascii=False) if args.json else report.summarise(lint))
+    return 1 if report.lint_status(lint) == "BLOCK" else 0
+
+
 def _profile(args: argparse.Namespace, root: Path) -> Profile:
     return _profile_ex(args, root)[0]
 
@@ -97,11 +155,12 @@ def main(argv: list[str] | None = None) -> int:
 def _main(argv: list[str] | None) -> int:
     ap = argparse.ArgumentParser(prog="plainspoken")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    c = sub.add_parser("check", help="deterministic lint of one article")
-    c.add_argument("path", type=Path)
+    c = sub.add_parser("check", help="deterministic lint of one article, or of a draft on stdin with `-`")
+    c.add_argument("path", type=Path, help="the article, or - to lint a draft read from stdin (nothing is saved)")
     c.add_argument("--profile")
     c.add_argument("--plugin-profile")
-    c.add_argument("--content-type", choices=CONTENT_TYPES, default="article")
+    c.add_argument("--content-type", choices=CONTENT_TYPES,
+                   help="default: article; for stdin, social under 300 words, else article")
     c.add_argument("--json", action="store_true")
     c.add_argument("--out", type=Path)
     c.add_argument("--reports", type=Path)
@@ -174,6 +233,17 @@ def _main(argv: list[str] | None) -> int:
     jr.add_argument("--from", dest="reply_file", type=Path,
                     help="read the reply from this file; the `reply` path from `paths` is deleted afterwards, "
                          "any other file is kept")
+    su = sub.add_parser("setup", help="turn the writing nudge, the drafting rule and lint after edits on or off for "
+                                      "one host (or print the text to paste into claude.ai or ChatGPT)")
+    su.add_argument("--host", required=True, choices=setup.HOSTS)
+    su.add_argument("--scope", choices=("project", "user"), default="project",
+                    help="project: .plainspoken/config.toml here; user: ~/.config/plainspoken/config.toml")
+    for name, what in (("nudge", "the writing nudge"), ("rule", "the drafting rule (Claude Code)"),
+                       ("lint-watch", "lint after each edit")):
+        su.add_argument(f"--{name}", choices=("on", "off"), help=f"{what}; unset leaves it as it is")
+    su.add_argument("--dry-run", action="store_true", help="print the change without writing it")
+    su.add_argument("--remove", action="store_true", help="delete every setting setup wrote to this file first")
+    su.add_argument("--status", action="store_true", help="print what is on now")
     _claims_parser(sub)
     _reader_value_parser(sub)
     _kaizen_parser(sub)
@@ -181,7 +251,12 @@ def _main(argv: list[str] | None) -> int:
     args = ap.parse_args(argv)
     root = config.project_root(Path.cwd())  # run from anywhere in the project: reports and config live at its root
 
+    if args.cmd == "setup":
+        return _setup(args, root)
+    if args.cmd == "check" and str(args.path) == "-":
+        return _check_stdin(args, root)
     if args.cmd == "check":
+        args.content_type = args.content_type or "article"
         try:
             prof = _profile(args, root)
             cfg = load_config()

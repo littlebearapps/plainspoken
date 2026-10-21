@@ -16,11 +16,13 @@ REPO = Path(__file__).resolve().parents[1]
 EVALS = REPO / "evals"
 CASES = EVALS / "triggers"
 REWRITE = EVALS / "rewrite"
+REWRITE_SLASH = EVALS / "rewrite-slash"
+SMOKE = EVALS / "smoke"
 CASE_KEYS = {"schema_version", "name", "description", "tags", "plugins", "runs", "expected_outcome", "model",
              "max_turns", "timeout_seconds", "allowed_tools", "append_system_prompt", "env"}
 GRADER_TYPES = {"regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"}
 AUTO = {"check", "humanize", "write", "plain-language"}
-MANUAL = {"voice", "copy-audit", "register-check", "adapt", "claims", "reader-value", "kaizen"}
+MANUAL = {"voice", "copy-audit", "register-check", "adapt", "claims", "reader-value", "kaizen", "setup"}
 READ_ONLY = {"Read", "Glob", "Grep", "Skill"}
 CLI_GRANT = "Bash(python3 *)"  # the run grants it with --allow-tools; covers `python3 <plugin>/lib/run.py …`
 
@@ -188,6 +190,22 @@ class RewriteCases(unittest.TestCase):
                     if name == "no-flagged-words.md":
                         self.assertIn("i", g.get("flags", ""))
 
+    def test_slash_arm_mirrors_each_rewrite_case(self):
+        """evals/rewrite-slash: the same six passages and graders, asked through /plainspoken:humanize, so the arm
+        measures the skill itself rather than whether a plain request starts it."""
+        plain = {d.name: (fm, prompt, graders) for d, fm, prompt, graders in rewrite_cases()}
+        slash = [_case(d) for d in sorted(p for p in REWRITE_SLASH.iterdir() if p.is_dir())]
+        self.assertEqual(sorted(d.name for d, *_ in slash), sorted(f"{n}--slash" for n in plain))
+        for d, fm, prompt, graders in slash:
+            with self.subTest(case=d.name):
+                pfm, pprompt, pgraders = plain[d.name.removesuffix("--slash")]
+                self.assertEqual(fm["name"], d.name)
+                self.assertEqual(flow_list(fm["tags"]), ["rewrite-slash"])
+                self.assertEqual(prompt, f"/plainspoken:humanize {pprompt}")
+                self.assertEqual(graders, pgraders)
+                self.assertEqual({k: v for k, v in fm.items() if k not in {"name", "description", "tags"}},
+                                 {k: v for k, v in pfm.items() if k not in {"name", "description", "tags"}})
+
     def test_rewrite_prompts_ask_for_the_rewrite_only(self):
         self.assertIsNone(re.search(r"\d", CLOSING))
         for d, fm, prompt, graders in rewrite_cases():
@@ -314,7 +332,7 @@ class EvalCases(unittest.TestCase):
         # is a trigger or a rewrite case, so each one is checked by a test below.
         self.assertTrue(found)
         self.assertEqual(len(found), len([p for p in CASES.iterdir() if p.is_dir()]))
-        rewrite_dirs = [p for p in REWRITE.iterdir() if p.is_dir()]
+        rewrite_dirs = [p for p in (*REWRITE.iterdir(), *REWRITE_SLASH.iterdir(), *SMOKE.iterdir()) if p.is_dir()]
         self.assertEqual(sorted([d for d, *_ in found] + rewrite_dirs), loadable_cases())
         for d, fm, prompt, graders in found:
             with self.subTest(case=d.name):
@@ -327,6 +345,27 @@ class EvalCases(unittest.TestCase):
                 self.assertTrue(graders)
                 for name, g, _ in graders:
                     self.assertIn(g.get("type"), GRADER_TYPES, name)
+
+    def test_smoke_cases_run_every_skill_once_by_slash(self):
+        """evals/smoke: one case per skill that does real work on a saved draft (paid; `--tag smoke`)."""
+        skills = sorted(p.parent.name for p in (REPO / "skills").glob("*/SKILL.md"))
+        found = [_case(d) for d in sorted(p for p in SMOKE.iterdir() if p.is_dir())]
+        self.assertEqual([d.name for d, *_ in found], [f"{s}--smoke" for s in skills])
+        for d, fm, prompt, graders in found:
+            skill = d.name.removesuffix("--smoke")
+            with self.subTest(case=d.name):
+                self.assertEqual(set(fm) - CASE_KEYS, set())
+                self.assertEqual(fm["name"], d.name)
+                self.assertEqual(flow_list(fm["tags"]), ["smoke", skill])
+                self.assertTrue(prompt.startswith(f"/plainspoken:{skill}"))
+                self.assertEqual((d / flow_list(fm["plugins"])[0]).resolve(), REPO)
+                self.assertTrue(graders)
+                for name, g, _ in graders:
+                    self.assertEqual(g.get("type"), "regex", name)
+                    rx = compiled(g)
+                    # A kept-the-facts grader is meant to match the passage; its not_contains partner fails an echo.
+                    if g.get("match") != "not_contains" and not name.startswith("kept-"):
+                        self.assertIsNone(rx.search(prompt), f"{name}: the request itself satisfies it")
 
     def test_skill_graders_match_only_their_skill(self):
         for d, fm, _, graders in cases():
@@ -408,6 +447,9 @@ class EvalCases(unittest.TestCase):
 
     def test_slash_regexes_still_match_the_reply_they_grade(self):
         replies = {
+            "setup--slash": ["plainspoken is set up like this now:\n\n- writing nudge: off\n- drafting rule: off\n"
+                             "- lint after edits: on",
+                             "| Writing nudge | off |\n| Drafting rule | off |"],
             "copy-audit--slash": ["Copy audit: shown in reply — PARTIAL\n\n1. ...",
                                   "**Copy audit:** .plainspoken/drafts/harbour-row.md — **FAIL**"],
             "register-check--slash": ["Register check: pasted text (follow-up)\n...\n\n"

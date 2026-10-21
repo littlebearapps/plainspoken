@@ -1,8 +1,9 @@
 name: plainspoken
-version: 0.6.1
+version: 0.7.0
 description: >-
   plainspoken writing skills for Hermes Agent: anti-AI-tells check with isolated
   judges, humanize, write, plain language, voice and claims integrity
 author: Little Bear Apps
 provides_hooks:
   - pre_llm_call
+  - transform_tool_result

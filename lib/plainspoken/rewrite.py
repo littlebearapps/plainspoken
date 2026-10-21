@@ -74,9 +74,11 @@ def grade(draft: Path, source: Path | None, profile: Profile, content_type: str 
             if number_key(n) not in known and n not in new:
                 new.append(n)
     verdict = "FAIL" if blocks or em_dashes > cap or new else "PASS"
+    warns = sum(1 for f in findings if f["severity"] == "WARN")
     return {"draft": str(draft), "source": None if source is None else str(source), "profile": profile.name,
             "content_type": content_type, "blocks": blocks, "em_dashes": em_dashes, "em_dash_cap": cap,
-            "new_numbers": new, "words": metrics.compute(doc, cfg)["words"], "verdict": verdict}
+            "new_numbers": new, "words": metrics.compute(doc, cfg)["words"], "verdict": verdict,
+            "block_findings": sum(1 for f in findings if f["severity"] == "BLOCK"), "warn_findings": warns}
 
 
 def _files(folder: Path, recursive: bool = False) -> list[Path]:
@@ -121,3 +123,85 @@ def summarise(g: dict) -> str:
         f"  new numbers: {nums}",
         f"  words: {g['words']}",
     ])
+
+
+# --- the rewrite delta: both arms of a `claude plugin eval` rewrite run, lint-counted --------------------------------
+SOCIAL_CASES = ("rewrite--linkedin-post",)  # graded with the social caps, as in the case-file tests
+
+
+def passage(prompt: str) -> str:
+    """The pasted text of a rewrite case: the prompt's blockquote lines, without the `> ` marker."""
+    return "\n".join(ln[2:] if ln.startswith("> ") else ln[1:] for ln in prompt.splitlines() if ln.startswith(">"))
+
+
+def final_reply(trace: Path) -> str | None:
+    """The run's final reply: the `result` of the last `result` row in a kept `trace.jsonl`; None when there is none."""
+    import json
+    reply = None
+    for line in Path(trace).read_text(encoding="utf-8").splitlines():
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict) and row.get("type") == "result" and isinstance(row.get("result"), str):
+            reply = row["result"]
+    return reply
+
+
+def delta(result: dict, suite_root: Path, profile: Profile, cfg=None) -> dict:
+    """Grade every run of a with-without rewrite run (the `aggregate-result.json` of `claude plugin eval --tag
+    rewrite[-slash] --keep-temp`) with the engine, per arm: lint BLOCK and WARN findings, em dashes over the cap, new
+    numbers. The regex graders only pass or fail; the counts show a difference even when both arms pass them all.
+    A run whose trace is gone (no --keep-temp) is listed as missing, never counted as clean."""
+    import tempfile
+    cfg = load_config() if cfg is None else cfg
+    rows, missing = [], []
+    for case in result.get("cases", []):
+        name = case["name"]
+        base = name.removesuffix("--slash")
+        ctype = "social" if base in SOCIAL_CASES else "article"
+        prompt = (Path(suite_root) / case["dir"] / "prompt.md").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory(prefix="plainspoken-delta-") as tmp:
+            source = Path(tmp) / "source.md"
+            source.write_text(passage(prompt.split("\n---\n", 1)[-1]) + "\n", encoding="utf-8")
+            for arm in ("with", "without"):
+                for i, run in enumerate(case.get("arms", {}).get(arm, [])):
+                    trace = run.get("tracePath")
+                    text = final_reply(Path(trace)) if trace and Path(trace).is_file() else None
+                    if text is None:
+                        missing.append(f"{name} {arm} #{i + 1}")
+                        continue
+                    draft = Path(tmp) / f"{arm}-{i}.md"
+                    draft.write_text(text + "\n", encoding="utf-8")
+                    g = grade(draft, source, profile, ctype, cfg)
+                    rows.append({"case": name, "arm": arm, "run": i + 1, "blocks": g["block_findings"],
+                                 "warns": g["warn_findings"], "em_dashes_over": max(0, g["em_dashes"] - g["em_dash_cap"]),
+                                 "new_numbers": len(g["new_numbers"]), "verdict": g["verdict"]})
+
+    def mean(arm: str, key: str) -> float | None:
+        vals = [r[key] for r in rows if r["arm"] == arm]
+        return round(sum(vals) / len(vals), 3) if vals else None
+
+    summary = {}
+    for key in ("blocks", "warns", "em_dashes_over", "new_numbers"):
+        w, wo = mean("with", key), mean("without", key)
+        summary[key] = {"with": w, "without": wo, "delta": None if w is None or wo is None else round(wo - w, 3)}
+    passes = {arm: sum(1 for r in rows if r["arm"] == arm and r["verdict"] == "PASS") for arm in ("with", "without")}
+    return {"profile": profile.name, "rows": rows, "missing": missing, "summary": summary, "passes": passes,
+            "runs": {arm: sum(1 for r in rows if r["arm"] == arm) for arm in ("with", "without")}}
+
+
+def summarise_delta(d: dict) -> str:
+    lines = [f"rewrite delta · {d['profile']} · runs with {d['runs']['with']}, without {d['runs']['without']}"
+             f" · engine PASS with {d['passes']['with']}, without {d['passes']['without']}",
+             "  mean per rewrite (lower is better; delta = without - with, positive favours the plugin):"]
+    for key, label in (("blocks", "lint BLOCK findings"), ("warns", "lint WARN findings"),
+                       ("em_dashes_over", "em dashes over the cap"), ("new_numbers", "new numbers")):
+        s = d["summary"][key]
+        lines.append(f"  {label}: with {s['with']}, without {s['without']}, delta {s['delta']}")
+    for r in d["rows"]:
+        lines.append(f"    {r['case']} {r['arm']} #{r['run']}: {r['verdict']} · BLOCK {r['blocks']} · WARN {r['warns']}"
+                     f" · em-dash over {r['em_dashes_over']} · new numbers {r['new_numbers']}")
+    if d["missing"]:
+        lines.append(f"  missing traces (run with --keep-temp): {', '.join(d['missing'])}")
+    return "\n".join(lines)

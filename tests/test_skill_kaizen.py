@@ -197,7 +197,9 @@ class MiningReference(unittest.TestCase):
 
 class CaptureStep(unittest.TestCase):
     def test_every_other_skill_ends_with_the_capture_step(self):
-        others = sorted(p.parent.name for p in (REPO / "skills").glob("*/SKILL.md") if p.parent.name != "kaizen")
+        # setup checks nothing, so it has no finding to dismiss or uphold
+        others = sorted(p.parent.name for p in (REPO / "skills").glob("*/SKILL.md")
+                        if p.parent.name not in ("kaizen", "setup"))
         self.assertEqual(len(others), 10)
         for name in others:
             _, text = load(name)
