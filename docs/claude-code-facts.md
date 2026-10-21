@@ -158,8 +158,8 @@ denies anything it can't interpret; it must not deny ordinary push commands.
   autocrlf, clean filters or LFS), the working-tree bytes the check read; otherwise the committed blob. A path absent
   from the pushed tree is a deletion and skipped; a path that's there but unreadable is unverifiable.
 - **Not modelled (known gaps):** `cd` earlier in the same command (the gate checks the project directory; `-C` is resolved
-  from the Bash tool's cwd); `GIT_DIR`, `GIT_CONFIG_*` and similar environment assignments; commands piped into a shell's stdin
-  (`echo "git push" | sh`); `xargs git` reading the subcommand from stdin; scripts and Makefiles that push; remote-
+  from the Bash tool's cwd); `GIT_DIR`, `GIT_CONFIG_*` and similar environment assignments; commands written to a shell's standard
+  input (`git push` echoed into `sh`); `xargs git` reading the subcommand from stdin; scripts and Makefiles that push; remote-
   tracking refs mapped by a non-default `remote.<name>.fetch`; MCP publishing (out of scope for v0.1).
 
 ## 7. Skill listing and manual-only skills
