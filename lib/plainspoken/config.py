@@ -29,17 +29,18 @@ _READER_VALUE_KEYS = {"cta_phrases"}
 _INTEGRITY_KEYS = {"mode", "paths"}
 _LINT_WATCH_KEYS = {"mode", "paths"}
 _NUDGE_KEYS = {"mode"}
+_RULE_KEYS = {"enabled"}
 _KAIZEN_KEYS = {"capture", "capture_sources", "excerpts", "adapter", "ledger_dir", "proposals_dir", "corpus",
                 "human_corpus", "approvers", "github", "trello"}
 _KAIZEN_GITHUB_KEYS = {"repo", "labels"}
 _KAIZEN_TRELLO_KEYS = {"list_id", "label_ids", "key_env", "token_env"}
 _SECTIONS = {"engine": _ENGINE_KEYS, "gate": _GATE_KEYS, "brief": _BRIEF_KEYS, "claims": _CLAIMS_KEYS,
              "reader_value": _READER_VALUE_KEYS, "integrity": _INTEGRITY_KEYS, "lint_watch": _LINT_WATCH_KEYS,
-             "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS}
+             "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS, "rule": _RULE_KEYS}
 # The user-wide file (~/.config/plainspoken/config.toml) holds only the settings that make sense outside a project:
-# hosts without install options (Codex, Hermes) turn the nudge and lint-watch on or off there. A project's own config
-# wins over it.
-_USER_SECTIONS = ("nudge", "lint_watch")
+# the nudge, the drafting rule and lint-watch (hosts without install options, Codex and Hermes, set them there). A
+# project's own config wins over it.
+_USER_SECTIONS = ("nudge", "rule", "lint_watch")
 STRICTNESS = ("watch", "warn", "block")
 INTEGRITY_MODES = ("off", "warn", "block")
 LINT_WATCH_MODES = ("on", "off")
@@ -112,9 +113,9 @@ def _read_config(path: Path, sections: tuple[str, ...]) -> tuple[Path, dict] | N
                 _check_profile_base(path, "[engine] profile", value)
             if "profiles" in body:
                 _check_profiles(path, body["profiles"])
-        elif section == "brief":
+        elif section in ("brief", "rule"):
             if "enabled" in body and not isinstance(body["enabled"], bool):
-                raise ConfigError(f"{path}: [brief] enabled must be true or false")
+                raise ConfigError(f"{path}: [{section}] enabled must be true or false")
         elif section in ("claims", "reader_value", "integrity"):
             _check_phase4_section(path, section, body)
         elif section == "lint_watch":
@@ -324,6 +325,16 @@ def nudge_mode(root: Path, env: Mapping[str, str] | None = None) -> str:
     if "mode" in body:
         return body["mode"]
     return "on" if str(env.get("CLAUDE_PLUGIN_OPTION_NUDGE", "")).strip().lower() == "true" else "off"
+
+
+def rule_enabled(root: Path, env: Mapping[str, str] | None = None) -> bool:
+    """Whether the drafting rule is added at session start: project `[rule] enabled` → user-wide `[rule] enabled` →
+    the Claude Code option `rule` (CLAUDE_PLUGIN_OPTION_RULE, "true") → off."""
+    env = os.environ if env is None else env
+    body = _project_or_user(root, "rule", env)
+    if "enabled" in body:
+        return bool(body["enabled"])
+    return str(env.get("CLAUDE_PLUGIN_OPTION_RULE", "")).strip().lower() == "true"
 
 
 def lint_watch(root: Path, env: Mapping[str, str] | None = None) -> dict:

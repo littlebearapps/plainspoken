@@ -65,3 +65,29 @@ class UserConfig(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Rule(unittest.TestCase):
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        self.project = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
+        self.env = {"HOME": str(self.home)}
+
+    def test_off_by_default_and_each_source(self):
+        self.assertFalse(config.rule_enabled(self.project, self.env))
+        self.assertTrue(config.rule_enabled(self.project, {**self.env, "CLAUDE_PLUGIN_OPTION_RULE": "true"}))
+        user = self.home / ".config" / "plainspoken" / "config.toml"
+        user.parent.mkdir(parents=True)
+        user.write_text("[rule]\nenabled = true\n", encoding="utf-8")
+        self.assertTrue(config.rule_enabled(self.project, self.env))
+        (self.project / ".plainspoken").mkdir()
+        (self.project / ".plainspoken" / "config.toml").write_text("[rule]\nenabled = false\n", encoding="utf-8")
+        self.assertFalse(config.rule_enabled(self.project, self.env))
+
+    def test_enabled_must_be_a_bool(self):
+        (self.project / ".plainspoken").mkdir()
+        (self.project / ".plainspoken" / "config.toml").write_text('[rule]\nenabled = "yes"\n', encoding="utf-8")
+        with self.assertRaises(config.ConfigError):
+            config.rule_enabled(self.project, self.env)

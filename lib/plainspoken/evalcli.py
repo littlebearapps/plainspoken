@@ -131,6 +131,11 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
                     help="stop before billed spend in the run folder would pass this (default 5); one budget per "
                          "batch, so the stop also holds back the unbilled claude-cli calls until you resume")
     jd.add_argument("--concurrency", type=int, default=4, help="calls in flight at once (default 4)")
+    rd = es.add_parser("rewrite-delta", help="lint-count both arms of a `claude plugin eval` rewrite run (needs "
+                                             "--keep-temp; free)")
+    rd.add_argument("result", type=Path, metavar="RESULT", help="the run's aggregate-result.json (or its --json file)")
+    rd.add_argument("--profile", help="the voice profile (default: the project's, else the plugin default)")
+    rd.add_argument("--json", action="store_true", help="print the rows and summary as JSON")
     rw = es.add_parser("rewrite", help="grade one rewrite: lint BLOCKs, the em-dash cap and new numbers (free)")
     rw.add_argument("draft", type=Path, metavar="DRAFT")
     rw.add_argument("--source", type=Path, help="the text it rewrites: a number not in it fails the draft")
@@ -198,6 +203,8 @@ def run(args: argparse.Namespace) -> int:
         return _judges_report(args)
     if args.eval_cmd == "rewrite":
         return _rewrite(args)
+    if args.eval_cmd == "rewrite-delta":
+        return _rewrite_delta(args)
     if args.eval_cmd == "lint-rate":
         return _lint_rate(args)
     if args.eval_cmd == "goodhart":
@@ -503,6 +510,19 @@ def _rewrite(args: argparse.Namespace) -> int:
         return _fail(cmd, _first_line(e))
     print(json.dumps(g, indent=2, ensure_ascii=False) if args.json else rewrite.summarise(g))
     return 0 if g["verdict"] == "PASS" else 1
+
+
+def _rewrite_delta(args: argparse.Namespace) -> int:
+    cmd = "rewrite-delta"
+    try:
+        result = json.loads(args.result.read_text(encoding="utf-8"))
+        root = Path(result["suite"]["root"])
+        prof, _ = config.resolve_profile_ex(args.profile, config.project_root(Path.cwd()), os.environ, "")
+        d = rewrite.delta(result, root, prof)
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        return _fail(cmd, f"{args.result}: {_first_line(e)}")
+    print(json.dumps(d, indent=2, ensure_ascii=False) if args.json else rewrite.summarise_delta(d))
+    return 0 if d["rows"] else 1
 
 
 def _judges_report(args: argparse.Namespace) -> int:
