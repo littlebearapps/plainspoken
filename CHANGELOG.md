@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.6.0](https://github.com/littlebearapps/plainspoken/compare/v0.5.0...v0.6.0) (2026-10-20)
+
+### Highlights
+
+plainspoken now installs in Codex and Hermes Agent as well as Claude Code. The same skills, agents and engine run in
+all three; each new host gets a short note on how to run the skills there (`hosts/codex.md`, `hosts/hermes.md`), and
+the judges and checkers run as separate one-shot processes with a fresh context, built by `run.py agent-prompt`.
+
+- **Codex:** `codex plugin marketplace add littlebearapps/lba-plugins`, then `codex plugin add plainspoken@lba-plugins`.
+- **Hermes Agent:** `hermes plugins install littlebearapps/plainspoken --enable`. Hermes rates the plugin "caution"
+  and asks you to confirm; over SSH or in a script, review the findings and add `--force`.
+- Not yet outside Claude Code: the hooks (lint after each edit, publish gate, kaizen nudges) and the install-time
+  settings. Run the check yourself before anything goes out.
+
+### Features
+
+* install in Codex and Hermes Agent ([875c23e](https://github.com/littlebearapps/plainspoken/commit/875c23ed872fa74cc1b4662ce0df17dad75138c1))
+
+
+### Bug Fixes
+
+* clear the Hermes install scan's avoidable HIGH findings ([987afd5](https://github.com/littlebearapps/plainspoken/commit/987afd567b94d623679b78fd11157bd6fea0d444))
+
 ## 0.5.0 — first public release (2026-10-20)
 
 plainspoken is a Claude Code plugin that helps Claude write like a person: specific, honest and plain, in a stated
