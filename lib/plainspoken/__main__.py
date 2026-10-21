@@ -223,8 +223,9 @@ def _main(argv: list[str] | None) -> int:
     m.add_argument("--reports", type=Path)
     m.add_argument("--profile")
     m.add_argument("--plugin-profile")
-    st = sub.add_parser("status", help="the last saved check and claims status lines for a draft, and its "
-                                       "reader-value contract path, for a report to quote (runs and writes nothing)")
+    st = sub.add_parser("status", help="the last saved check and claims status lines for a draft, its word "
+                                       "count and its reader-value contract path, for a report to quote (runs and "
+                                       "writes nothing)")
     st.add_argument("path", type=Path)
     st.add_argument("--reports", type=Path)
     st.add_argument("--ledger", type=Path)
@@ -835,7 +836,9 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
     try:
         if not args.path.is_file():
             raise FileNotFoundError(f"no such file: {args.path}")
-        check_status, check_lines = report.saved_check(args.path, reports_dir, _profile(args, root), root)
+        prof = _profile(args, root)
+        check_status, check_lines = report.saved_check(args.path, reports_dir, prof, root)
+        words = report.word_count(args.path, prof)
     except _INPUT_ERRORS as e:
         return _input_error(args.path, e, "report the status of")
     try:
@@ -848,7 +851,7 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
     contract = reader_value.default_contract(args.path, root)
     shown = claims_tools.display_path(contract, root)
     print("\n".join([f"check: {check_lines[0]}", *check_lines[1:], f"claims: {rep['status']}",
-                     *(f"  {r}" for r in rep["reasons"]),
+                     *(f"  {r}" for r in rep["reasons"]), f"words: {words}",
                      f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
     return 0 if check_status == rep["status"] == "PASS" else 1
 

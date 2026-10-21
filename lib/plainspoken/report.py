@@ -334,6 +334,12 @@ def saved_check(article: Path, reports_dir: Path, profile: Profile, cwd: Path) -
     return "INCOMPLETE", ["INCOMPLETE (the merged report can't be read; run the check again)"]
 
 
+def word_count(article: Path, profile: Profile) -> int:
+    """The draft's length as it is now, counted as the check's `words` metric counts it."""
+    doc = parse(article.read_text(encoding="utf-8"), path=str(article), profile=profile)
+    return metrics.compute(doc, load_config())["words"]
+
+
 def reports_dir_default(cwd: Path) -> Path:
     """Where reports go when the caller doesn't say: the project's .plainspoken/reports."""
     return cwd / ".plainspoken" / "reports"

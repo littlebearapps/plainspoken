@@ -34,6 +34,18 @@ class WriteSkill(SkillBasics, unittest.TestCase):
     def step(self, n: int) -> str:
         return self.text.split(f"### {n}. ", 1)[1].split(f"### {n + 1}. ", 1)[0]
 
+    def test_length_the_sources_cant_carry_is_raised_before_drafting(self):  # #32: say so; never pad
+        step = " ".join(self.step(1).split())
+        self.assertIn("estimate whether the sources can carry it", step)
+        self.assertIn("say so before you draft and ask for more material", step)
+        self.assertIn("write it shorter and say why at the top of the report", step)
+        self.assertIn("Never pad", step)
+        self.assertIn("A definition or background line the sources don't give is a new fact", step)
+        gate = (REFS / "research-gate.md").read_text(encoding="utf-8")
+        self.assertIn("## When the sources can't carry the length", gate)
+        report = " ".join(self.text.split("### 8. Report", 1)[1].split())
+        self.assertIn("Any length you give is the `words:` line's, never an estimate", report)
+
     def test_reader_value_outline_before_drafting(self):  # the stub is gone
         step = self.step(2)
         self.assertIn("/plainspoken:reader-value outline", step)

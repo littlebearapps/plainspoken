@@ -759,3 +759,14 @@ class DraftStatus(unittest.TestCase):
                          f"reader-value contract: .plainspoken/reader-value/{self.art.stem}.reader-value.toml")
         gone = self._cli("status", str(self.tmp / "nope.md"), *PRODUCT_ARGS)
         self.assertEqual((gone.returncode, gone.stdout), (2, ""))
+
+    def test_gives_the_drafts_word_count_as_the_check_counts_it(self):
+        """A report states the piece's real length from the engine, not an estimate (issue #32)."""
+        want = run_lint(self.art, PRODUCT, "article", self.cfg)["metrics"]["words"]
+        self.assertGreater(want, 0)
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)  # before any check: the count doesn't need one
+        self.assertIn(f"words: {want}", r.stdout.splitlines())
+        with self.art.open("a", encoding="utf-8") as f:
+            f.write("\nOne more short line here.\n")
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+        self.assertIn(f"words: {want + 5}", r.stdout.splitlines())  # read from the draft as it is now
