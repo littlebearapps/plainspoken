@@ -1,0 +1,1 @@
+Welcome to Ballarat Aquatic Centre. If your child is under 10, please stay within arm's reach of them in the water. Lifeguards are on duty from 6am to 8pm. We also run free 30-minute water-safety sessions for parents every Sunday, so ask at the front desk.

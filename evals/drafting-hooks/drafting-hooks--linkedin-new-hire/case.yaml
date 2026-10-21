@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: drafting-hooks--linkedin-new-hire
+context:
+  scaffold_script: scaffold.sh

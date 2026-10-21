@@ -1,5 +1,5 @@
 ---
 type: regex
-pattern: 'drafting rule[*_`]*\s*(?::|\|)\s*[*_`]*on\b'
+pattern: 'drafting rule[^\n]*(?::|\|)[^\n]*\bon\b'
 flags: i
 ---

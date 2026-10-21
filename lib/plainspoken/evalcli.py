@@ -136,6 +136,7 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
     rd.add_argument("result", type=Path, metavar="RESULT", help="the run's aggregate-result.json (or its --json file)")
     rd.add_argument("--profile", help="the voice profile (default: the project's, else the plugin default)")
     rd.add_argument("--json", action="store_true", help="print the rows and summary as JSON")
+    rd.add_argument("--save", type=Path, help="write each graded piece to DIR/<case>/<arm>-<run>.md")
     rw = es.add_parser("rewrite", help="grade one rewrite: lint BLOCKs, the em-dash cap and new numbers (free)")
     rw.add_argument("draft", type=Path, metavar="DRAFT")
     rw.add_argument("--source", type=Path, help="the text it rewrites: a number not in it fails the draft")
@@ -518,7 +519,7 @@ def _rewrite_delta(args: argparse.Namespace) -> int:
         result = json.loads(args.result.read_text(encoding="utf-8"))
         root = Path(result["suite"]["root"])
         prof, _ = config.resolve_profile_ex(args.profile, config.project_root(Path.cwd()), os.environ, "")
-        d = rewrite.delta(result, root, prof)
+        d = rewrite.delta(result, root, prof, save=args.save)
     except (OSError, ValueError, KeyError, TypeError) as e:
         return _fail(cmd, f"{args.result}: {_first_line(e)}")
     print(json.dumps(d, indent=2, ensure_ascii=False) if args.json else rewrite.summarise_delta(d))
