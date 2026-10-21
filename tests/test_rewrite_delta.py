@@ -30,12 +30,13 @@ class Delta(unittest.TestCase):
             "name": "rewrite--email--slash", "dir": "evals/rewrite-slash/rewrite--email--slash",
             "arms": {"with": [{"tracePath": trace(self.tmp / "w", PLAIN)}],
                      "without": [{"tracePath": trace(self.tmp / "o", STIFF)},
-                                 {"tracePath": str(self.tmp / "gone" / "trace.jsonl")}]}}]}
+                                 {"tracePath": str(self.tmp / "gone" / "trace.jsonl")},
+                                 {"tracePath": trace(self.tmp / "e", "API Error: 400 usage limits"), "error": "exit 1"}]}}]}
 
     def test_counts_per_arm_and_missing_runs(self):
         d = rewrite.delta(self.result, REPO, default_profile())
         self.assertEqual(d["runs"], {"with": 1, "without": 1})
-        self.assertEqual(d["missing"], ["rewrite--email--slash without #2"])
+        self.assertEqual(d["missing"], ["rewrite--email--slash without #2", "rewrite--email--slash without #3"])
         s = d["summary"]["blocks"]
         self.assertEqual(s["with"], 0.0)
         self.assertGreater(s["without"], 0)

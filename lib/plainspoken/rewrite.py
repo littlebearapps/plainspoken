@@ -194,7 +194,9 @@ def delta(result: dict, suite_root: Path, profile: Profile, cfg=None, save: Path
             for arm in ("with", "without"):
                 for i, run in enumerate(case.get("arms", {}).get(arm, [])):
                     trace = run.get("tracePath")
-                    text = final_reply(Path(trace)) if trace and Path(trace).is_file() else None
+                    # a run that ended on an API error has an error message, not a rewrite, as its final reply
+                    text = (final_reply(Path(trace)) if trace and Path(trace).is_file() and not run.get("error")
+                            else None)
                     if text is None:
                         missing.append(f"{name} {arm} #{i + 1}")
                         continue
