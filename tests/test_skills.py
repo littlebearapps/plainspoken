@@ -32,7 +32,7 @@ class CheckSkill(unittest.TestCase):
         self.assertIn("${CLAUDE_PLUGIN_ROOT}/lib/run.py", self.fm.get("allowed-tools", ""))
 
     def test_calls_the_cli_not_python_snippets(self):
-        for sub in ("check", "judge-input", "judge-record", "merge", "justify", "paths"):
+        for sub in ("check", "judge-input", "judge-record", "merge", "justify", "paths", "status"):
             self.assertRegex(self.text, rf"run\.py {sub}\b")
         self.assertNotIn("python3 - ", self.text)
         self.assertNotIn("import json", self.text)
@@ -81,6 +81,19 @@ class CheckSkill(unittest.TestCase):
         tools = self.fm.get("allowed-tools", "")
         self.assertIn("Write(.plainspoken/reports/", tools)
         self.assertIn("Edit(.plainspoken/reports/", tools)
+
+    def test_which_edits_count_as_fix_passes(self):  # #29: uncounted pre-judge edits, edits after JR
+        head = " ".join(self.text[: self.text.index("## Steps")].split())
+        self.assertIn("Before the judges start you may fix lint findings once", head)
+        self.assertIn("isn't a fix pass", head)
+        self.assertIn("Once the judges start, every edit to FILE is a fix pass (after justify or JR too)", head)
+
+    def test_report_reads_status_and_reruns_when_stale(self):  # #29: no clean finish after an uncounted edit
+        step = " ".join(self.text[self.text.index("8. **Report.**"):].split())
+        self.assertIn("RUN status FILE --plugin-profile", step)
+        self.assertIn("`check:` lines exactly as printed", step)
+        self.assertIn("run steps 1 to 5 again without editing", step)
+        self.assertIn("how many fix passes ran", step)
 
 if __name__ == "__main__":
     unittest.main()
