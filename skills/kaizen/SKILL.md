@@ -43,8 +43,8 @@ Also:
 - If the host asks permission for `kaizen apply` or `kaizen calibrate`, or refuses it, never suggest broadening the
   grant (no `kaizen *`, no `run.py *`, no standing allow rule): the person approves each of those calls.
 
-Proposals waiting now (injected when this skill loads):
-!`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py kaizen review || true`
+**First, before any other step:** run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py kaizen review` and read what it
+prints: the proposals waiting now. If the call fails, carry on without it.
 
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. No `kaizen` subcommand takes `--plugin-profile`
 (argparse rejects it with exit 2); `dismiss`, `uphold` and `published` find the profile from the saved lint.

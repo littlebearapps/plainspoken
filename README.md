@@ -64,21 +64,22 @@ Hermes Agent:
 
     hermes plugins install littlebearapps/plainspoken --enable
 
-Hermes scans a plugin before it installs it. It rates plainspoken "caution", mostly because the skills carry
-Claude Code's load-time commands (`` !`python3 …` ``) and the engine runs Python, so it asks you to confirm. Over
-SSH or in a script, where it can't ask, it refuses: review the findings and add `--force`. Then start a new session
-(or `/reset`). Hermes loads `.hermes-plugin/`, which registers the skills as `plainspoken:<name>` and tells the
-model where the plugin lives. To add it to one Hermes profile only, name the
-profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`. The install also warns
-that the repo root has no `plugin.yaml`; that's expected, because the Hermes manifest sits in `.hermes-plugin/`.
+Hermes scans a plugin before it installs it. Hermes v0.22 rates plainspoken "safe": it lists medium and low findings
+(the engine runs Python, and the docs show commands) but no high ones, so the install doesn't stop to ask. If your
+Hermes rates it "caution", it asks you to confirm; over SSH or in a script, where it can't ask, review the findings
+and add `--force`. Then start a new session (or `/reset`). Hermes loads `.hermes-plugin/`, which registers the
+skills as `plainspoken:<name>` and tells the model where the plugin lives. To add it to one Hermes profile only,
+name the profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`. The install also
+warns that the repo root has no `plugin.yaml`; that's expected, because the Hermes manifest sits in
+`.hermes-plugin/`.
 
 Updates: this install follows the `stable` branch, which only moves when a release ships. Hermes checks for a new
-commit once a day (`plugins.auto_update_check_hours`), `hermes plugins check-updates` checks now, and Hermes
-Desktop shows an **Update** button. Apply it with `hermes plugins update plainspoken`. The update is scanned
-again and asks "Update anyway?" for the same caution rating; add `--force` where it can't ask, such as a cron job.
-For the same reason `plugins.auto_apply: true` doesn't update plainspoken yet: unattended updates don't accept a
-caution rating. To stay on one release instead, pin its full commit with `--ref <sha>` (Hermes takes no tags or
-branches there); `update` then leaves it alone, and `install --force --ref <new-sha>` moves it.
+commit once a day (`plugins.auto_update_check_hours`), `hermes plugins check-updates` checks now, and Hermes Desktop
+shows an **Update** button. Apply it with `hermes plugins update plainspoken`. The update is scanned again; a "safe"
+rating applies without asking, so `plugins.auto_apply: true` can apply it unattended (a "caution" rating asks
+"Update anyway?" and needs `--force` where it can't ask). To stay on one release instead, pin its full commit with
+`--ref <sha>` (Hermes takes no tags or branches there); `update` then leaves it alone, and
+`install --force --ref <new-sha>` moves it.
 
 Hooks outside Claude Code: lint and the claims integrity check after each edit, and the optional writing nudge, run
 in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Still missing: the publish gate and

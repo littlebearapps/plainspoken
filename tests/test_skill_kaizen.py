@@ -4,7 +4,7 @@ import subprocess
 import sys
 import unittest
 
-from tests._skills import REPO, SkillBasics, files, load
+from tests._skills import REPO, SkillBasics, assert_first_step, files, load
 
 SKILL = REPO / "skills" / "kaizen"
 REFS = SKILL / "references"
@@ -40,8 +40,8 @@ class KaizenSkill(SkillBasics, unittest.TestCase):
     DRAFTING = True  # no ban-list word anywhere in the skill's files (the lists live in the checker)
     REFERENCES = ("mining.md", "claude-code.md")
 
-    def test_profile_injected(self):  # kaizen reads no profile: it shows the proposal queue at load instead
-        self.assertRegex(self.text, r"(?m)^!`python3 \$\{CLAUDE_PLUGIN_ROOT\}/lib/run\.py kaizen review \|\| true`$")
+    def test_profile_read_first(self):  # kaizen reads no profile: its first step shows the proposal queue instead
+        assert_first_step(self, self.text, f"`python3 {RUN_PATH} kaizen review`")
 
     def test_frontmatter(self):  # narrower than SkillBasics: no blanket run.py grant
         self.assertEqual(self.fm["name"], "kaizen")
@@ -67,8 +67,7 @@ class KaizenSkill(SkillBasics, unittest.TestCase):
 
     def test_every_other_call_is_pre_approved(self):
         grants = allowed(self.fm["allowed-tools"])
-        calls = [f"python3 {RUN_PATH} {line}" for line in re.findall(r"(?m)^!`python3 \$\{CLAUDE_PLUGIN_ROOT\}/lib/run\.py"
-                                                                      r" (kaizen [a-z]+)", self.text)]
+        calls = []  # the first step's `kaizen review` is a code span too, so KAIZEN_SPAN finds it
         for f in files(self.NAME):
             for sub, rest in KAIZEN_SPAN.findall(f.read_text(encoding="utf-8")):
                 if sub not in ("apply", "calibrate"):

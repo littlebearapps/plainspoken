@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from scripts.dev.lint_frontmatter import parse_frontmatter
+from tests._skills import LOAD_LINE, PROFILE_CALL, assert_first_step
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -42,16 +43,16 @@ class CheckSkill(unittest.TestCase):
         for needle in ("never edit", "two fix passes", "INCOMPLETE", "plainspoken:tells-judge"):
             self.assertIn(needle, head)
 
-    def test_profile_injected(self):
-        self.assertRegex(self.text, r"(?m)^!`python3 \$\{CLAUDE_PLUGIN_ROOT\}/lib/run\.py profile .*\|\| true`$")
+    def test_profile_read_first(self):  # #12: an explicit first step, not a load-time command
+        assert_first_step(self, self.text, PROFILE_CALL)
 
     def test_no_ban_list_words(self):  # lists live in the checker
         lists = __import__("plainspoken.registry", fromlist=["load_config"]).load_config().lists
         for word in lists["ban_literal"]:
             self.assertIsNone(re.search(rf"\b{re.escape(word)}\b", self.text, re.I), word)
 
-    def test_injection_line_survives_an_unsubstituted_placeholder(self):
-        line = re.search(r"(?m)^!`(.*)`$", self.text).group(1).replace("${CLAUDE_PLUGIN_ROOT}", str(REPO))
+    def test_first_step_survives_an_unsubstituted_placeholder(self):
+        line = PROFILE_CALL.strip("`").replace("${CLAUDE_PLUGIN_ROOT}", str(REPO))
         env = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_"))}
         with tempfile.TemporaryDirectory() as cwd:  # no project config, no profile from the caller's environment
             r = subprocess.run(["bash", "-c", line], capture_output=True, text=True, cwd=cwd, env=env)
@@ -171,3 +172,20 @@ class PerFileProfile(unittest.TestCase):
     def test_the_cli_has_profile_for(self):
         src = (REPO / "lib" / "plainspoken" / "__main__.py").read_text(encoding="utf-8")
         self.assertIn('add_parser("profile-for"', src)
+
+
+class NoLoadTimeCommands(unittest.TestCase):  # #12: Hermes rates any load-time command under skills/ high
+    def test_no_skill_file_has_a_load_time_command(self):
+        found = []
+        for f in sorted((REPO / "skills").rglob("*")):
+            if f.is_file():
+                for n, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                    if LOAD_LINE.search(line):
+                        found.append(f"{f.relative_to(REPO)}:{n}")
+        self.assertEqual(found, [])
+
+    def test_every_skill_with_a_profile_call_runs_it_first(self):
+        for f in sorted((REPO / "skills").glob("*/SKILL.md")):
+            text = f.read_text(encoding="utf-8")
+            if "First, before any other step" in text and f.parent.name != "kaizen":
+                assert_first_step(self, text, PROFILE_CALL)

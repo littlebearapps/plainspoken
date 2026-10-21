@@ -11,8 +11,6 @@ wins in Hermes; the skill still decides *what* to do.
   absolute path into every command. `RUN` in the skills is `python3 <root>/lib/run.py`, run with `terminal`.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
   literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
-- A line written as `` !`command` `` is something Claude Code runs when the skill loads. Run it yourself first, with
-  the root filled in, and read its output as the skill's injected context.
 - Claude Code tool names map as: Read → `read_file`, Write → `write_file`, Edit → `patch`, Bash → `terminal`,
   Grep/Glob → `search_files`. `allowed-tools`, `argument-hint` and `disable-model-invocation` are Claude Code
   settings; the manual-only skills (`claims`, `reader-value`, `kaizen`) still start only when the user asks.
