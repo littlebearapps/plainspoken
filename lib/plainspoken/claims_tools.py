@@ -1,6 +1,7 @@
 """The logic behind the `claims` CLI subcommands that build or combine things: `scaffold` (a fail-closed starter
-ledger from the extracted candidates), `pin` (a ready-to-paste TOML binding fragment), and `status` (gaps computed,
-the checker's record read, the report payload assembled).
+ledger from the extracted candidates), `pin` (a ready-to-paste TOML binding fragment), `stamp` (the article's hash,
+the time and `checked_by` written into the ledger, so no hash is copied by hand), and `status` (gaps computed, the
+checker's record read, the report payload assembled).
 
 Kept apart from claims.py, the ledger core, because it needs extraction.py and checker.py, and checker.py imports
 claims.py.
@@ -14,15 +15,17 @@ as INCOMPLETE.
 from __future__ import annotations
 
 import functools
+import hashlib
 import json
 import re
+import tomllib
 from pathlib import Path
 
 from plainspoken import _util, checker, claims, extraction, integrity, pinning, schema, tomlw
 
-__all__ = ["CHECKED_BY", "RESOLUTION", "default_id_prefix", "id_pattern", "location_kinds", "pin_fragment",
-           "read_check", "scaffold", "scaffold_text", "source_suffixes", "status_report", "unreported",
-           "display_path"]
+__all__ = ["CHECKED_BY", "RESOLUTION", "NotReady", "default_id_prefix", "id_pattern", "location_kinds",
+           "pin_fragment", "read_check", "scaffold", "scaffold_text", "source_suffixes", "stamp", "stamp_text",
+           "status_report", "unreported", "display_path"]
 
 CHECKED_BY = "plainspoken claims scaffold"
 RESOLUTION = "unreviewed candidate from claims scaffold"
@@ -190,6 +193,85 @@ def pin_fragment(source_text: str, passage: str, *, retrieved_at: str, source_sn
     if locator is not None:
         fields["locator"] = locator
     return tomlw.dumps({"claims": {"binding": {"additional_passages": [fields]}}})
+
+
+class NotReady(Exception):
+    """`stamp` refused: the ledger isn't finished (coverage not complete, or a gap open). Not a ValueError, because
+    the CLI exits 1 for it, not 2 (bad input)."""
+
+
+_STAMP_KEYS = ("source_content_hash", "checked_at", "checked_by")
+_TOP_KEY = re.compile(r'^[ \t]*(["\']?)(source_content_hash|checked_at|checked_by)\1[ \t]*=')
+_TABLE_LINE = re.compile(r"^[ \t]*\[")
+
+
+def _stamp_toml(text: str, values: dict) -> str:
+    lines = text.splitlines(keepends=True)
+    end = next((i for i, ln in enumerate(lines) if _TABLE_LINE.match(ln)), len(lines))  # top-level keys end here
+    done = set()
+    for i in range(end):
+        m = _TOP_KEY.match(lines[i])
+        if m:
+            lines[i] = tomlw.dumps({m.group(2): values[m.group(2)]})
+            done.add(m.group(2))
+    missing = "".join(tomlw.dumps({k: values[k]}) for k in _STAMP_KEYS if k not in done)
+    at = end  # above the blank and comment lines that lead into the first table, so they stay with it
+    while at > 0 and (not lines[at - 1].strip() or lines[at - 1].lstrip().startswith("#")):
+        at -= 1
+    if missing and at > 0 and not lines[at - 1].endswith("\n"):
+        missing = "\n" + missing
+    lines[at:at] = [missing]
+    return "".join(lines)
+
+
+def stamp_text(text: str, suffix: str, values: dict) -> str:
+    """The ledger text with `values` (`source_content_hash`, `checked_at`, `checked_by`) set at its top level and
+    everything else unchanged. TOML is edited in place, line by line, so comments and layout stay; a missing key is
+    added before the first table. JSON is rewritten with the same keys in the same order. Raises ValueError when the
+    result wouldn't read back as the same ledger with those three values (a value written over several lines)."""
+    if suffix == ".json":
+        data = claims.strict_json(text)
+        if not isinstance(data, dict):
+            raise ValueError("the ledger must be an object at the top level")
+        return json.dumps({**data, **values}, indent=2, ensure_ascii=False) + "\n"
+    before = tomllib.loads(text)
+    out = _stamp_toml(text, values)
+    try:
+        after = tomllib.loads(out)
+    except tomllib.TOMLDecodeError:
+        after = None
+    if after != {**before, **values}:
+        raise ValueError("can't stamp it in place: put source_content_hash, checked_at and checked_by each on one "
+                         "line at the top of the ledger, then run stamp again")
+    return out
+
+
+def stamp(article: Path, ledger_path: Path, project_root: Path, platforms: tuple[str, ...] | None,
+          checked_by: str) -> tuple[str, dict]:
+    """(new ledger text, the values written) for `claims stamp`. Writes nothing itself.
+
+    Raises NotReady while `coverage_status` isn't `complete` or the article holds a value or quote the ledger
+    doesn't (`claims gaps`): the hash says the ledger was checked against this text, so it waits until it was.
+    Raises OSError / UnicodeDecodeError for an unreadable article, claims.LedgerError for an unreadable ledger, and
+    ValueError for a ledger whose `source_file` is another article or one it can't edit in place."""
+    article, ledger_path = Path(article), Path(ledger_path)
+    raw = article.read_bytes()  # one read: the hash and the gaps are of the same text
+    text = raw.decode("utf-8")
+    values = {"source_content_hash": "sha256:" + hashlib.sha256(raw).hexdigest(), "checked_at": _util.now_iso(),
+              "checked_by": checked_by}
+    ledger = claims.load_ledger(ledger_path)
+    own = project_relative(article, project_root)
+    if ledger.get("source_file") != own:
+        raise ValueError(f"{ledger_path} is the ledger for {ledger.get('source_file')!r}, not {own}")
+    if ledger.get("coverage_status") != "complete":
+        raise NotReady(f"coverage_status is {ledger.get('coverage_status')!r}: finish steps 2 to 4 (every claim "
+                       "reviewed, every verified claim pinned, no gaps), set it to \"complete\", then stamp")
+    gaps = extraction.value_gaps(text, ledger, platforms)
+    if gaps:
+        shown = ", ".join(g["value"] for g in gaps[:5]) + (" …" if len(gaps) > 5 else "")
+        raise NotReady(f"{len(gaps)} value(s) or quote(s) in the article aren't in the ledger ({shown}): run "
+                       "`claims gaps` and give each one a claim or an exclusion, then stamp")
+    return stamp_text(ledger_path.read_text(encoding="utf-8"), ledger_path.suffix.lower(), values), values
 
 
 def read_check(path: Path, article_sha: str | None, ledger_sha: str | None, rubric_sha: str | None = None,

@@ -486,13 +486,18 @@ def _main(argv: list[str] | None) -> int:
 
 
 def _claims_parser(sub) -> None:
-    cl = sub.add_parser("claims", help="claim ledgers: hash, validate, candidates, gaps, pin, recheck, scaffold, "
-                                       "status, checker-input, record")
+    cl = sub.add_parser("claims", help="claim ledgers: hash, stamp, validate, candidates, gaps, pin, recheck, "
+                                       "scaffold, status, checker-input, record")
     cs = cl.add_subparsers(dest="claims_cmd", required=True)
     h = cs.add_parser("hash", help="print the article's sha256:<hex> (the ledger's source_content_hash)")
     h.add_argument("path", type=Path)
     h.add_argument("--stamp", action="store_true",
-                   help='also print checked_at = "<now, ISO 8601 with offset>", ready to paste into the ledger')
+                   help='also print checked_at = "<now, ISO 8601 with offset>" (`claims stamp` writes both for you)')
+    sp = cs.add_parser("stamp", help="write the article's hash, checked_at and checked_by into its ledger "
+                                     "(refuses until coverage is complete and no gap is open)")
+    sp.add_argument("path", type=Path)
+    sp.add_argument("--ledger", type=Path)
+    sp.add_argument("--by", default="claims skill", help='checked_by (default: "claims skill")')
     v = cs.add_parser("validate", help="validate a ledger; one finding per line")
     v.add_argument("ledger", type=Path)
     v.add_argument("--root", type=Path, help="the project root its source_file is relative to (default: found)")
@@ -703,6 +708,8 @@ def _claims(args: argparse.Namespace, root: Path) -> int:
         if args.stamp:
             print(f'checked_at = "{_util.now_iso()}"')
         return 0
+    if cmd == "stamp":
+        return _stamp(args, root)
     if cmd == "validate":
         try:
             findings = claims.validate_ledger(args.ledger, args.root or root)
@@ -909,6 +916,24 @@ def _pin(args: argparse.Namespace, root: Path) -> int:
                                         source_url=args.source_url, locator=args.locator), end="")
     except ValueError as e:
         return _usage(f"pin refused: {_first_line(e)}")
+    return 0
+
+
+def _stamp(args: argparse.Namespace, root: Path) -> int:
+    try:
+        args.path.read_bytes()  # an unreadable article is named before any ledger lookup
+        ledger = args.ledger or claims.ledger_path_for(args.path, root)
+        text, values = claims_tools.stamp(args.path, ledger, root, extraction.platform_names(root), args.by)
+    except claims_tools.NotReady as e:
+        print(f"plainspoken: not stamped: {e}", file=sys.stderr)
+        return 1
+    except _INPUT_ERRORS as e:
+        return _input_error(args.path, e, "stamp the ledger for")
+    try:
+        report.write_atomic(ledger, text)
+    except OSError as e:
+        return _input_error(ledger, e, "write")
+    print(f"stamped {ledger}: " + ", ".join(f"{k} = {v}" for k, v in values.items()))
     return 0
 
 

@@ -150,10 +150,10 @@ draft, contract or rubric has changed, and PASS only for a current pass from the
 
 The skills call these CLI subcommands (`python3 lib/run.py <subcommand>`; each prints its own `--help`):
 
-- `claims hash | validate | candidates | gaps | pin | recheck | scaffold | status | checker-input | record`: hash
-  the article, validate a ledger, list the values and quotes in an article and the ones the ledger misses, pin a
-  passage in a saved source, recheck every pin offline, write a starter ledger, report the status, print the
-  checker's input, and record its reply.
+- `claims hash | stamp | validate | candidates | gaps | pin | recheck | scaffold | status | checker-input | record`:
+  hash the article, write its hash and the time into the ledger, validate a ledger, list the values and quotes in an
+  article and the ones the ledger misses, pin a passage in a saved source, recheck every pin offline, write a
+  starter ledger, report the status, print the checker's input, and record its reply.
 - `reader-value validate | modules | template | deliver-input | deliver | status`: validate a contract, check an
   article's `<!-- module:NAME -->` blocks, print a starter contract, print the delivery reviewer's input, record its
   reply, and read the delivery record back against the current files.
