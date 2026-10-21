@@ -17,6 +17,7 @@ EVALS = REPO / "evals"
 CASES = EVALS / "triggers"
 REWRITE = EVALS / "rewrite"
 REWRITE_SLASH = EVALS / "rewrite-slash"
+SMOKE = EVALS / "smoke"
 CASE_KEYS = {"schema_version", "name", "description", "tags", "plugins", "runs", "expected_outcome", "model",
              "max_turns", "timeout_seconds", "allowed_tools", "append_system_prompt", "env"}
 GRADER_TYPES = {"regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"}
@@ -331,7 +332,7 @@ class EvalCases(unittest.TestCase):
         # is a trigger or a rewrite case, so each one is checked by a test below.
         self.assertTrue(found)
         self.assertEqual(len(found), len([p for p in CASES.iterdir() if p.is_dir()]))
-        rewrite_dirs = [p for p in (*REWRITE.iterdir(), *REWRITE_SLASH.iterdir()) if p.is_dir()]
+        rewrite_dirs = [p for p in (*REWRITE.iterdir(), *REWRITE_SLASH.iterdir(), *SMOKE.iterdir()) if p.is_dir()]
         self.assertEqual(sorted([d for d, *_ in found] + rewrite_dirs), loadable_cases())
         for d, fm, prompt, graders in found:
             with self.subTest(case=d.name):
@@ -344,6 +345,27 @@ class EvalCases(unittest.TestCase):
                 self.assertTrue(graders)
                 for name, g, _ in graders:
                     self.assertIn(g.get("type"), GRADER_TYPES, name)
+
+    def test_smoke_cases_run_every_skill_once_by_slash(self):
+        """evals/smoke: one case per skill that does real work on a saved draft (paid; `--tag smoke`)."""
+        skills = sorted(p.parent.name for p in (REPO / "skills").glob("*/SKILL.md"))
+        found = [_case(d) for d in sorted(p for p in SMOKE.iterdir() if p.is_dir())]
+        self.assertEqual([d.name for d, *_ in found], [f"{s}--smoke" for s in skills])
+        for d, fm, prompt, graders in found:
+            skill = d.name.removesuffix("--smoke")
+            with self.subTest(case=d.name):
+                self.assertEqual(set(fm) - CASE_KEYS, set())
+                self.assertEqual(fm["name"], d.name)
+                self.assertEqual(flow_list(fm["tags"]), ["smoke", skill])
+                self.assertTrue(prompt.startswith(f"/plainspoken:{skill}"))
+                self.assertEqual((d / flow_list(fm["plugins"])[0]).resolve(), REPO)
+                self.assertTrue(graders)
+                for name, g, _ in graders:
+                    self.assertEqual(g.get("type"), "regex", name)
+                    rx = compiled(g)
+                    # A kept-the-facts grader is meant to match the passage; its not_contains partner fails an echo.
+                    if g.get("match") != "not_contains" and not name.startswith("kept-"):
+                        self.assertIsNone(rx.search(prompt), f"{name}: the request itself satisfies it")
 
     def test_skill_graders_match_only_their_skill(self):
         for d, fm, _, graders in cases():
