@@ -157,9 +157,10 @@ The skills call these CLI subcommands (`python3 lib/run.py <subcommand>`; each p
 - `reader-value validate | modules | template | deliver-input | deliver | status`: validate a contract, check an
   article's `<!-- module:NAME -->` blocks, print a starter contract, print the delivery reviewer's input, record its
   reply, and read the delivery record back against the current files.
-- `status <draft>`: the last saved check and claims status lines and the reader-value contract path, read back
-  without running or writing anything, so `write`'s report quotes them. A check or claims step that never ran, or ran
-  on an older version of the draft, shows as INCOMPLETE; it exits 0 only when both say PASS.
+- `status <draft>`: the last saved check and claims status lines, the draft's word count (as the check counts it) and
+  the reader-value contract path, read back without running or writing anything, so `write`'s report quotes them. A
+  check or claims step that never ran, or ran on an older version of the draft, shows as INCOMPLETE; it exits 0 only
+  when both say PASS.
 
 **The integrity hook.** After each Write or Edit of a target file, a PostToolUse hook flags prominent numbers that
 nothing sources: a statistic in a chart, in the `> **TL;DR:**` block or in the frontmatter description with no link

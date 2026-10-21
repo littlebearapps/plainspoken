@@ -23,6 +23,15 @@ If the piece needs a claim the sources don't support, name the claim and ask the
 section. Example: a brief for a page about a bakery's catering service says orders need "plenty of notice", but no
 source gives the number of days. Ask for the number; don't pick one.
 
+## When the sources can't carry the length
+
+Before drafting, weigh what the sources say against the length asked for. If they run out well short of it, tell the
+user how far they go and what would fill the rest (more detail on a service, an example, a customer question), and
+ask for it. Where no one can answer, write the shorter piece and say why at the top of the report.
+
+Don't fill the gap with background from memory. A line explaining a term (what a tax form is, what a piece of
+software does) is a new fact like any other: it needs a source, or it stays out.
+
 ## When sources disagree
 
 Say so, in the draft or to the user. Give both figures with their sources and dates, and say which one the piece

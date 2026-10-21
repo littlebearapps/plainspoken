@@ -45,6 +45,11 @@ List the sources you have: files, URLs, the brief, and anything the user has tol
 stop and ask for them. If the sources are thin for a claim the piece needs, name that claim and ask before you write
 it. What counts as a source, and what to do when two of them disagree: `references/research-gate.md`.
 
+If the user asked for a length, estimate whether the sources can carry it. If they can't, say so before you draft and
+ask for more material; when you can't ask (a run with no one to answer, or the user said not to), write it shorter
+and say why at the top of the report. Never pad. A definition or background line the sources don't give is a new
+fact, so it needs a source too.
+
 ### 2. Reader value
 
 Settle the draft's path now (where the user asks, else `.plainspoken/drafts/<short-slug>.md`), and run
@@ -123,14 +128,15 @@ the last saved check and claims results back; it runs and writes nothing. Start 
 in, with the `status` lines copied exactly as printed, never from memory or in other words:
 
     Draft: <draft path>
-    <every line `status` printed: check, claims and its reasons, the reader-value contract>
+    <every line `status` printed: check, claims and its reasons, words, the reader-value contract>
     Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)
     Needs the owner: <the claims skill's list, or none>
     Anchors: <ids used>; no anchors: <tags, or none>; <every (skipped anchor …) line>
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 
-Then say whatever else the user needs, in plain words. A check or claims result that isn't PASS is never described
-as passed. The person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
+Then say whatever else the user needs, in plain words. Any length you give is the `words:` line's, never an
+estimate. A check or claims result that isn't PASS is never described as passed. The person records a `For kaizen`
+item with `/plainspoken:kaizen dismiss` if they agree.
 
 A piece step 2 parked, or left INCOMPLETE, gets only the `Reader value` line and the reason. Before a drafted piece
 ships, the user runs `/plainspoken:reader-value deliver <draft>` to check the draft keeps the contract's promise.
