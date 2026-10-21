@@ -47,15 +47,17 @@ run.py status.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
    this. Your input:" followed by that line verbatim. Nothing else: no file contents, no opinion, no hint about who
    wrote it.
-4. **Record**, one judge at a time. Take only the JSON object of the reply (its first `{` to its last `}`): drop any
-   code fence or trailing agent metadata. Save it unchanged as a file at the `reply` path from
-   `RUN paths FILE`, then run `RUN judge-record FILE --group Jn --from <reply path>`, which records it and deletes the
-   reply file. The JSON never goes in a shell command (no heredoc, no echo): the shell check refuses it there.
-   Exit 1 (invalid or stale) → start that one judge again once ("no current lint" → rerun step 1 first); a second
-   failure → stop and report the reason.
-5. **Merge.** `RUN merge FILE --plugin-profile '${user_config.profile}'`. PASS → step 8. INCOMPLETE → rerun exactly
-   what its `problem:` and `missing verdicts:` lines name, then merge again (once). FAIL → step 6. UNRESOLVED → step 6
-   for WARNs you'll fix, step 7 for WARNs you'll keep.
+4. **Record** all four at once. From each reply take only its JSON object (its first `{` to its last `}`): drop any
+   code fence or trailing agent metadata. In one Write, save the four objects unchanged, one after another, as the
+   file at the `reply` path from `RUN paths FILE`. In the same message, run
+   `RUN judge-record FILE --all --from <reply path> && RUN merge FILE --plugin-profile '${user_config.profile}'`
+   (step 5); it records each reply and deletes the file. The JSON never goes in a shell command (no heredoc, no
+   echo): the shell check refuses it there. Exit 1 names each judge it didn't record (invalid or stale): start just
+   that judge again once ("no current lint" → rerun step 1 first), Write its reply alone to the same path and run
+   `RUN judge-record FILE --group Jn --from <reply path>`, then merge; a second failure → stop and report the reason.
+5. **Merge.** `RUN merge FILE --plugin-profile '${user_config.profile}'` (step 4 runs it once all four are
+   recorded). PASS → step 8. INCOMPLETE → rerun exactly what its `problem:` and `missing verdicts:` lines name, then
+   merge again (once). FAIL → step 6. UNRESOLVED → step 6 for WARNs you'll fix, step 7 for WARNs you'll keep.
 6. **Fix pass** (at most two in the whole run). Use `/plainspoken:humanize` on FILE with the list of failing rules
    and their evidence from `RUN paths FILE` → the `report` file. If it can't be started (the project may deny it),
    follow `${CLAUDE_PLUGIN_ROOT}/skills/humanize/SKILL.md` yourself. Fix every BLOCK and every failing WARN under
