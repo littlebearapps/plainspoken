@@ -60,8 +60,9 @@ Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py 
 7. **Justify what you kept** (after the last fix pass you'll make). When no BLOCK remains but a WARN still fails and you have a real reason to keep it,
    follow `references/fix-or-justify.md` (template → fill → review input → one JR judge → record → merge). A JR
    reject leaves the rule UNRESOLVED: fix it, or rewrite the reason once.
-8. **Report.** Give merge's status line; then BLOCKs, justified WARNs (accepted / rejected), anything unresolved,
-   and the path of the report file. If the run stopped early, say which step and quote the engine's message.
+8. **Report.** Give merge's last status line exactly as printed; then BLOCKs, justified WARNs (accepted / rejected),
+   anything unresolved, and the path of the report file. A WARN kept without an accepted justification is
+   UNRESOLVED, never passed. If the run stopped early, say which step and quote the engine's message.
    Merge has already captured the verdicts in the kaizen ledger, so don't record them again.
 
 If the person disagrees with a finding, or you had to work around a step, record it:
