@@ -18,6 +18,7 @@ CASES = EVALS / "triggers"
 REWRITE = EVALS / "rewrite"
 REWRITE_SLASH = EVALS / "rewrite-slash"
 SMOKE = EVALS / "smoke"
+DRAFTING = (EVALS / "drafting", EVALS / "drafting-hooks")
 CASE_KEYS = {"schema_version", "name", "description", "tags", "plugins", "runs", "expected_outcome", "model",
              "max_turns", "timeout_seconds", "allowed_tools", "append_system_prompt", "env"}
 GRADER_TYPES = {"regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"}
@@ -109,7 +110,7 @@ def compiled(g: dict) -> re.Pattern:
 
 
 def content_type(case: str) -> str:
-    return "social" if case in SOCIAL else "article"
+    return rewrite.content_type_for(case)
 
 
 _LINT_EDGE = (r"(?<![\w-])", r"(?![\w-])")
@@ -156,7 +157,7 @@ def proper_nouns(text: str) -> list[str]:
 class RewriteCases(unittest.TestCase):
     def test_rewrite_cases_shape(self):
         found = list(rewrite_cases())
-        self.assertEqual(len(found), 6)
+        self.assertEqual(len(found), 12)
         for d, fm, prompt, graders in found:
             with self.subTest(case=d.name):
                 self.assertEqual(set(fm) - CASE_KEYS, set())
@@ -332,7 +333,8 @@ class EvalCases(unittest.TestCase):
         # is a trigger or a rewrite case, so each one is checked by a test below.
         self.assertTrue(found)
         self.assertEqual(len(found), len([p for p in CASES.iterdir() if p.is_dir()]))
-        rewrite_dirs = [p for p in (*REWRITE.iterdir(), *REWRITE_SLASH.iterdir(), *SMOKE.iterdir()) if p.is_dir()]
+        rewrite_dirs = [p for p in (*REWRITE.iterdir(), *REWRITE_SLASH.iterdir(), *SMOKE.iterdir(),
+                                    *DRAFTING[0].iterdir(), *DRAFTING[1].iterdir()) if p.is_dir()]
         self.assertEqual(sorted([d for d, *_ in found] + rewrite_dirs), loadable_cases())
         for d, fm, prompt, graders in found:
             with self.subTest(case=d.name):
@@ -345,6 +347,34 @@ class EvalCases(unittest.TestCase):
                 self.assertTrue(graders)
                 for name, g, _ in graders:
                     self.assertIn(g.get("type"), GRADER_TYPES, name)
+
+    def test_drafting_cases_pair_up_and_mark_the_piece(self):
+        """evals/drafting and evals/drafting-hooks: the same briefs, the second with the nudge and the rule switched on
+        by its scaffold. Each asks for the piece between markers, so `eval rewrite-delta` lints the writing, not a
+        skill's report around it."""
+        plain = sorted(p.name.removeprefix("drafting--") for p in DRAFTING[0].iterdir() if p.is_dir())
+        hooks = sorted(p.name.removeprefix("drafting-hooks--") for p in DRAFTING[1].iterdir() if p.is_dir())
+        self.assertEqual(plain, hooks)
+        self.assertGreaterEqual(len(plain), 12)
+        for folder, tag in ((DRAFTING[0], "drafting"), (DRAFTING[1], "drafting-hooks")):
+            for d in sorted(p for p in folder.iterdir() if p.is_dir()):
+                _, fm, prompt, graders = _case(d)
+                with self.subTest(case=d.name):
+                    self.assertEqual(fm["name"], d.name)
+                    self.assertEqual(flow_list(fm["tags"]), [tag])
+                    self.assertIn("<<<PIECE", prompt)
+                    self.assertIn("scaffold_script: scaffold.sh", (d / "case.yaml").read_text(encoding="utf-8"))
+                    script = (d / "scaffold.sh").read_text(encoding="utf-8")
+                    self.assertIn("git init", script)
+                    self.assertEqual("[nudge]" in script, tag == "drafting-hooks")
+                    self.assertEqual({n for n, _, _ in graders}, {"kept-the-facts.md", "no-new-numbers.md"})
+                    for name, g, _ in graders:
+                        rx = compiled(g)
+                        if name == "kept-the-facts.md":
+                            self.assertTrue(rx.search(prompt), "the brief itself carries every kept fact")
+                        else:
+                            self.assertIsNone(rx.search(passage(prompt).replace("> - ", "")),
+                                              "the brief's own numbers are allowed")
 
     def test_smoke_cases_run_every_skill_once_by_slash(self):
         """evals/smoke: one case per skill that does real work on a saved draft (paid; `--tag smoke`)."""

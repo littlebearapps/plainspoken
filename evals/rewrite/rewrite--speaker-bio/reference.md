@@ -1,0 +1,1 @@
+Dr Mei Tan runs a vet clinic in Launceston and has been a vet for 22 years. Her talk is about what small clinics can learn from rural farm visits. Outside work, Mei keeps bees and grows far too many tomatoes.

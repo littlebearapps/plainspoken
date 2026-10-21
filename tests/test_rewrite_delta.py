@@ -60,3 +60,24 @@ class Delta(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Pieces(unittest.TestCase):
+    def test_piece_between_markers_else_whole_reply(self):
+        self.assertEqual(rewrite.piece("Report line\n<<<PIECE\nHi Tom.\nSee you.\nPIECE>>>\nmerge: PASS"), "Hi Tom.\nSee you.")
+        self.assertEqual(rewrite.piece("just the text"), "just the text")
+
+    def test_content_type_for(self):
+        self.assertEqual(rewrite.content_type_for("drafting--sms-dentist-reschedule"), "social")
+        self.assertEqual(rewrite.content_type_for("drafting-hooks--x-thread-bin-changes"), "social")
+        self.assertEqual(rewrite.content_type_for("rewrite--linkedin-post--slash"), "social")
+        self.assertEqual(rewrite.content_type_for("drafting--newsletter-school"), "article")
+
+    def test_save_writes_each_piece(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        result = {"suite": {"root": str(REPO)}, "cases": [{
+            "name": "rewrite--email--slash", "dir": "evals/rewrite-slash/rewrite--email--slash",
+            "arms": {"with": [{"tracePath": trace(tmp / "w", "<<<PIECE\n" + PLAIN + "\nPIECE>>>")}], "without": []}}]}
+        rewrite.delta(result, REPO, default_profile(), save=tmp / "out")
+        self.assertEqual((tmp / "out" / "rewrite--email--slash" / "with-1.md").read_text(encoding="utf-8"), PLAIN + "\n")

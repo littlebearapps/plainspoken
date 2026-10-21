@@ -1,0 +1,1 @@
+The Riverlight Festival is back in Echuca this March, running Friday to Sunday. There'll be 40 local stalls along the Murray and a lantern parade, and entry is free. Festival coordinator Dee Collins said it's a good weekend for local businesses and a chance for the town to get together.
