@@ -317,14 +317,18 @@ def slop_metrics(doc: Doc, cfg: Config) -> list[Finding]:
     if m["burstiness"] < t["burstiness_min"]:
         out.append(Finding("12f", "BLOCK", 0, f"burstiness {m['burstiness']}",
                            f"Burstiness {m['burstiness']} < {t['burstiness_min']} — spread sentence lengths"))
-    trips = [
-        m["opening_top3_share"] > t["opening_top3_max"],
-        m["capsule_transition_share"] > t["capsule_transition_max"],
-        m["paragraph_sd"] < t["paragraph_sd_min"],
-        m["mattr"] < t["mattr_min"],
+    # (name, value, comparison, limit); only the tripped ones are named, so the writer knows what to fix (#26).
+    checks = [
+        ("opening repetition", m["opening_top3_share"], ">", t["opening_top3_max"]),
+        ("capsule transitions", m["capsule_transition_share"], ">", t["capsule_transition_max"]),
+        ("paragraph SD", m["paragraph_sd"], "<", t["paragraph_sd_min"]),
+        ("MATTR", m["mattr"], "<", t["mattr_min"]),
     ]
-    if sum(trips) >= 2:
-        out.append(Finding("12f", "WARN", 0, str(m)[:160], f"{sum(trips)} slop metrics tripped (opening repetition, capsule transitions, paragraph SD, MATTR)"))
+    tripped = [f"{name} {value:g} {op} {limit:g}" for name, value, op, limit in checks
+               if (value > limit if op == ">" else value < limit)]
+    if len(tripped) >= 2:
+        # capture.py matches "slop metrics tripped"; keep the phrase.
+        out.append(Finding("12f", "WARN", 0, str(m)[:160], f"{len(tripped)} slop metrics tripped: " + "; ".join(tripped)))
     return out
 
 

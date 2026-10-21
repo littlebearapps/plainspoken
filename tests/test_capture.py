@@ -136,7 +136,7 @@ class Facets(unittest.TestCase):
         for excerpt, message, want in (("mattr 0.61", "MATTR-50 0.61 < 0.7 — vary", "mattr"),
                                        ("burstiness 0.2", "Burstiness 0.2 < 0.3", "burstiness"),
                                        ("ttr 0.3", "Raw TTR 0.3", "ttr"),
-                                       ("{'words': 400}", "2 slop metrics tripped (opening repetition…)", "slop")):
+                                       ("{'words': 400}", "2 slop metrics tripped: opening repetition 0.27 > 0.25; MATTR 0.4 < 0.46", "slop")):
             self.assertEqual(capture.facets(_finding("12f", 0, excerpt, message), doc, CFG)["metric"], want)
         self.assertNotIn("metric", capture.facets(_finding("4b", 3, "mattr 0.5", "x"), doc, CFG))
 
@@ -181,8 +181,8 @@ class Aggregates(unittest.TestCase):
         ("25", "WARN", 0, ("various ×3", "Vague quantifiers: 3 (limit 2)"), ("numerous ×3", "Vague quantifiers: 3")),
         ("24", "WARN", 0, ("12 bold spans / 400 words", "Mechanical mid-prose bold (3.0 per 100 words)"),
          ("14 bold spans / 410 words", "Mechanical mid-prose bold (3.4 per 100 words)")),
-        ("12f", "WARN", 0, ("{'words': 400, 'mattr': 0.6}", "2 slop metrics tripped (opening repetition, …)"),
-         ("{'words': 420, 'mattr': 0.62}", "3 slop metrics tripped (opening repetition, …)")),
+        ("12f", "WARN", 0, ("{'words': 400, 'mattr': 0.6}", "2 slop metrics tripped: opening repetition 0.27 > 0.25; …"),
+         ("{'words': 420, 'mattr': 0.62}", "3 slop metrics tripped: paragraph SD 22 < 25; …")),
         ("15", "WARN", 0, ("3 expanded vs 5 contracted", "Contraction avoidance"), ("4 expanded vs 5 contracted", "x")),
         ("HM", "WARN", 0, ("no human markers", "No contractions"), ("no human markers ", "No contractions, …")),
         ("NR-5", "WARN", 0, ("shortest 22w, longest 70w", "A narrative piece needs…"),

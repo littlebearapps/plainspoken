@@ -291,6 +291,14 @@ class SlopGate(unittest.TestCase):
         self.assertNotIn("was", words)
         self.assertNotIn("rare", words)  # 2 uses: under the minimum
 
+    def test_slop_warning_names_only_the_tripped_metrics(self):  # #26
+        cfg = with_thresholds(opening_top3_max=0.0, paragraph_sd_min=1000, capsule_transition_max=1.0, mattr_min=0.0)
+        (f,) = [x for x in run_cfg("12f", self.LOW_VOCAB, cfg) if "slop metrics tripped" in x.message]
+        self.assertEqual(f.severity, "WARN")
+        self.assertRegex(f.message, r"^2 slop metrics tripped: opening repetition [\d.]+ > 0; paragraph SD [\d.]+ < 1000$")
+        self.assertNotIn("capsule", f.message)
+        self.assertNotIn("MATTR", f.message)
+
     def test_varied_prose_has_no_burstiness_block(self):
         f = run("12f", self.LOW_VOCAB)
         self.assertFalse(any(x.excerpt.startswith("burstiness") for x in f))
