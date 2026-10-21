@@ -60,7 +60,7 @@ def uniform_sentences(doc: Doc, cfg: Config) -> list[Finding]:
         sents = _prose_sentences(sec.paragraphs)
         for i in _runs([len(s.words) for s in sents], t["uniform_tolerance"], t["uniform_sentence_run"]):
             out.append(Finding("7", "WARN", sents[i].line, sents[i].text[:160],
-                               f"{t['uniform_sentence_run']}+ consecutive sentences of near-identical length — vary the rhythm"))
+                               f"{t['uniform_sentence_run']}+ consecutive sentences of near-identical length — join or split one"))
     return out
 
 
@@ -118,7 +118,7 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
         run_end = _short_run(sents, short_len, run_len)
         if narrative and any(p.search(heading) for p in doc.profile.long_sentence_headings) and no_long:
             out.append(Finding("7d", "WARN", at, where,
-                               f"'{heading}' section with no sentence over {long_} words — let one thought run long"))
+                               f"'{heading}' section with no sentence over {long_} words — join two short sentences that share a thought"))
         elif narrative:
             if no_long and run_end:
                 out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
@@ -126,7 +126,7 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
                                    "in this section"))
         elif no_long and not run_only:
             out.append(Finding("7d", "WARN", at, where,
-                               f"No sentence over {long_} words in this section — let one thought run long"))
+                               f"No sentence over {long_} words in this section — join two short sentences that share a thought"))
         elif run_end:
             out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
                                f"{run_len} consecutive sentences under {short_len} words"))
@@ -295,7 +295,9 @@ def human_markers(doc: Doc, cfg: Config) -> list[Finding]:
     }
     if any(markers.values()):
         return []
-    return [Finding("HM", "WARN", 0, "no human markers", "No contractions, fragments, And/But starters, first person, casual connectives or asides")]
+    return [Finding("HM", "WARN", 0, "no human markers",
+                    "No contractions, fragments, And/But starters, first person, casual connectives or asides — "
+                    "contract or join where it reads naturally; add nothing new")]
 
 
 def slop_metrics(doc: Doc, cfg: Config) -> list[Finding]:
@@ -316,7 +318,7 @@ def slop_metrics(doc: Doc, cfg: Config) -> list[Finding]:
                            f"MATTR-{t['mattr_window']} {m['mattr']} < {t['mattr_min']} — vary the vocabulary.{where}"))
     if m["burstiness"] < t["burstiness_min"]:
         out.append(Finding("12f", "BLOCK", 0, f"burstiness {m['burstiness']}",
-                           f"Burstiness {m['burstiness']} < {t['burstiness_min']} — spread sentence lengths"))
+                           f"Burstiness {m['burstiness']} < {t['burstiness_min']} — join or split sentences to spread their lengths"))
     # (name, value, comparison, limit); only the tripped ones are named, so the writer knows what to fix (#26).
     # The opening limit scales with length (#25): top-3 share can't fall below 3/n.
     open_limit = round(metrics.opening_top3_limit(t["opening_top3_max"], metrics.opener_count(doc)), 3)
@@ -330,7 +332,8 @@ def slop_metrics(doc: Doc, cfg: Config) -> list[Finding]:
                if (value > limit if op == ">" else value < limit)]
     if len(tripped) >= 2:
         # capture.py matches "slop metrics tripped"; keep the phrase.
-        out.append(Finding("12f", "WARN", 0, str(m)[:160], f"{len(tripped)} slop metrics tripped: " + "; ".join(tripped)))
+        out.append(Finding("12f", "WARN", 0, str(m)[:160], f"{len(tripped)} slop metrics tripped: " + "; ".join(tripped)
+                           + " — cut, join or split; never pad"))
     return out
 
 

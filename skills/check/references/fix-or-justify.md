@@ -20,8 +20,8 @@ Use this when `merge` reads UNRESOLVED and you will keep a failing WARN. `RUN` a
    - `false_positive`: the rule's own text says this isn't a hit.
    - `format`: a structural element where the rule's pattern is the format itself. Only an FAQ, a table, a
      checklist or numbered steps.
-   - `metric`: only for 12f, 7 and 12d (article-level measures), and the reason says why a removal-only fix pass
-     can't move it honestly.
+   - `metric`: only for 12f, 7 and 12d (article-level measures), and the reason says why a fix pass
+     (cut, join, split or restate) can't move it honestly.
 
    `reason` is one specific sentence on one line about what the text is doing, true of every evidence item for that
    rule, not "reads fine". Never use `voice` for a phrase on a ban or WARN list. Justify only what you'd defend to

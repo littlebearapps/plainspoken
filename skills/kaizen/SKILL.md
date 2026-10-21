@@ -79,7 +79,7 @@ it does, then stop and let the person pick.
 ### dismiss
 
 1. The person says a finding in the current check is wrong. Ask which rule, which line if several fired, why in a
-   few words, and which kind: `false_positive`, `voice`, `unfixable` (it can't be fixed by removing words), `quote`,
+   few words, and which kind: `false_positive`, `voice`, `unfixable` (no cut, join or restatement clears it), `quote`,
    `format` or `other`.
 2. `RUN kaizen dismiss FILE --rule <id> --kind <kind> --reason '<their words>'` (add `--line <n>` for one finding).
    When the finding is gone from FILE because a fix pass removed it (even after the check that followed), add

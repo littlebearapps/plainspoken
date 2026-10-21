@@ -10,9 +10,9 @@ license: MIT (adapted from blader/humanizer v3.1.0; see NOTICE.md)
 > skill's folder) once before step 1. In Claude Code, skip this note.
 
 Calibration — these override anything below:
-1. **Remove, never add.** A fix deletes or plainly restates what is there. Never add a fact, number, name, date,
-   quote, example, opinion or reaction that isn't already in the text or given by the user. If a sentence needs a
-   specific you don't have, flag it for the writer instead.
+1. **Remove, never add.** A fix cuts, joins or splits sentences, or plainly restates what is there.
+   Never add a fact, number, name, date, quote, example, opinion or reaction that isn't already in the text or given
+   by the user. If a sentence needs a specific you don't have, flag it for the writer instead.
 2. **Cut empty claims; don't restate them.** Puffery carries no fact: "a place where people come together",
    "made with real care", "a mix of old and new", "an experience you'll remember", "brings the community together".
    Delete it rather than saying it in plainer words ("made with a lot of love" is the same empty claim).
