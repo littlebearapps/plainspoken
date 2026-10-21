@@ -11,7 +11,7 @@ allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 Write a press release announcing our festival.
 
 > - Event: Riverlight Festival, Echuca.
-> - Dates: Friday 6 to Sunday 8 March.
+> - Dates: Friday 5 to Sunday 7 March.
 > - 40 local food and wine stalls, and live music each night.
 > - Entry is free; the lantern parade starts at 7pm Saturday.
 > - Media contact: Dee Collins, festival coordinator.

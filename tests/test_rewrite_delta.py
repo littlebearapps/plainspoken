@@ -66,6 +66,7 @@ class Pieces(unittest.TestCase):
     def test_piece_between_markers_else_whole_reply(self):
         self.assertEqual(rewrite.piece("Report line\n<<<PIECE\nHi Tom.\nSee you.\nPIECE>>>\nmerge: PASS"), "Hi Tom.\nSee you.")
         self.assertEqual(rewrite.piece("just the text"), "just the text")
+        self.assertEqual(rewrite.piece("Hi all.\n\n(`/plainspoken:humanize` isn't installed, so I rewrote it.)"), "Hi all.")
 
     def test_content_type_for(self):
         self.assertEqual(rewrite.content_type_for("drafting--sms-dentist-reschedule"), "social")

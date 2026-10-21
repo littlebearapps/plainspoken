@@ -11,7 +11,7 @@ allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 Draft a LinkedIn post announcing our new hire.
 
 > - Firm: Hargreaves & Lin, a 6-person bookkeeping practice in Geelong.
-> - New hire: Priya Desai, starting Monday 3 November as a senior bookkeeper.
+> - New hire: Priya Desai, starting Monday 2 November as a senior bookkeeper.
 > - Priya spent 8 years doing payroll for hospitality businesses.
 > - She'll look after our cafe and restaurant clients.
 

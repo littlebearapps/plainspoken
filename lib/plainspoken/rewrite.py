@@ -143,7 +143,10 @@ def piece(reply: str) -> str:
     """The piece itself: the text between `<<<PIECE` and `PIECE>>>` when a case asks for those markers (a skill's
     report around it isn't the writing being judged), else the whole reply."""
     found = PIECE.findall(reply)
-    return found[-1].strip() if found else reply
+    text = found[-1].strip() if found else reply
+    # A model without the plugin sometimes adds a note that the slash command isn't installed: that's about the run,
+    # not the writing, and a reader would spot it at once.
+    return "\n".join(ln for ln in text.splitlines() if "plainspoken" not in ln.lower()).strip()
 
 
 def passage(prompt: str) -> str:

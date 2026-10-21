@@ -10,7 +10,7 @@ allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 
 Write a short thread (3 posts) for the council's account about the bin changes.
 
-> - Darebin Council is moving green-waste collection from weekly to fortnightly from Monday 1 December.
+> - Darebin Council is moving green-waste collection from weekly to fortnightly from Tuesday 1 December.
 > - Red and yellow bins don't change.
 > - Residents can check their street's new day on the council website.
 > - Households can request a second green bin for $45 a year.

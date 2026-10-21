@@ -367,7 +367,7 @@ class EvalCases(unittest.TestCase):
                     script = (d / "scaffold.sh").read_text(encoding="utf-8")
                     self.assertIn("git init", script)
                     self.assertEqual("[nudge]" in script, tag == "drafting-hooks")
-                    self.assertEqual({n for n, _, _ in graders}, {"kept-the-facts.md", "no-new-numbers.md"})
+                    self.assertEqual({n for n, _, _ in graders}, {"kept-the-facts.md"})  # new numbers: eval rewrite-delta
                     for name, g, _ in graders:
                         rx = compiled(g)
                         if name == "kept-the-facts.md":

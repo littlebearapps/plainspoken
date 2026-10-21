@@ -12,8 +12,8 @@ Write the principal's message for this term's school newsletter.
 
 > - School: Westgarth Primary.
 > - Principal: Helen Marsh.
-> - The new library opens on Monday 10 November.
+> - The new library opens on Monday 9 November.
 > - Parents raised $18,000 for it at the autumn fete.
-> - Working bee on Saturday 15 November to move the books.
+> - Working bee on Saturday 14 November to move the books.
 
 When it's ready, put the final text, and only that, between a line `<<<PIECE` and a line `PIECE>>>`.

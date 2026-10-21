@@ -11,7 +11,7 @@ allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 Write a text message I can send to my dentist's office to move my appointment.
 
 > - My name is Sam Okafor.
-> - Current appointment: Tuesday 4 November at 2:30pm.
+> - Current appointment: Wednesday 4 November at 2:30pm.
 > - I need to move it because of a work trip.
 > - Any weekday morning the following week works.
 
