@@ -318,8 +318,10 @@ def slop_metrics(doc: Doc, cfg: Config) -> list[Finding]:
         out.append(Finding("12f", "BLOCK", 0, f"burstiness {m['burstiness']}",
                            f"Burstiness {m['burstiness']} < {t['burstiness_min']} — spread sentence lengths"))
     # (name, value, comparison, limit); only the tripped ones are named, so the writer knows what to fix (#26).
+    # The opening limit scales with length (#25): top-3 share can't fall below 3/n.
+    open_limit = round(metrics.opening_top3_limit(t["opening_top3_max"], metrics.opener_count(doc)), 3)
     checks = [
-        ("opening repetition", m["opening_top3_share"], ">", t["opening_top3_max"]),
+        ("opening repetition", m["opening_top3_share"], ">", open_limit),
         ("capsule transitions", m["capsule_transition_share"], ">", t["capsule_transition_max"]),
         ("paragraph SD", m["paragraph_sd"], "<", t["paragraph_sd_min"]),
         ("MATTR", m["mattr"], "<", t["mattr_min"]),

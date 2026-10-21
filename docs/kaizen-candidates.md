@@ -78,3 +78,14 @@ rule change.
 - **Candidate change:** a `run.py` subcommand that prints the weekday for a date, covered by the existing grant, so
   no skill needs a wider one. Or record that the claims ledger is where a weekday gets checked, and leave it there.
 - **Decision needed:** whether it's worth a subcommand; the owner decides at the next kaizen review.
+
+## K6: rule 12f below article length
+
+- **Labels:** kaizen, metric
+- **Seen:** pre-v1.0 eval campaign, round 4 (#25): the 2+-trips WARN fired on 9 of 9 pieces of 300–500 words.
+- **Done (2026-10-21):** the opening-repetition limit now adds 3/n (`data/RULESET-CHANGELOG.md`, engine change).
+- **Still open:** paragraph SD isn't length-biased but sits on its limit: whole long posts had a median of 26
+  against 25, and 300- to 1,000-word windows of them tripped it 56–69% of the time. Prose extracts from
+  human-written technical READMEs trip the 2+-trips WARN at every length (19 of 21 over 1,000 words). Both need
+  ledger evidence before any threshold moves.
+- **Decision needed:** at the first calibrate run with 12f evidence, together with K1.

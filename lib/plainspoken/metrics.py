@@ -55,6 +55,21 @@ def opening_top3_share(sentences: list[str]) -> float:
     return sum(n for _, n in Counter(openers).most_common(3)) / len(openers)
 
 
+def opening_top3_limit(base: float, openers: int) -> float:
+    """The opening-repetition limit for `openers` opened sentences: `base` plus 3/openers (#25).
+
+    The top three openers always cover at least 3 of n sentences, so a short piece reads high by length alone:
+    a 300-word window of a long article measured about 0.09–0.12 above the whole article. The 3/n term is that
+    floor; at article length (150+ sentences) it adds 0.02 or less.
+    """
+    return base + 3 / openers if openers else base
+
+
+def opener_count(doc: Doc) -> int:
+    """The sentences `opening_top3_share` counts: rhythm sentences with an opening word."""
+    return sum(1 for s in _rhythm_sentences(doc) if _opener(s.text))
+
+
 def paragraph_sd(counts: list[int]) -> float:
     return statistics.pstdev(counts) if len(counts) > 1 else 0.0
 

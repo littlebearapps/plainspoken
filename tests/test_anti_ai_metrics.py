@@ -50,6 +50,11 @@ class MovingAverage(unittest.TestCase):
         self.assertAlmostEqual(metrics.opening_top3_share(['"The a.', "**The** b.", "It c.", "So d.", "Now e."]), 0.8)
 
 
+    def test_opening_limit_rises_by_three_over_the_opener_count(self):  # #25: top-3 share can't fall below 3/n
+        self.assertAlmostEqual(metrics.opening_top3_limit(0.25, 20), 0.4)
+        self.assertAlmostEqual(metrics.opening_top3_limit(0.25, 150), 0.27)
+        self.assertEqual(metrics.opening_top3_limit(0.25, 0), 0.25)
+
 class Compute(unittest.TestCase):
     def doc(self, body, profile=PRODUCT):
         return parse(f"---\n---\n\n{body}\n", profile=profile)

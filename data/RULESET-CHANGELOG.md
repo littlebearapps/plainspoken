@@ -2,6 +2,19 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## Engine change (2026-10-21; ruleset version unchanged)
+
+- **Rule 12f, opening repetition scales with length (#25):** the limit is now `opening_top3_max` plus 3/n, where
+  n is the number of sentences counted. The top three openers always cover at least 3 of n sentences, so the flat
+  0.25 failed short pieces on length alone. Measured on 13 long first-person blog posts (model-drafted,
+  human-edited): a 300-word window read 0.12 above its whole post, 500 words 0.08, 1,000 words 0.03 (62 prose
+  extracts from human-written READMEs: 0.09, 0.05, 0.02). Paragraph SD read at most 10% low and MATTR (raw TTR
+  below the 500-word window) never tripped there, so neither changes; nor do burstiness and the MATTR WARN.
+  Effect on the 2+-trips WARN: windows of posts whose whole text is clean fired 50% at 300 words, 33% at 500 and
+  21% at 1,000, and now fire 6%, 10% and 8%; the whole posts are unchanged (1 of 13). Campaign pieces of
+  300–499 words: 18 of 22 before, 5 after. At 2,500 words the limit rises by about 0.02. The threshold value and
+  the ruleset version are unchanged; the owner approves by merging the round-4 fix PR.
+
 ## Comment revision (2026-10-19; ruleset version unchanged)
 
 - **Stale forward references:** comments only, so no rule, threshold or list changes and no version bump
