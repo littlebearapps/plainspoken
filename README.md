@@ -4,27 +4,31 @@ A writing plugin that helps an AI agent write like a person: specific, honest, p
 in a stated voice, with every claim traceable. Built for Claude Code; it also installs in Codex and Hermes Agent
 (see [Codex and Hermes Agent](#codex-and-hermes-agent)).
 
-Status: v0.5, the first public release. It has:
+Status: v0.7. It has:
 - the anti-AI check and humanize skills, with four isolated judges;
 - language skills (write, plain-language, voice, copy-audit, register-check, adapt), with the cold-reader agent;
 - claims integrity and reader value (claims, reader-value), with the claims-checker and delivery-checker agents and
   the integrity hook;
 - the kaizen loop: a ledger of what the checks flagged and what you did, calibrate, and approval-gated `kaizen apply`;
-- evals: a 232-case golden set, a cross-vendor judge panel, rewrite evals, a blind reader test and ablations.
+- evals: a 232-case golden set, a cross-vendor judge panel, rewrite evals, a smoke case per skill, a blind reader
+  test and ablations;
+- optional pieces you switch on with `/plainspoken:setup`: a writing nudge, a drafting rule, and lint after each
+  edit in Claude Code, Codex and Hermes Agent.
 
 A production host has already moved its own checks over to it.
 
 Next:
-- **v1.0.0:** one accept item is left: the rewrite-quality eval against a no-plugin baseline
-  (`claude plugin eval . --tag rewrite`). Its first run (20 Oct 2026) showed no difference, because the model never
-  started `humanize` on those prompts, so the cases and graders are being reworked. The tier-2 blind reader test
-  runs after v1.0, once samples of the author's unassisted writing exist; tier 1, with human readers, comes later.
+- **v1.0.0:** one accept item is left: the rewrite-quality eval against a no-plugin baseline. Its first run
+  (20 Oct 2026) showed no difference, because the model never started `humanize` on those prompts. v0.7 widens
+  humanize's trigger wording, adds a slash arm (`--tag rewrite-slash`) and lint-counts both arms
+  (`eval rewrite-delta`), so the re-run can show a difference if there is one. The tier-2 blind reader test runs
+  after v1.0, once samples of the author's unassisted writing exist; tier 1, with human readers, comes later.
 - **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
   ([#1](https://github.com/littlebearapps/plainspoken/issues/1)), and `kaizen apply --target profile` editing the
   proposal's own profile rather than the one the project resolves now
   ([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
-- **After v1.0:** an editor agent that can rewrite, not only cut. Hooks (lint after each edit, the publish gate)
-  for Codex and Hermes Agent.
+- **After v1.0:** an editor agent that can rewrite, not only cut. The publish gate and the kaizen nudges for Codex
+  and Hermes Agent.
 
 ## Use
 
@@ -78,10 +82,11 @@ For the same reason `plugins.auto_apply: true` doesn't update plainspoken yet: u
 caution rating. To stay on one release instead, pin its full commit with `--ref <sha>` (Hermes takes no tags or
 branches there); `update` then leaves it alone, and `install --force --ref <new-sha>` moves it.
 
-What's missing outside Claude Code in this version: the hooks (no lint after each edit, no publish gate, no kaizen
-nudges), so run the check yourself before anything goes out; the install-time settings (pick a profile with
-`[engine] profile` in `.plainspoken/config.toml`); and an enforced read-only sandbox for the agents in Hermes, where
-it's an instruction they follow.
+Hooks outside Claude Code: lint and the claims integrity check after each edit, and the optional writing nudge, run
+in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Still missing: the publish gate and
+the kaizen nudges, so run the check yourself before anything goes out; the install-time settings (pick a profile
+with `[engine] profile` in `.plainspoken/config.toml`, and turn the optional pieces on with `/plainspoken:setup`);
+and an enforced read-only sandbox for the agents in Hermes, where it's an instruction they follow.
 
 Check a draft:
 
@@ -108,7 +113,7 @@ For a text over about 600 words, or when you ask, plain-language hands it to the
 it once in a fresh context, as the reader your profile names, and reports in JSON where it got lost, which words it
 didn't know and what it would do next. It never rewrites.
 
-The other seven skills run only when you call them:
+The other eight skills run only when you call them:
 
     /plainspoken:voice build samples/*.md                       # build a voice profile from your own writing
     /plainspoken:copy-audit hero.md                             # audit buyer-facing copy against the evidence
@@ -117,9 +122,10 @@ The other seven skills run only when you call them:
     /plainspoken:claims post.md                                 # verify every number, quote, name and date against saved sources
     /plainspoken:reader-value outline post.md                   # set the reader's benefit before drafting (deliver checks it after)
     /plainspoken:kaizen review                                  # the proposed ruleset changes waiting for your decision
+    /plainspoken:setup                                          # turn the writing nudge, drafting rule and lint after edits on or off
 
 `write`, `check`, `humanize` and `plain-language` also start on their own when a request fits. `voice`, `copy-audit`,
-`register-check`, `adapt`, `claims`, `reader-value` and `kaizen` run only when you call them.
+`register-check`, `adapt`, `claims`, `reader-value`, `kaizen` and `setup` run only when you call them.
 
 ### Claims and reader value
 
@@ -265,17 +271,29 @@ your `.gitignore` so reports and hook state stay out of commits; to keep the pro
     !.plainspoken/config.toml
     !.plainspoken/profiles/
 
-## Optional: the always-on nudge
+## Optional: the writing nudge, the drafting rule and the session brief
 
-Both pieces are off by default and add 0 tokens until you switch them on.
+All of these are off by default and add 0 tokens until you switch them on. `/plainspoken:setup` turns them on or
+off for the app you're in and shows what's on; underneath it runs
+`python3 <plugin>/lib/run.py setup --host <host> [--scope project|user] [--nudge on|off] [--rule on|off]
+[--lint-watch on|off] [--dry-run | --remove | --status]`. It edits one config file, the project's
+`.plainspoken/config.toml` or the user-wide `~/.config/plainspoken/config.toml`, marks every line it writes, and
+`--remove` deletes only those lines.
 
-- **Session brief.** Set `[brief] enabled = true` in `.plainspoken/config.toml`. A short writing brief (at most 800
-  characters, about 200 tokens) is then added at session start and to each subagent. It is never added to plainspoken's
-  own agents, so the judges and the cold reader stay isolated. A missing or unreadable config means no brief.
-- **Output style.** Choose it with `/output-style plainspoken`. It reaches the main conversation only, not subagents.
+| Piece | What it does | Where it runs |
+|---|---|---|
+| Writing nudge (`[nudge] mode = "on"`) | When a prompt asks for an email, a text, a post, a script, a page or a rewrite that sounds like a person, one line names the plainspoken step that fits: lint a short piece on stdin (`check -`), run the full check on a long one, use humanize for a rewrite. Chat, code and slash commands don't trigger it | Claude Code and Cowork (`UserPromptSubmit`), Codex CLI, app and ChatGPT Work (`UserPromptSubmit`), Hermes (`pre_llm_call`) |
+| Drafting rule (`[rule] enabled = true`) | Every session starts with a short rule: whenever something people will read is drafted, use plainspoken. It's added by the plugin with this install's paths, so it never goes stale after an update, and it only applies where plainspoken is installed | Claude Code and Cowork |
+| Lint after edits (`[lint_watch] mode`, on by default) | After a draft file is saved, the lint's findings come straight back | Claude Code, Cowork, Codex, Hermes |
+| Paste-in text (`setup --host claude-ai` or `chatgpt`) | The same rule as text to paste into the app's personal preferences, custom instructions or a project's instructions | claude.ai chat, ChatGPT chat (neither runs hooks) |
+| Session brief (`[brief] enabled = true`) | A short writing brief (at most 800 characters) at session start and in each subagent, never in plainspoken's own agents | Claude Code and Cowork |
+| Output style (`/output-style plainspoken`) | The same guidance as an output style, for the main conversation only | Claude Code |
 
-Neither is switched on by default yet. The Phase 6 ablation (21 drafts, 2026-10-16) gave no lint evidence for
-either, and with 3 drafts per variant that's only a hint. The blind reader test decides.
+A project's config wins over the user-wide file, and the user-wide file wins over the Claude Code options (`nudge`,
+`rule`). The user-wide file holds only `[nudge]`, `[rule]` and `[lint_watch]`.
+
+The session brief and the output style aren't on by default yet: the Phase 6 ablation (21 drafts, 2026-10-16) gave no
+lint evidence for either, and with 3 drafts per variant that's only a hint. The blind reader test decides.
 
 ## Evals
 
@@ -301,7 +319,8 @@ or are billed, and a person OKs each billed run. What each one measures, what it
 plainspoken` reports `Always-on: ~1,042 tok`. That figure counts the seven manual-only skills (about 560 tokens),
 whose descriptions Claude Code keeps out of context (`docs/claude-code-facts.md` section 7). Without them,
 `python3 -m scripts.dev.token_budget .` reports 482 tokens, against a budget of 500 (the delivery-checker agent added
-about 30; shorter cold-reader, tells-judge and humanize descriptions took about 15 off). Hooks add none.
+about 30; shorter cold-reader, tells-judge and humanize descriptions took about 15 off). Hooks add none. In v0.7 it's
+486: humanize's wider trigger wording, paid for by a shorter tells-judge description; the setup skill is manual-only.
 (`claude plugin details plainspoken` without `--plugin-dir` only finds an installed copy.)
 
 ## Develop

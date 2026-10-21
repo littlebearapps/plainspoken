@@ -12,7 +12,9 @@ each one costs and the rules that keep the numbers honest. Every eval command pr
 | Judge validation | Does each judge model find the tells a person would, and leave clean text alone? | `eval judges`, then `eval judges-report` | subscription or paid |
 | Rewrite graders | Does one rewrite keep its facts, drop the banned words and stay under the em-dash cap? | `eval rewrite DRAFT --source FILE` | free |
 | Trigger cases | Do the skills start when a request fits, and stay quiet when it doesn't? | `claude plugin eval . --tag trigger` | paid |
-| Rewrite cases | Are rewrites made with the plugin better than rewrites made without it? | `claude plugin eval . --tag rewrite` | paid |
+| Rewrite cases | Are rewrites made with the plugin better than rewrites made without it? | `claude plugin eval . --tag rewrite` (a plain request) and `--tag rewrite-slash` (the same texts through `/plainspoken:humanize`) | paid |
+| Rewrite delta | How many lint findings does each arm's rewrite still have? | `eval rewrite-delta RESULT` on a run made with `--keep-temp` | free |
+| Smoke cases | Does every skill do its job end to end on a saved draft? | `claude plugin eval . --tag smoke` | paid |
 | Ablations | Does the output style, the session brief or a ban list in the prompt change the drafts? | `scripts/dev/draft_runs.py`, then `scripts/dev/ablation_table.py` | subscription |
 | Blind reader test | Can a reader tell plainspoken's drafts from the author's own writing? | `eval blind build`, `form`, `run`, `score` | people: free; panel: subscription or paid |
 | Lint pass rate | What share of a folder of drafts has no lint BLOCK? | `eval lint-rate --drafts DIR` | free |
@@ -95,9 +97,18 @@ suite, two invocations, about twice that:
 ```bash
 claude plugin eval . --tag trigger --ablation none --allow-tools "Bash(python3 *)" --runs 1 -j 4 \
   --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin
-claude plugin eval . --tag rewrite --runs 1 -j 4 \
-  --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin
+claude plugin eval . --tag rewrite --tag rewrite-slash --runs 1 -j 4 --keep-temp \
+  --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin --json rewrite.json
+python3 lib/run.py eval rewrite-delta rewrite.json
+claude plugin eval . --tag smoke --ablation none -j 2 \
+  --allow-tools "Bash(python3 *)" Write Edit --no-publish --max-cost-usd 15 --threshold 0.8 --trust-plugin
 ```
+
+The rewrite cases' regex graders only pass or fail, and a strong model passes most of them without the plugin, so
+`eval rewrite-delta` reads each run's final reply from its kept trace and counts the lint's BLOCK and WARN findings per
+arm. The delta is without minus with: positive favours the plugin. `--keep-temp` is what keeps the traces; without it
+every run is listed as missing. The smoke cases run each skill once through its slash command on a draft the case
+saves first, including the full check with its four judges, so they cost more than the trigger suite.
 
 The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm. The
 rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The

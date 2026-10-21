@@ -56,8 +56,13 @@ the skills' rule that you don't award your own pass holds here too.
 
 ## What's different from Claude Code
 
-- No hooks in this version: no lint after each edit, no publish gate and no kaizen nudges. Run `$plainspoken:check`
+- Hooks (`hooks/codex.json`): after each `apply_patch` edit, the lint and the claims integrity check report on the
+  patched files; the optional writing nudge names the right step when a prompt asks for writing. Codex runs them only
+  after the user trusts them (`/hooks`). There's no publish gate and no kaizen nudge, so run `$plainspoken:check`
   yourself before anything goes out.
+- A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
+  `RUN check - < draft`, run `$plainspoken:check` on a long one, and remove what's flagged without adding facts.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
-  `.plainspoken/config.toml` (see the README). Kaizen records go to `.plainspoken/` in the project.
+  `.plainspoken/config.toml` (see the README); turn the nudge on with `$plainspoken:setup` (`RUN setup --host codex
+  …`). Kaizen records go to `.plainspoken/` in the project.
 - Agents run on your Codex model, not the model the agent file names.
