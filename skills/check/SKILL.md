@@ -17,7 +17,9 @@ Core rules (these hold for the whole run):
 - Fixes remove patterns. You never edit an article to add a fact, number, name, quote or example that isn't already
   in the text or given by the user. You never edit or add `anti-ai-allow` markers.
 - At most two fix passes, and fix passes come before justify: justify only what you keep after the last fix pass.
-  INCOMPLETE means an input is missing or stale: rerun what merge names, without editing the article; that rerun is
+  Before the judges start you may fix lint findings once, by removal, then rerun step 1; no judge has read that
+  text, so it isn't a fix pass. Once the judges start, every edit to FILE is a fix pass (after justify or JR too),
+  and step 1 follows it. INCOMPLETE means an input is missing or stale: rerun what merge names, without editing the article; that rerun is
   not a fix pass. Still INCOMPLETE after one rerun → stop and report merge's problem lines.
 - Exit codes: `check` 0 = no BLOCK, 1 = BLOCKs found (carry on), 2 = bad input (stop and report the message).
   `merge` 0 = PASS, 1 = read the status line (INCOMPLETE, FAIL or UNRESOLVED). For `merge`, `justify` and
@@ -28,13 +30,14 @@ Active profile (injected when this skill loads):
 !`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}' || true`
 
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. These calls take
-`--plugin-profile '${user_config.profile}'` (single quotes, exactly so): check, judge-input, merge, justify and
-profile. `paths` and `judge-record` don't take it (argparse rejects it there with exit 2). `FILE` is the first
+`--plugin-profile '${user_config.profile}'` (single quotes, exactly so): check, judge-input, merge, justify, status
+and profile. `paths` and `judge-record` don't take it (argparse rejects it there with exit 2). `FILE` is the first
 argument; quote it in every command (`"drafts/my post.md"`). Pass `--content-type social` to `check` when the user
 asks for it or the file is a social post. When the project gives files their own profile (`[engine] profiles` in
 `.plainspoken/config.toml`), every call that takes FILE uses FILE's profile by itself; the summary injected above is
 the project's default (`RUN config profile-for FILE` prints FILE's).
-Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths.
+Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
+run.py status.
 
 ## Steps
 
@@ -60,8 +63,10 @@ Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py 
 7. **Justify what you kept** (after the last fix pass you'll make). When no BLOCK remains but a WARN still fails and you have a real reason to keep it,
    follow `references/fix-or-justify.md` (template → fill → review input → one JR judge → record → merge). A JR
    reject leaves the rule UNRESOLVED: fix it, or rewrite the reason once.
-8. **Report.** Give merge's last status line exactly as printed; then BLOCKs, justified WARNs (accepted / rejected),
-   anything unresolved, and the path of the report file. A WARN kept without an accepted justification is
+8. **Report.** Run `RUN status FILE --plugin-profile '${user_config.profile}'` and give its `check:` lines exactly
+   as printed (its claims lines and exit code aren't this skill's). `INCOMPLETE (stale …)` means FILE changed after
+   the last merge: that edit was a fix pass, so run steps 1 to 5 again without editing, then report. Then say how
+   many fix passes ran, BLOCKs, justified WARNs (accepted / rejected), anything unresolved, and the report file's path. A WARN kept without an accepted justification is
    UNRESOLVED, never passed. If the run stopped early, say which step and quote the engine's message.
    Merge has already captured the verdicts in the kaizen ledger, so don't record them again.
 
