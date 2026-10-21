@@ -93,6 +93,11 @@ class Text(unittest.TestCase):
         self.assertIn("--plugin-profile 'default'", t)
         self.assertLessEqual(len(t), nudge.LIMIT)
 
+    def test_short_draft_lint_never_stands_in_for_write(self):  # #23
+        for host in nudge.HOSTS:
+            t = nudge.nudge_text("draft", host, "/a/very/long/plugin/root/path/x", "default")
+            self.assertTrue(t.endswith("this lint never replaces its check and claims steps."), host)
+
     def test_long_text_names_write(self):
         self.assertIn("/plainspoken:write", nudge.nudge_text("draft-long", "claude-code", "/p/root", "default"))
         self.assertIn("$plainspoken:write", nudge.nudge_text("draft-long", "codex", "/p/root", "default"))
