@@ -1,6 +1,6 @@
 ---
 name: humanize
-description: Removes AI writing patterns from a draft without adding facts, keeping the writer's voice. Use when asked to humanise or de-AI text, or as check's fix step.
+description: Removes AI writing patterns without adding facts, in the writer's voice. Use when asked to humanise or de-AI text, make it sound like a person wrote it, less like ChatGPT or a bot, or less stiff.
 license: MIT (adapted from blader/humanizer v3.1.0; see NOTICE.md)
 ---
 

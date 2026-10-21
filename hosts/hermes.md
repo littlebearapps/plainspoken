@@ -56,9 +56,13 @@ here too.
 
 ## What's different from Claude Code
 
-- No hooks in this version: no lint after each edit, no publish gate and no kaizen nudges. Run the check skill
-  yourself before anything goes out.
+- Hooks: after each `write_file` or `patch`, the lint and the claims integrity check report on the file, appended to
+  the tool's result; the optional writing nudge is added to a turn that asks for writing. There's no publish gate
+  and no kaizen nudge, so run the check skill yourself before anything goes out.
+- A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
+  `RUN check - < draft`, run the check skill on a long one, and remove what's flagged without adding facts.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
-  `.plainspoken/config.toml` (see the README). Kaizen records go to `.plainspoken/` in the project.
+  `.plainspoken/config.toml` (see the README); turn the nudge on with the setup skill (`RUN setup --host hermes
+  --scope user --nudge on` for every session of this profile). Kaizen records go to `.plainspoken/` in the project.
 - Agents run on this profile's default model (`hermes chat -m <model>` picks another), not the model the agent file
   names.

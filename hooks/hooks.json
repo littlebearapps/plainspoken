@@ -10,6 +10,11 @@
         {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session_brief.py"], "timeout": 5}
       ]}
     ],
+    "UserPromptSubmit": [
+      {"hooks": [
+        {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/nudge.py"], "timeout": 5}
+      ]}
+    ],
     "PostToolUse": [
       {"matcher": "Write|Edit", "hooks": [
         {"type": "command", "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/lint_watch.py"], "timeout": 15},

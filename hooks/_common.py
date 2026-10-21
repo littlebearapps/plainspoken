@@ -99,8 +99,54 @@ def clip(text: str, limit: int = 4000) -> str:
     return _clip(text, limit)
 
 
+_PENDING: list[tuple[str, str]] | None = None  # set while for_each_edit collects one context line per edited file
+_PATCH_PATH = re.compile(r"^\*\*\* (?:Add File|Update File|Move to): (.+?)\s*$", re.M)
+
+
 def emit_context(event: str, text: str) -> None:
+    if _PENDING is not None:
+        _PENDING.append((event, text))
+        return
     print(json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": clip(text)}}))
+
+
+def edited_events(event: dict) -> list[dict]:
+    """One Claude-shaped event per edited file. Claude Code's Write/Edit carry `tool_input.file_path`; Codex's
+    `apply_patch` carries the patch in `tool_input.command`, whose `*** Add File:` / `*** Update File:` /
+    `*** Move to:` headers name the files (relative to the session's cwd). Deleted files aren't linted."""
+    tool_input = event.get("tool_input")
+    if isinstance(tool_input, dict) and isinstance(tool_input.get("file_path"), str):
+        return [event]
+    command = tool_input.get("command") if isinstance(tool_input, dict) else tool_input
+    if event.get("tool_name") != "apply_patch" or not isinstance(command, str):
+        return []
+    cwd = Path(event.get("cwd") or ".")
+    out, seen = [], set()
+    for raw in _PATCH_PATH.findall(command):
+        path = Path(raw).expanduser()
+        path = path if path.is_absolute() else cwd / path
+        if str(path) not in seen:
+            seen.add(str(path))
+            out.append({**event, "tool_input": {"file_path": str(path)}})
+    return out
+
+
+def for_each_edit(event: dict, one) -> int:
+    """Run `one(event)` for every edited file in a PostToolUse event and print their context lines as one hook reply
+    (a hook prints one JSON object, so lines from several files are joined)."""
+    global _PENDING
+    _PENDING = []
+    try:
+        for each in edited_events(event):
+            try:
+                one(each)
+            except Exception:  # one file's failure never costs the others
+                continue
+    finally:
+        pending, _PENDING = _PENDING, None
+    if pending:
+        emit_context(pending[0][0], "\n".join(text for _, text in pending))
+    return 0
 
 
 # --- per-session hook state -------------------------------------------------------------------------------------

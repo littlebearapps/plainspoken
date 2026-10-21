@@ -185,3 +185,48 @@ class OutputStyle(unittest.TestCase):
             text = (REPO / rel).read_text(encoding="utf-8")
             for w in load_config().lists["ban_literal"]:
                 self.assertIsNone(re.search(rf"\b{re.escape(w)}\b", text, re.I), f"{rel}: {w}")
+
+
+class DraftingRule(unittest.TestCase):
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+
+    def run_hook(self, event_name="SessionStart", **env_over):
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_"))}
+        env.pop("XDG_CONFIG_HOME", None)
+        env.update({"HOME": str(self.home), "CLAUDE_PROJECT_DIR": str(self.project)}, **env_over)
+        event = {"hook_event_name": event_name, "source": "startup", "cwd": str(self.project)}
+        return subprocess.run([sys.executable, str(HOOK)], input=json.dumps(event), capture_output=True, text=True,
+                              env=env)
+
+    def context(self, r):
+        return json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"] if r.stdout.strip() else None
+
+    def test_off_by_default(self):
+        self.assertIsNone(self.context(self.run_hook()))
+
+    def test_option_turns_it_on_with_live_paths(self):
+        ctx = self.context(self.run_hook(CLAUDE_PLUGIN_OPTION_RULE="true"))
+        self.assertIn(f"python3 {REPO}/lib/run.py check -", ctx)
+        self.assertIn("/plainspoken:check", ctx)
+        self.assertNotIn("{", ctx)
+
+    def test_user_config_turns_it_on_without_a_project_config(self):
+        user = self.home / ".config" / "plainspoken" / "config.toml"
+        user.parent.mkdir(parents=True)
+        user.write_text("[rule]\nenabled = true\n", encoding="utf-8")
+        self.assertIn("Drafting rule", self.context(self.run_hook()))
+
+    def test_not_for_subagents(self):
+        self.assertIsNone(self.context(self.run_hook("SubagentStart", CLAUDE_PLUGIN_OPTION_RULE="true")))
+
+    def test_rule_and_brief_together(self):
+        (self.project / ".plainspoken").mkdir()
+        (self.project / ".plainspoken" / "config.toml").write_text(
+            "[rule]\nenabled = true\n[brief]\nenabled = true\n", encoding="utf-8")
+        ctx = self.context(self.run_hook())
+        self.assertIn("Drafting rule", ctx)
+        self.assertIn("When you write prose for a reader", ctx)

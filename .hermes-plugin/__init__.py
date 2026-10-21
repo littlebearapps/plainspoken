@@ -8,18 +8,54 @@ Code and Codex use. How the skills run here (paths, the judges as one-shot `herm
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BOOTSTRAP_MARKER = "plainspoken plugin for hermes"
+EDIT_TOOLS = ("write_file", "patch")  # Hermes' file-writing tools; lint-watch and integrity run after each
+HOOK_TIMEOUT = 15
+
+
+def _load(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _frontmatter_loader():
     # The engine's own YAML-subset reader, loaded by path so nothing is added to sys.path.
-    spec = importlib.util.spec_from_file_location("_plainspoken_frontmatter", ROOT / "lib" / "plainspoken" / "frontmatter.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.load
+    return _load("_plainspoken_frontmatter", ROOT / "lib" / "plainspoken" / "frontmatter.py").load
+
+
+def _run_hook(script: str, event: dict, *args: str) -> str | None:
+    """Run one of plainspoken's hook scripts (the same ones Claude Code and Codex run) on a Claude-shaped event and
+    return its context line, or None. Never raises: the hooks are optional."""
+    try:
+        done = subprocess.run([sys.executable, str(ROOT / "hooks" / script), *args], input=json.dumps(event),
+                              capture_output=True, text=True, timeout=HOOK_TIMEOUT, cwd=event.get("cwd") or None)
+        out = json.loads(done.stdout) if done.stdout.strip() else None
+        return out["hookSpecificOutput"]["additionalContext"] if out else None
+    except Exception:
+        return None
+
+
+def edit_paths(tool_name: str, args: dict) -> list[str]:
+    """The files a write_file or patch call changed: its `path`, or the `*** Update/Add File:` headers of a V4A
+    patch (mode "patch")."""
+    if not isinstance(args, dict):
+        return []
+    if tool_name == "patch" and args.get("mode") == "patch" and isinstance(args.get("patch"), str):
+        common = _load("_plainspoken_hook_common", ROOT / "hooks" / "_common.py")
+        events = common.edited_events({"tool_name": "apply_patch", "cwd": os.environ.get("TERMINAL_CWD") or os.getcwd(),
+                                       "tool_input": {"command": args["patch"]}})
+        return [e["tool_input"]["file_path"] for e in events]
+    path = args.get("path")
+    return [str(Path(path).expanduser())] if isinstance(path, str) and path else []
 
 
 def _skill_files() -> list[Path]:
@@ -55,9 +91,36 @@ def register(ctx):
         ctx.register_skill(skill_md.parent.name, skill_md, description=_description(skill_md, load))
 
     text = bootstrap()
+    nudge = _load("_plainspoken_nudge", ROOT / "hooks" / "nudge.py")
 
-    def pre_llm_call(is_first_turn=None, **kwargs):
-        # A pre_llm_call return is Hermes' documented way to add context; it's appended to the first user message.
-        return {"context": text} if is_first_turn else None
+    def pre_llm_call(is_first_turn=None, user_message=None, session_id=None, **kwargs):
+        # A pre_llm_call return is Hermes' documented way to add context; it's appended to this turn's user message.
+        # The first turn gets the pointer to hosts/hermes.md; any turn that asks for writing gets the optional nudge
+        # (off unless [nudge] mode = "on" in the project's or the user-wide config).
+        parts = [text] if is_first_turn else []
+        if nudge.intent(user_message):
+            # Hermes runs plugins in a host process whose working folder isn't the user's project, so the
+            # user-wide config (`setup --host hermes --scope user`) is what usually turns the nudge on here.
+            line = _run_hook("nudge.py", {"hook_event_name": "UserPromptSubmit", "prompt": user_message,
+                                          "cwd": os.environ.get("TERMINAL_CWD") or os.getcwd(),
+                                          "session_id": session_id}, "--host", "hermes")
+            if line:
+                parts.append(line)
+        return {"context": "\n\n".join(parts)} if parts else None
+
+    def transform_tool_result(tool_name=None, args=None, result=None, session_id=None, **kwargs):
+        # After write_file or patch: the lint-watch and integrity hooks, appended to the tool result the model reads.
+        # None keeps the result as it is.
+        if tool_name not in EDIT_TOOLS or not isinstance(result, str):
+            return None
+        lines = []
+        for path in edit_paths(tool_name, args):
+            # The project is found from the file's own folder (its nearest .plainspoken/config.toml or .git): the
+            # plugin host's working folder isn't the user's.
+            event = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": session_id or "hermes",
+                     "cwd": str(Path(path).parent), "tool_input": {"file_path": path}}
+            lines += [line for script in ("lint_watch.py", "integrity.py") if (line := _run_hook(script, event))]
+        return result + "\n\n" + "\n".join(lines) if lines else None
 
     ctx.register_hook("pre_llm_call", pre_llm_call)
+    ctx.register_hook("transform_tool_result", transform_tool_result)

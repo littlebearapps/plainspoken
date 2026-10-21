@@ -41,6 +41,7 @@ jobs:
           PLAINSPOKEN_LEAK_KEY: ${{ secrets.PLAINSPOKEN_LEAK_KEY }}
           LEAK_LIST: ${{ secrets.PLAINSPOKEN_LEAK_LIST }}
       - run: python scripts/dev/check_links.py .
+      - run: python scripts/dev/check_doc_commands.py .
       - run: python scripts/dev/lint_frontmatter.py .
       - run: python scripts/dev/check_release_version.py .
       - run: python lib/run.py eval golden validate --require-counts

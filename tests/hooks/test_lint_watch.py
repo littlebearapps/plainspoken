@@ -159,7 +159,8 @@ class Hook(unittest.TestCase):
         self.assertEqual((h["command"], h["args"][0]), ("python3", "${CLAUDE_PLUGIN_ROOT}/hooks/lint_watch.py"))
         self.assertNotIn("onFailure", h)
         self.assertEqual(set(cfg), {"SessionStart", "SubagentStart", "PostToolUse", "PreToolUse", "Stop",
-                                    "SubagentStop"})  # Stop/SubagentStop: the kaizen hooks (Phase 5)
+                                    "SubagentStop", "UserPromptSubmit"})  # Stop/SubagentStop: kaizen (Phase 5);
+        # UserPromptSubmit: the optional writing nudge (v0.7)
         self.assertIn("PreToolUse", cfg)
         pre = cfg["PreToolUse"][0]
         self.assertEqual(pre["matcher"], "Bash")
@@ -319,3 +320,39 @@ class Clip(unittest.TestCase):  # deferred minor: no … marker on the 4,000-cha
 
     def test_short_text_unchanged(self):
         self.assertEqual(_common.clip("short"), "short")
+
+
+class CodexApplyPatch(unittest.TestCase):
+    """Codex reports file edits as `apply_patch` with the patch text in tool_input.command (no file_path)."""
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
+        (self.project / "a.md").write_text("We delve into a robust tapestry.\n", encoding="utf-8")
+        (self.project / "b.md").write_text("Moreover, it is a pivotal and seamless paradigm.\n", encoding="utf-8")
+        (self.project / "c.py").write_text("x = 1\n", encoding="utf-8")
+
+    def event(self, patch: str):
+        return {"hook_event_name": "PostToolUse", "tool_name": "apply_patch", "session_id": "c1",
+                "cwd": str(self.project), "tool_input": {"command": patch}}
+
+    def test_every_patched_target_is_linted_in_one_reply(self):
+        patch = ("*** Begin Patch\n*** Update File: a.md\n@@\n-x\n+y\n*** Add File: b.md\n+text\n"
+                 "*** Update File: c.py\n@@\n-x\n+y\n*** End Patch\n")
+        r = run_hook(self.event(patch), self.project, CLAUDE_PROJECT_DIR=None)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(r.stdout.strip().splitlines()), 1, r.stdout)
+        ctx = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("a.md", ctx)
+        self.assertIn("b.md", ctx)
+        self.assertNotIn("c.py", ctx)
+
+    def test_edited_events_paths(self):
+        ev = self.event("*** Begin Patch\n*** Update File: docs/x.md\n*** Move to: docs/y.md\n"
+                        "*** Delete File: z.md\n*** End Patch")
+        got = [e["tool_input"]["file_path"] for e in _common.edited_events(ev)]
+        self.assertEqual(got, [str(self.project / "docs/x.md"), str(self.project / "docs/y.md")])
+
+    def test_other_tools_and_shapes_are_ignored(self):
+        self.assertEqual(_common.edited_events({"tool_name": "Bash", "tool_input": {"command": "ls"}}), [])
+        self.assertEqual(_common.edited_events({"tool_name": "apply_patch", "tool_input": {}}), [])

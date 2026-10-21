@@ -1,6 +1,6 @@
 ---
 name: tells-judge
-description: Isolated, read-only judge for the check skill. Strict JSON verdicts with verbatim evidence for one judge group or a justification review. Never edits.
+description: Isolated, read-only judge for the check skill. Strict JSON verdicts with verbatim evidence. Never edits.
 tools: Read, Grep, Glob
 model: opus
 effort: medium

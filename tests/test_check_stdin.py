@@ -1,0 +1,54 @@
+import json
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+
+from tests.test_cli import cli
+
+DRAFT = ("Moreover, the committee underscored the pivotal role of volunteers. Additionally, it highlighted the need "
+         "to foster a robust sense of community across the suburb.\n")
+
+
+class CheckStdin(unittest.TestCase):
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+
+    def test_stdin_matches_file_lint_and_saves_nothing(self):
+        (self.cwd / "d.md").write_text(DRAFT, encoding="utf-8")
+        from_file = cli("check", "d.md", "--profile", "default", "--content-type", "social", "--json", "--no-save",
+                        cwd=self.cwd)
+        clean = Path(tempfile.mkdtemp())  # the file run records kaizen events; stdin runs in a folder of its own
+        self.addCleanup(shutil.rmtree, clean, ignore_errors=True)
+        from_stdin = cli("check", "-", "--profile", "default", "--json", cwd=clean, input=DRAFT)
+        self.assertEqual(from_stdin.returncode, from_file.returncode, from_stdin.stderr)
+        a, b = json.loads(from_file.stdout), json.loads(from_stdin.stdout)
+        strip = lambda fs: [(f["rule"], f["severity"], f.get("line")) for f in fs]  # noqa: E731
+        self.assertEqual(strip(b["findings"]), strip(a["findings"]))
+        self.assertEqual(b["article"], "<stdin>")
+        self.assertEqual(b["content_type"], "social")
+        self.assertEqual(list(clean.iterdir()), [], "stdin lint must not write reports or kaizen events")
+
+    def test_stdin_long_text_defaults_to_article(self):
+        long = " ".join(["Plain words here, said once and then said again."] * 40) + "\n"
+        r = cli("check", "-", "--profile", "default", "--json", cwd=self.cwd, input=long)
+        self.assertEqual(json.loads(r.stdout)["content_type"], "article", r.stderr)
+
+    def test_stdin_content_type_flag_wins(self):
+        r = cli("check", "-", "--profile", "default", "--json", "--content-type", "article", cwd=self.cwd,
+                input=DRAFT)
+        self.assertEqual(json.loads(r.stdout)["content_type"], "article", r.stderr)
+
+    def test_stdin_with_out_is_refused(self):
+        r = cli("check", "-", "--profile", "default", "--out", "x.json", cwd=self.cwd, input=DRAFT)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("stdin", r.stderr)
+
+    def test_empty_stdin_is_an_input_error(self):
+        r = cli("check", "-", "--profile", "default", cwd=self.cwd, input="")
+        self.assertEqual(r.returncode, 2)
+
+
+if __name__ == "__main__":
+    unittest.main()

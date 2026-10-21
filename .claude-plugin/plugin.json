@@ -46,6 +46,18 @@
         "**/*.md"
       ]
     },
+    "nudge": {
+      "type": "boolean",
+      "title": "Writing nudge",
+      "description": "On: when a prompt asks for an email, post, script or other writing, a one-line reminder names the plainspoken step that fits. Off by default.",
+      "default": false
+    },
+    "rule": {
+      "type": "boolean",
+      "title": "Drafting rule",
+      "description": "On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read. Off by default.",
+      "default": false
+    },
     "strictness": {
       "type": "string",
       "title": "Gate strictness",
