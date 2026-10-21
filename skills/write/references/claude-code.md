@@ -4,11 +4,11 @@
   `/plainspoken:write <brief or notes file> [--type article|page|email|social]`.
 - It can run the CLI without asking. Saving the draft (to the path the user names, or `.plainspoken/drafts/`) goes
   through the normal permission prompt.
-- Step 6: start the check with the Skill tool as `plainspoken:check`, with the draft path as its argument (plus
+- Step 7: start the check with the Skill tool as `plainspoken:check`, with the draft path as its argument (plus
   `--content-type social` for a social post). The check skill loads with its own allowed tools and starts its
   `plainspoken:tells-judge` subagents itself. If the Skill tool isn't available, follow
   `${CLAUDE_PLUGIN_ROOT}/skills/check/SKILL.md` step by step; its report-file writes will then ask for permission.
-- Steps 2 and 7: `reader-value` and `claims` are manual-only (`disable-model-invocation: true`), so the Skill tool
+- Steps 2 and 6: `reader-value` and `claims` are manual-only (`disable-model-invocation: true`), so the Skill tool
   can't start them from here. Read `${CLAUDE_PLUGIN_ROOT}/skills/reader-value/SKILL.md` (outline mode) and
   `${CLAUDE_PLUGIN_ROOT}/skills/claims/SKILL.md` and follow their steps, with their own `references/claude-code.md`
   notes. Writing the contract under
