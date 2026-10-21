@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/littlebearapps/plainspoken/compare/v0.8.0...v0.9.0) (2026-10-21)
+
+
+### Features
+
+* long-form asks go to write with the full check; write never skips its check and claims steps ([#20](https://github.com/littlebearapps/plainspoken/issues/20)) ([cf1a1a7](https://github.com/littlebearapps/plainspoken/commit/cf1a1a7b9a4d04de4d68d5f8869a33fbb432bc6f))
+
 ## [0.8.0](https://github.com/littlebearapps/plainspoken/compare/v0.7.0...v0.8.0) (2026-10-21)
 
 
