@@ -146,7 +146,10 @@ def piece(reply: str) -> str:
     text = found[-1].strip() if found else reply
     # A model without the plugin sometimes adds a note that the slash command isn't installed: that's about the run,
     # not the writing, and a reader would spot it at once.
-    return "\n".join(ln for ln in text.splitlines() if "plainspoken" not in ln.lower()).strip()
+    lines = [ln for ln in text.splitlines() if "plainspoken" not in ln.lower()]
+    while lines and lines[0].strip() in ("", "---", "***", "___"):  # a leading rule would read as frontmatter
+        lines.pop(0)
+    return "\n".join(lines).strip()
 
 
 def passage(prompt: str) -> str:
@@ -181,9 +184,13 @@ def delta(result: dict, suite_root: Path, profile: Profile, cfg=None, save: Path
         name = case["name"]
         ctype = content_type_for(name)
         prompt = (Path(suite_root) / case["dir"] / "prompt.md").read_text(encoding="utf-8")
+        scaffold = Path(suite_root) / case["dir"] / "scaffold.sh"
+        draft_in = re.search(r"<<'DRAFT'\n(.*?)\nDRAFT", scaffold.read_text(encoding="utf-8"), re.S) if scaffold.is_file() else None
         with tempfile.TemporaryDirectory(prefix="plainspoken-delta-") as tmp:
             source = Path(tmp) / "source.md"
-            source.write_text(passage(prompt.split("\n---\n", 1)[-1]) + "\n", encoding="utf-8")
+            # the source is the pasted passage, or for a fix case the draft its scaffold saved
+            source.write_text((draft_in.group(1) if draft_in else passage(prompt.split("\n---\n", 1)[-1])) + "\n",
+                              encoding="utf-8")
             for arm in ("with", "without"):
                 for i, run in enumerate(case.get("arms", {}).get(arm, [])):
                     trace = run.get("tracePath")

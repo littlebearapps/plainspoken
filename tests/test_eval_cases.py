@@ -19,6 +19,7 @@ REWRITE = EVALS / "rewrite"
 REWRITE_SLASH = EVALS / "rewrite-slash"
 SMOKE = EVALS / "smoke"
 DRAFTING = (EVALS / "drafting", EVALS / "drafting-hooks")
+EXTRA = (EVALS / "longform", EVALS / "fix")
 CASE_KEYS = {"schema_version", "name", "description", "tags", "plugins", "runs", "expected_outcome", "model",
              "max_turns", "timeout_seconds", "allowed_tools", "append_system_prompt", "env"}
 GRADER_TYPES = {"regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"}
@@ -334,7 +335,8 @@ class EvalCases(unittest.TestCase):
         self.assertTrue(found)
         self.assertEqual(len(found), len([p for p in CASES.iterdir() if p.is_dir()]))
         rewrite_dirs = [p for p in (*REWRITE.iterdir(), *REWRITE_SLASH.iterdir(), *SMOKE.iterdir(),
-                                    *DRAFTING[0].iterdir(), *DRAFTING[1].iterdir()) if p.is_dir()]
+                                    *DRAFTING[0].iterdir(), *DRAFTING[1].iterdir(), *EXTRA[0].iterdir(),
+                                    *EXTRA[1].iterdir()) if p.is_dir()]
         self.assertEqual(sorted([d for d, *_ in found] + rewrite_dirs), loadable_cases())
         for d, fm, prompt, graders in found:
             with self.subTest(case=d.name):
@@ -375,6 +377,25 @@ class EvalCases(unittest.TestCase):
                         else:
                             self.assertIsNone(rx.search(passage(prompt).replace("> - ", "")),
                                               "the brief's own numbers are allowed")
+
+    def test_longform_and_fix_cases(self):
+        """evals/longform (long pieces from notes) and evals/fix (a stiff draft saved by the scaffold, fixed in place):
+        both with the nudge and the rule on, both asking for the piece between markers."""
+        for folder, tag in ((EXTRA[0], "longform"), (EXTRA[1], "fix")):
+            found = sorted(p for p in folder.iterdir() if p.is_dir())
+            self.assertGreaterEqual(len(found), 3)
+            for d in found:
+                _, fm, prompt, graders = _case(d)
+                with self.subTest(case=d.name):
+                    self.assertEqual(fm["name"], d.name)
+                    self.assertTrue(d.name.startswith(tag + "--"))
+                    self.assertEqual(flow_list(fm["tags"]), [tag])
+                    self.assertIn("<<<PIECE", prompt)
+                    script = (d / "scaffold.sh").read_text(encoding="utf-8")
+                    self.assertIn("[nudge]", script)
+                    self.assertEqual("<<'DRAFT'" in script, tag == "fix")
+                    kept = compiled(next(g for n, g, _ in graders if n == "kept-the-facts.md"))
+                    self.assertTrue(kept.search(script if tag == "fix" else prompt))
 
     def test_smoke_cases_run_every_skill_once_by_slash(self):
         """evals/smoke: one case per skill that does real work on a saved draft (paid; `--tag smoke`)."""
