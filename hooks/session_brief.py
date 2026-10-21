@@ -68,7 +68,8 @@ def rule_text(root, profile: str) -> str:
     """The drafting rule with this install's paths and Claude Code's skill syntax filled in."""
     text = (root / "data" / "drafting-rule.md").read_text(encoding="utf-8").strip()
     filled = (text.replace("{root}", str(root)).replace("{profile}", profile)
-              .replace("{check}", "/plainspoken:check").replace("{humanize}", "/plainspoken:humanize"))
+              .replace("{check}", "/plainspoken:check").replace("{humanize}", "/plainspoken:humanize")
+              .replace("{write}", "/plainspoken:write"))
     return fit(filled, RULE_LIMIT)
 
 
