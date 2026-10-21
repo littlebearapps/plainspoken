@@ -58,6 +58,29 @@ class Delta(unittest.TestCase):
         self.assertIn("lint BLOCK findings: with 0.0", r.stdout)
         self.assertIn("missing traces", r.stdout)
 
+    def test_derived_numbers_are_listed_not_counted(self):
+        """A drafting case's source is the brief's facts: 150 from its 151 is derived, not new (#33)."""
+        piece = ("<<<PIECE\nThe 151 repairs so far have kept something like 150 kilos out of the tip, and Ray has "
+                 "fixed 913 toasters.\nPIECE>>>")
+        plain = piece.replace(", and Ray has fixed 913 toasters", "")
+        name = "longform--newsletter-feature-library"
+        result = {"suite": {"root": str(REPO)}, "cases": [{
+            "name": name, "dir": f"evals/longform/{name}",
+            "arms": {"with": [{"tracePath": trace(self.tmp / "dw", piece)}],
+                     "without": [{"tracePath": trace(self.tmp / "do", plain)}]}}]}
+        d = rewrite.delta(result, REPO, default_profile())
+        rows = {r["arm"]: r for r in d["rows"]}
+        self.assertEqual((rows["with"]["new_numbers"], rows["with"]["derived_numbers"]), (1, 1))
+        self.assertEqual((rows["without"]["new_numbers"], rows["without"]["derived_numbers"]), (0, 1))
+        self.assertEqual(rows["without"]["derived"], "150 ≈ 151")
+        self.assertEqual(d["summary"]["new_numbers"], {"with": 1.0, "without": 0.0, "delta": -1.0})
+        text = rewrite.summarise_delta(d)
+        self.assertIn("  new numbers: with 1.0, without 0.0, delta -1.0", text)
+        self.assertIn("derived numbers (worked out from the source's own; not counted as new): with 1.0, without 1.0",
+                      text)
+        self.assertIn("without #1: PASS · BLOCK 0 · WARN 0 · em-dash over 0 · new numbers 0 · derived 1 (150 ≈ 151)",
+                      text)
+
 
 if __name__ == "__main__":
     unittest.main()

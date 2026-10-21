@@ -447,7 +447,7 @@ class TableTests(Base):
         drafts = Path(self.tmp.name) / "drafts"
         clean = "# Kettles\n\nI boil water in a kettle every morning, and it takes about 3 minutes.\n"
         banned = "# Kettles\n\nThis is a crucial kettle. It boils water fast enough for me.\n"
-        dashes = "# Kettles\n\nOne — two — three — four — five. It boils water.\n"
+        dashes = "# Kettles\n\nSteam — click — pour — tea — quiet. It boils water.\n"  # no numbers, in words either
         numbers = "# Kettles\n\nIt boils 1,700 millilitres in 4 minutes, and I like that.\n"
         files = {
             "none/claude-opus-5-5": {"alpha": clean, "beta": banned},
