@@ -67,6 +67,7 @@ class CheckSkill(unittest.TestCase):
     def test_profile_flag_scope_and_routing(self):
         self.assertIn("`paths` and `judge-record` don't take it", self.text)
         self.assertIn("judge-record FILE --group Jn --from", self.text)
+        self.assertIn("judge-record FILE --all --from", self.text)  # #28: one record call per judge round
         self.assertNotIn("<<'EOF'", self.text)  # E2E: Claude Code's shell check denies JSON in a heredoc
         self.assertIn("UNRESOLVED → step 6", self.text)
         self.assertIn("run every call from the same working directory", self.text.lower())

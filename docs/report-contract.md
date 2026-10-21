@@ -8,15 +8,15 @@ the current project; `--reports DIR` changes it). File names start with the arti
 Each file, what writes it, and what it's bound to:
 
 - `<key>.lint.json`: written by `check`; bound to article_sha256, profile_sha256, ruleset_version, content_type.
-- `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn`; bound to article_sha256,
-  profile_sha256, ruleset_version (stamped from the current lint).
+- `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn` (or `--all` for all four);
+  bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint).
 - `<key>.justify.json`: written by `justify --template --write` (then filled in by the check skill); bound to
   article_sha256.
 - `<key>.JR.judge.json`: written by `judge-record --group JR`; bound to article_sha256 + justify_sha256,
   profile_sha256, ruleset_version.
 - `<key>.report.json`: written by `merge`; bound to everything above.
-- `<key>.reply.json`: written by the check skill (one judge reply at a time), deleted by `judge-record --from`; bound
-  to nothing (scratch).
+- `<key>.reply.json`: written by the check skill (all four judge replies one after another, or one reply on a
+  retry or for JR), deleted by `judge-record --from`; bound to nothing (scratch).
 - `<key>.claims.json`: written by `claims status`; bound to article_sha256, ledger_sha256 (the status, its reasons,
   the gaps and the checker record it read).
 - `<key>.claims-check.json`: written by `claims record` (the isolated claims checker's verified reply); bound to

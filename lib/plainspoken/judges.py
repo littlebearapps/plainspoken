@@ -87,3 +87,52 @@ def record_reply(article: Path, group: str, text: str, reports_dir: Path, cwd: P
     paths[group].parent.mkdir(parents=True, exist_ok=True)
     report.write_atomic(paths[group], json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     return paths[group]
+
+
+_FENCE_LINE = re.compile(r"(?m)^[ \t]*```[ \t]*(?:json)?[ \t]*$", re.I)
+
+
+def parse_replies(text: str) -> list:
+    """The replies in one file: a JSON list, or JSON values one after another (code-fence lines are dropped).
+    Raises ValueError when anything else is in the file, so a reply with prose around it is never half-read."""
+    body = _FENCE_LINE.sub("", text).strip()
+    try:
+        data = json.loads(body)
+    except ValueError:
+        data, out, dec, i = None, [], json.JSONDecoder(), 0
+        while i < len(body):
+            try:
+                obj, i = dec.raw_decode(body, i)
+            except ValueError:
+                raise ValueError("replies are not JSON objects one after another, or one JSON list "
+                                 "(no prose between or around them)") from None
+            out.append(obj)
+            while i < len(body) and body[i].isspace():
+                i += 1
+    else:
+        out = data if isinstance(data, list) else [data]
+    return out
+
+
+def record_all(article: Path, text: str, reports_dir: Path, cwd: Path) -> list[tuple[str, Path | None, str | None]]:
+    """Record J1–J4 from one file of replies, each validated as `record_reply` does, each by its own `group`.
+    Returns `(group, written path or None, reason or None)` per group, J1 to J4, then one row per reply that isn't
+    for J1–J4 (JR is recorded on its own). A bad reply never stops the others. Raises ValueError when the file
+    can't be parsed at all."""
+    replies = parse_replies(text)
+    out: list[tuple[str, Path | None, str | None]] = []
+    for g in GROUPS:
+        mine = [r for r in replies if isinstance(r, dict) and r.get("group") == g]
+        if len(mine) != 1:
+            out.append((g, None, f"{len(mine)} replies for {g} in the file" if mine else "no reply for it in the file"))
+            continue
+        try:
+            out.append((g, record_reply(article, g, json.dumps(mine[0]), reports_dir, cwd), None))
+        except ValueError as e:
+            out.append((g, None, str(e)))
+    for r in replies:
+        if not isinstance(r, dict) or r.get("group") not in GROUPS:
+            label = str(r.get("group")) if isinstance(r, dict) else "?"
+            out.append((label, None, "not a J1–J4 reply (record JR with --group JR)" if isinstance(r, dict)
+                        else "an item that isn't a JSON object"))
+    return out

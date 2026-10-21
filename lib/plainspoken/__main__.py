@@ -52,6 +52,26 @@ def _input_error(path: Path, e: Exception, verb: str = "check") -> int:
     return 2
 
 
+def _record_all(args: argparse.Namespace, text: str, root: Path) -> int:
+    """`judge-record --all`: J1-J4 from one input in one call (#28). Prints each recorded path; names each group it
+    didn't record on stderr, so only those judges run again. Exit 0 = all four recorded, 1 = any not, 2 = I/O."""
+    try:
+        rows = judges.record_all(args.path, text, args.reports or report.reports_dir_default(root), root)
+    except ValueError as e:
+        print(f"plainspoken: judge replies not recorded: {_first_line(e)}", file=sys.stderr)
+        capture.for_rejected_reply(_first_line(e), root)
+        return 1
+    except OSError as e:
+        return _input_error(args.path, e, "record judge replies for")
+    for group, written, reason in rows:
+        if written is not None:
+            print(written)
+        else:
+            print(f"plainspoken: {group} reply not recorded: {reason}", file=sys.stderr)
+            capture.for_rejected_reply(f"{group}: {reason}", root)
+    return 0 if all(written is not None for _, written, _ in rows) else 1
+
+
 def _same_file(a: Path, b: Path) -> bool:
     try:
         return config.resolve_path(Path(a)) == config.resolve_path(Path(b))
@@ -233,9 +253,13 @@ def _main(argv: list[str] | None) -> int:
     ag.add_argument("--line", type=int, help="use only the Nth non-blank input line (1 = J1 from judge-input)")
     sub.add_parser("agent-reply", help="cut the JSON object out of an agent's output on stdin (host CLIs add a "
                                        "session line or a fence); the record step still validates it")
-    jr = sub.add_parser("judge-record", help="record a judge's JSON reply (from --from FILE, else stdin)")
+    jr = sub.add_parser("judge-record", help="record a judge's JSON reply, or J1-J4 at once with --all (from --from "
+                                             "FILE, else stdin)")
     jr.add_argument("path", type=Path)
-    jr.add_argument("--group", required=True, choices=[*judges.GROUPS, "JR"])
+    which = jr.add_mutually_exclusive_group(required=True)
+    which.add_argument("--group", choices=[*judges.GROUPS, "JR"])
+    which.add_argument("--all", action="store_true",
+                       help="record J1-J4 from one input: their replies one after another, or one JSON list")
     jr.add_argument("--reports", type=Path)
     jr.add_argument("--from", dest="reply_file", type=Path,
                     help="read the reply from this file; the `reply` path from `paths` is deleted afterwards, "
@@ -413,6 +437,8 @@ def _main(argv: list[str] | None) -> int:
                     pass
         else:
             text = sys.stdin.read()
+        if args.all:
+            return _record_all(args, text, root)
         try:
             written = judges.record_reply(args.path, args.group, text,
                                           args.reports or report.reports_dir_default(root), root)
