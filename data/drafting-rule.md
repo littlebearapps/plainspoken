@@ -4,7 +4,8 @@ web pages, newsletters, pamphlets, flyers, letters, bios and announcements. It d
 code, commit messages or notes for yourself.
 - Short piece: write it, pipe it to `python3 {root}/lib/run.py check - --plugin-profile '{profile}'` and cut what
   it flags.
-- Long piece, or one that's going out: save it to a file and run {check}.
+- Long piece (a blog post, article, page, newsletter, anything over a few paragraphs) or one that's going out: use
+  {write}, which drafts, runs the full check and fixes; for a draft that already exists, run {check} on it.
 - Rewriting someone's text so it sounds like a person: use {humanize}.
 - A fix removes or plainly restates. Never add a fact, number, name, quote or opinion that isn't in the source or
   from the user; ask instead.

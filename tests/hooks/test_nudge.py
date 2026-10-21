@@ -55,6 +55,18 @@ class Matcher(unittest.TestCase):
     def test_drafting_prompts_fire_as_draft(self):
         for p in DRAFT:
             with self.subTest(p=p):
+                self.assertIn(nudge.intent(p), ("draft", "draft-long"))
+
+    def test_long_pieces_go_to_write(self):
+        for p in ("Write a blog post (about 600 words) for our club website about the rosters",
+                  "Draft the service page for my bookkeeping business's website",
+                  "Can you write a newsletter feature on the repair cafe?",
+                  "Write a 300-word email to the board about the budget"):
+            with self.subTest(p=p):
+                self.assertEqual(nudge.intent(p), "draft-long")
+        for p in ("Draft a text message to Sam saying I'll be late", "Write three tweets announcing the release",
+                  "Write a short bio for the conference program"):
+            with self.subTest(p=p):
                 self.assertEqual(nudge.intent(p), "draft")
 
     def test_rewrite_prompts_fire_as_rewrite(self):
@@ -77,9 +89,13 @@ class Text(unittest.TestCase):
     def test_claude_code_text_names_the_commands(self):
         t = nudge.nudge_text("draft", "claude-code", "/p/root", "default")
         self.assertIn("python3 /p/root/lib/run.py check -", t)
-        self.assertIn("/plainspoken:check", t)
+        self.assertIn("/plainspoken:write", t)
         self.assertIn("--plugin-profile 'default'", t)
         self.assertLessEqual(len(t), nudge.LIMIT)
+
+    def test_long_text_names_write(self):
+        self.assertIn("/plainspoken:write", nudge.nudge_text("draft-long", "claude-code", "/p/root", "default"))
+        self.assertIn("$plainspoken:write", nudge.nudge_text("draft-long", "codex", "/p/root", "default"))
 
     def test_codex_uses_dollar_syntax(self):
         t = nudge.nudge_text("rewrite", "codex", "/p/root", "default")
@@ -88,11 +104,11 @@ class Text(unittest.TestCase):
 
     def test_hermes_names_skills(self):
         t = nudge.nudge_text("draft", "hermes", "/p/root", "default")
-        self.assertIn("plainspoken:check", t)
+        self.assertIn("plainspoken:write", t)
         self.assertNotIn("$plainspoken", t)
 
     def test_every_text_fits(self):
-        for kind in ("draft", "rewrite"):
+        for kind in ("draft", "draft-long", "rewrite"):
             for host in nudge.HOSTS:
                 self.assertLessEqual(len(nudge.nudge_text(kind, host, "/a/very/long/plugin/root/path/x", "default")),
                                      nudge.LIMIT)
@@ -122,7 +138,7 @@ class Hook(unittest.TestCase):
         r = self.run_hook(DRAFT[0], {"CLAUDE_PLUGIN_OPTION_NUDGE": "true"})
         out = json.loads(r.stdout)["hookSpecificOutput"]
         self.assertEqual(out["hookEventName"], "UserPromptSubmit")
-        self.assertIn("/plainspoken:check", out["additionalContext"])
+        self.assertIn("/plainspoken:write", out["additionalContext"])
 
     def test_on_by_project_config_and_codex_host(self):
         (self.project / ".plainspoken").mkdir()
