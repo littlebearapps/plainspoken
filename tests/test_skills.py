@@ -115,7 +115,8 @@ class HumanizeSkill(unittest.TestCase):
         self.assertIn("v3.1.0", notice)
 
 
-PROFILE_SUBCOMMANDS = {"check", "profile", "anchors", "register-checklist", "merge", "justify", "judge-input"}
+PROFILE_SUBCOMMANDS = {"check", "profile", "anchors", "register-checklist", "merge", "justify", "judge-input",
+                       "status"}
 CLI_SPAN = re.compile(r"`([^`\n]*\b(?:RUN|run\.py) ([a-z-]+)\b[^`\n]*)`")
 
 

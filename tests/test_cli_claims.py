@@ -588,6 +588,42 @@ class EndToEndFixture(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(r.stdout.strip().splitlines(), ["claims: PASS", "  checker: PASS (0 warnings)"])
 
+    def test_draft_status_passes_only_with_both_passes(self):  # issue #24: `status` quotes both engines
+        from plainspoken.registry import load_config
+        from tests._profiles import PRODUCT
+        from tests.test_anti_ai_report import PRODUCT_ARGS, _judges
+        art = self.root / "posts" / "tool-library-first-year.md"
+        ledger = self.root / ".plainspoken" / "claims" / "tool-library-first-year.claims.toml"
+        paths = json.loads(subprocess.run([sys.executable, str(RUN), "paths", "posts/tool-library-first-year.md"],
+                                          cwd=self.root, capture_output=True, text=True).stdout)
+        write_check(Path(paths["claims-check"]), art, ledger)
+        engine = [sys.executable, str(RUN)]
+        draft = ["posts/tool-library-first-year.md", *PRODUCT_ARGS]
+        subprocess.run([*engine, "check", *draft], cwd=self.root, capture_output=True)
+        digest, cfg, reports = sha(art).removeprefix("sha256:"), load_config(), Path(paths["report"]).parent
+        _judges(reports, paths["key"], digest, cfg, PRODUCT)
+
+        def status() -> tuple[subprocess.CompletedProcess, subprocess.CompletedProcess]:
+            merged = subprocess.run([*engine, "merge", *draft], cwd=self.root, capture_output=True, text=True)
+            r = subprocess.run([*engine, "status", *draft], cwd=self.root, capture_output=True, text=True)
+            self.assertEqual(r.stdout.splitlines()[:3], ["check: " + merged.stdout.splitlines()[0], "claims: PASS",
+                                                         "  checker: PASS (0 warnings)"])
+            return merged, r
+
+        merged, r = status()  # the lint's WARNs (7d today) are unresolved: a claims PASS alone isn't enough
+        kept = json.loads(Path(paths["report"]).read_text())["unresolved"]
+        self.assertEqual((r.returncode, merged.stdout.split()[0], bool(kept)), (1, "UNRESOLVED", True), r.stdout)
+        jp = reports / f"{paths['key']}.justify.json"
+        jp.write_text(json.dumps({"article_sha256": digest, "items": [
+            {"rule": rid, "kind": "voice", "reason": "the short lines are the annual report's own figures"}
+            for rid in kept]}))
+        (reports / f"{paths['key']}.JR.judge.json").write_text(json.dumps({
+            "group": "JR", "article_sha256": digest, "justify_sha256": hashlib.sha256(jp.read_bytes()).hexdigest(),
+            "judged_at": "2026-10-21T00:00:00Z", "profile_sha256": PRODUCT.sha256, "ruleset_version": cfg.version,
+            "verdicts": [{"rule": rid, "verdict": "accept", "reason": "checked against the evidence"} for rid in kept]}))
+        merged, r = status()
+        self.assertEqual((merged.returncode, r.returncode), (0, 0), r.stdout + r.stderr)
+
 
 class ScaffoldAnchors(unittest.TestCase):  # section anchors, not line numbers
     def test_sections_skip_frontmatter_and_code(self):

@@ -1,7 +1,7 @@
-"""CLI: python3 -m plainspoken {check|profile|config|paths|merge|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
+"""CLI: python3 -m plainspoken {check|profile|config|paths|merge|status|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
 register-checklist|claims|reader-value|kaizen|eval} …
-Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), invalid justifications or nothing to review
-(justify), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
+Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
+invalid justifications or nothing to review (justify), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
 (checker-input, record), reader-value or action-module findings, a delivery record or status other than a
 current PASS (every self-check), a stale delivery reply or a contract that doesn't validate (deliver-input,
 deliver, status), or a kaizen refusal (no current check or snapshot, no finding, a bad hunk number, capture off, a
@@ -203,6 +203,13 @@ def _main(argv: list[str] | None) -> int:
     m.add_argument("--reports", type=Path)
     m.add_argument("--profile")
     m.add_argument("--plugin-profile")
+    st = sub.add_parser("status", help="the last saved check and claims status lines for a draft, and its "
+                                       "reader-value contract path, for a report to quote (runs and writes nothing)")
+    st.add_argument("path", type=Path)
+    st.add_argument("--reports", type=Path)
+    st.add_argument("--ledger", type=Path)
+    st.add_argument("--profile")
+    st.add_argument("--plugin-profile")
     j = sub.add_parser("justify", help="fix or justify: a justification template, or the JR judge's input")
     j.add_argument("path", type=Path)
     j.add_argument("--reports", type=Path)
@@ -360,15 +367,10 @@ def _main(argv: list[str] | None) -> int:
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e)
         capture.for_merge(merged, args.path, prof, root)
-        cov = merged["coverage"]
-        print(f"{merged['status']} · coverage {cov['covered']}/{cov['expected']}"
-              f" · BLOCK {', '.join(merged['blocks']) or '-'} · WARN {', '.join(merged['warns']) or '-'}"
-              f" · unresolved {', '.join(merged['unresolved']) or '-'}")
-        if cov["missing"]:
-            print(f"  missing verdicts: {', '.join(cov['missing'])}")
-        for p in merged["problems"]:
-            print(f"  problem: {p}")
+        print("\n".join(report.merge_lines(merged)))
         return 0 if merged["status"] == "PASS" else 1
+    if args.cmd == "status":
+        return _draft_status(args, root)
     if args.cmd == "judge-input":
         try:
             items = judges.judge_input(args.path, _profile(args, root),
@@ -791,6 +793,31 @@ def _status(args: argparse.Namespace, root: Path) -> int:
         return _input_error(check_path["claims"], e, "write")
     print(payload if args.json else "\n".join([f"claims: {rep['status']}", *(f"  {r}" for r in rep["reasons"])]))
     return 0 if rep["status"] == "PASS" else 1
+
+
+def _draft_status(args: argparse.Namespace, root: Path) -> int:
+    """`status`: what a report quotes, read back from saved files. Neither result can come from memory, and a step
+    that never ran shows as INCOMPLETE. Exit 0 only when both say PASS."""
+    reports_dir = args.reports or report.reports_dir_default(root)
+    try:
+        if not args.path.is_file():
+            raise FileNotFoundError(f"no such file: {args.path}")
+        check_status, check_lines = report.saved_check(args.path, reports_dir, _profile(args, root), root)
+    except _INPUT_ERRORS as e:
+        return _input_error(args.path, e, "report the status of")
+    try:
+        ledger = args.ledger or claims.ledger_path_for(args.path, root)
+        rep = claims_tools.status_report(args.path, ledger, root,
+                                         report.report_paths(args.path, reports_dir, root)["claims-check"],
+                                         extraction.platform_names(root))
+    except _INPUT_ERRORS as e:
+        rep = {"status": "INCOMPLETE", "reasons": [f"can't report: {type(e).__name__}: {_first_line(e)}"]}
+    contract = reader_value.default_contract(args.path, root)
+    shown = claims_tools.display_path(contract, root)
+    print("\n".join([f"check: {check_lines[0]}", *check_lines[1:], f"claims: {rep['status']}",
+                     *(f"  {r}" for r in rep["reasons"]),
+                     f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
+    return 0 if check_status == rep["status"] == "PASS" else 1
 
 
 def _record(args: argparse.Namespace, root: Path) -> int:

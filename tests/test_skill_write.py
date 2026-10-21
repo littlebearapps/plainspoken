@@ -71,15 +71,27 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertNotIn("in this version", self.text.lower())
         self.assertNotIn("Claims to verify", self.text)
 
-    def test_report_lines(self):
+    def test_report_lines(self):  # #24: a fixed block, the engine's lines quoted from `status`, never from memory
         step = self.text.split("### 8. Report", 1)[1]
-        self.assertIn("`Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)`", step)
-        self.assertIn("`claims: <PASS|INCOMPLETE|BLOCKED>`", step)  # no "Claims: claims:"
-        self.assertNotIn("`Claims:", step)
+        self.assertIn("`RUN status '<draft>' --plugin-profile '${user_config.profile}'`", step)
+        block = [line.strip() for line in step.splitlines() if line.startswith("    ")]
+        self.assertEqual([line.split(":", 1)[0] for line in block],
+                         ["Draft", "<every line `status` printed", "Reader value", "Needs the owner", "Anchors",
+                          "For kaizen"])
+        self.assertIn("Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)", block)
+        self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
         flat = " ".join(step.split())
+        self.assertIn("copied exactly as printed, never from memory or in other words", flat)
+        self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
-        self.assertIn("every `(skipped anchor …)` line", flat)  # step 4's skipped anchors are reported
+        self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
+
+    def test_unresolved_check_and_skipped_claims_are_never_silent(self):  # #24
+        six, seven = " ".join(self.step(6).split()), " ".join(self.step(7).split())
+        self.assertIn("an UNRESOLVED merge goes through its fix-or-justify loop first", six)
+        self.assertIn("A WARN you keep without an accepted justification leaves the check UNRESOLVED", six)
+        self.assertIn("Never skip this step; if it can't run, the report keeps `claims: INCOMPLETE`", seven)
 
     def test_a_draft_changed_after_claims_goes_back_to_claims(self):
         step = " ".join(self.step(7).split())

@@ -698,3 +698,64 @@ class CliBadInput(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DraftStatus(unittest.TestCase):
+    """`status`: the lines a write report quotes, read back from saved files (issue #24)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.cfg = load_config()
+        self.art = _article(self.tmp, Merge.BODY)
+        self.dir = self.tmp / ".plainspoken" / "reports"
+        self.key = report_key(self.art, self.tmp)
+
+    def _cli(self, *args: str) -> subprocess.CompletedProcess:
+        env = {k: v for k, v in _cli_env().items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_"))}
+        return subprocess.run([sys.executable, "-m", "plainspoken", *args], cwd=self.tmp, env=env,
+                              capture_output=True, text=True)
+
+    def _checked(self, fails: tuple = ()) -> subprocess.CompletedProcess:
+        """Lint, a full set of judge files and a merge, through the CLI; returns the merge."""
+        self.assertIn(self._cli("check", str(self.art), *PRODUCT_ARGS).returncode, (0, 1))
+        _judges(self.dir, self.key, file_sha(self.art), self.cfg, PRODUCT, fails=fails)
+        return self._cli("merge", str(self.art), *PRODUCT_ARGS)
+
+    def test_quotes_an_unresolved_merge_verbatim(self):
+        merged = self._checked(fails=("7b",))
+        self.assertTrue(merged.stdout.startswith("UNRESOLVED"), merged.stdout + merged.stderr)
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+        self.assertEqual(r.returncode, 1, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[0], "check: " + merged.stdout.splitlines()[0])
+        self.assertIn("claims: INCOMPLETE", lines)  # no ledger: the claims step never ran, and it shows
+        self.assertTrue(lines[-1].startswith("reader-value contract: ") and lines[-1].endswith("(missing)"))
+        self.assertFalse((self.dir / f"{self.key}.claims.json").exists())  # it writes nothing
+
+    def test_a_passing_check_still_exits_1_without_claims(self):
+        self.assertEqual(self._checked().returncode, 0)
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stdout.startswith("check: PASS · coverage "), r.stdout)
+        self.assertIn("claims: INCOMPLETE", r.stdout.splitlines())
+
+    def test_no_merge_or_a_stale_one_is_incomplete(self):
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stdout.startswith("check: INCOMPLETE (not run"), r.stdout)
+        self._checked()
+        with self.art.open("a", encoding="utf-8") as f:
+            f.write("One more line.\n")
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+        self.assertTrue(r.stdout.startswith("check: INCOMPLETE (stale"), r.stdout)
+
+    def test_names_an_existing_contract_and_refuses_a_missing_draft(self):
+        contract = self.tmp / ".plainspoken" / "reader-value" / f"{self.art.stem}.reader-value.toml"
+        contract.parent.mkdir(parents=True)
+        contract.write_text("", encoding="utf-8")
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+        self.assertEqual(r.stdout.splitlines()[-1],
+                         f"reader-value contract: .plainspoken/reader-value/{self.art.stem}.reader-value.toml")
+        gone = self._cli("status", str(self.tmp / "nope.md"), *PRODUCT_ARGS)
+        self.assertEqual((gone.returncode, gone.stdout), (2, ""))
