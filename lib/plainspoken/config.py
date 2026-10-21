@@ -28,16 +28,22 @@ _CLAIMS_KEYS = {"ledger_dir", "sources_dir", "regulated_matrix", "platforms_extr
 _READER_VALUE_KEYS = {"cta_phrases"}
 _INTEGRITY_KEYS = {"mode", "paths"}
 _LINT_WATCH_KEYS = {"mode", "paths"}
+_NUDGE_KEYS = {"mode"}
 _KAIZEN_KEYS = {"capture", "capture_sources", "excerpts", "adapter", "ledger_dir", "proposals_dir", "corpus",
                 "human_corpus", "approvers", "github", "trello"}
 _KAIZEN_GITHUB_KEYS = {"repo", "labels"}
 _KAIZEN_TRELLO_KEYS = {"list_id", "label_ids", "key_env", "token_env"}
 _SECTIONS = {"engine": _ENGINE_KEYS, "gate": _GATE_KEYS, "brief": _BRIEF_KEYS, "claims": _CLAIMS_KEYS,
              "reader_value": _READER_VALUE_KEYS, "integrity": _INTEGRITY_KEYS, "lint_watch": _LINT_WATCH_KEYS,
-             "kaizen": _KAIZEN_KEYS}
+             "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS}
+# The user-wide file (~/.config/plainspoken/config.toml) holds only the settings that make sense outside a project:
+# hosts without install options (Codex, Hermes) turn the nudge and lint-watch on or off there. A project's own config
+# wins over it.
+_USER_SECTIONS = ("nudge", "lint_watch")
 STRICTNESS = ("watch", "warn", "block")
 INTEGRITY_MODES = ("off", "warn", "block")
 LINT_WATCH_MODES = ("on", "off")
+NUDGE_MODES = ("on", "off")
 # Where kaizen events and friction come from: `check`, `merge`, `judge` (judge-record's rejected replies and the
 # agent-run backstop) and the `lint-watch` hook. `[kaizen] capture_sources` keeps a subset; `capture = false` still
 # turns all of them off.
@@ -64,8 +70,21 @@ class ConfigError(ValueError):
     """A project config that can't be used. The message names the file and the key."""
 
 
+def user_config_path(env: Mapping[str, str]) -> Path:
+    """The user-wide config file: `$XDG_CONFIG_HOME/plainspoken/config.toml`, else `~/.config/plainspoken/config.toml`."""
+    base = env.get("XDG_CONFIG_HOME") or str(Path(env.get("HOME") or Path.home()) / ".config")
+    return Path(base) / "plainspoken" / "config.toml"
+
+
+def _user_config(env: Mapping[str, str]) -> tuple[Path, dict] | None:
+    return _read_config(user_config_path(env), _USER_SECTIONS)
+
+
 def _project_config(cwd: Path) -> tuple[Path, dict] | None:
-    path = cwd / ".plainspoken" / "config.toml"
+    return _read_config(cwd / ".plainspoken" / "config.toml", tuple(_SECTIONS))
+
+
+def _read_config(path: Path, sections: tuple[str, ...]) -> tuple[Path, dict] | None:
     if not path.exists():
         return None
     if not path.is_file():
@@ -75,8 +94,8 @@ def _project_config(cwd: Path) -> tuple[Path, dict] | None:
     except (UnicodeDecodeError, tomllib.TOMLDecodeError) as e:
         raise ConfigError(f"{path}: not valid TOML ({e})") from None
     for section, body in raw.items():
-        if section not in _SECTIONS:
-            known = [f"[{name}]" for name in _SECTIONS]
+        if section not in sections:
+            known = [f"[{name}]" for name in sections]
             raise ConfigError(f"{path}: unknown section [{section}] (expected {', '.join(known[:-1])} or "
                               f"{known[-1]})")
         if not isinstance(body, dict):
@@ -106,6 +125,9 @@ def _project_config(cwd: Path) -> tuple[Path, dict] | None:
                 raise ConfigError(f"{path}: [lint_watch] paths must be a list of non-empty strings")
         elif section == "kaizen":
             _check_kaizen_section(path, body)
+        elif section == "nudge":
+            if "mode" in body and body["mode"] not in NUDGE_MODES:
+                raise ConfigError(f"{path}: [nudge] mode must be one of {', '.join(NUDGE_MODES)}, got {body['mode']!r}")
         else:
             paths = body.get("paths", [])
             if not isinstance(paths, list) or not all(isinstance(g, str) and g.strip() for g in paths):
@@ -285,10 +307,30 @@ def integrity_settings(cwd: Path) -> dict:
     return {"mode": body.get("mode", "warn"), "paths": None if paths is None else list(paths)}
 
 
-def lint_watch(root: Path) -> dict:
+def _project_or_user(root: Path, name: str, env: Mapping[str, str] | None) -> dict:
+    """A section from the project's config when it has one, else from the user-wide file, else {}."""
+    found = _project_config(root)
+    if found and name in found[1]:
+        return dict(found[1][name])
+    user = _user_config(os.environ if env is None else env)
+    return dict(user[1].get(name, {})) if user else {}
+
+
+def nudge_mode(root: Path, env: Mapping[str, str] | None = None) -> str:
+    """Whether the prompt nudge is on: project `[nudge] mode` → user-wide `[nudge] mode` → the Claude Code option
+    `nudge` (CLAUDE_PLUGIN_OPTION_NUDGE, "true") → off. Only an explicit true turns the option on."""
+    env = os.environ if env is None else env
+    body = _project_or_user(root, "nudge", env)
+    if "mode" in body:
+        return body["mode"]
+    return "on" if str(env.get("CLAUDE_PLUGIN_OPTION_NUDGE", "")).strip().lower() == "true" else "off"
+
+
+def lint_watch(root: Path, env: Mapping[str, str] | None = None) -> dict:
     """`[lint_watch]` with defaults filled in: mode `on`; `paths` None when unset, so the hook falls back to the plugin
-    `targets` option and then `["**/*.md"]` (as with `[integrity] paths`). An empty list lints nothing."""
-    body = _section(root, "lint_watch")
+    `targets` option and then `["**/*.md"]` (as with `[integrity] paths`). An empty list lints nothing. The project's
+    section wins; without one, the user-wide file's applies."""
+    body = _project_or_user(root, "lint_watch", env)
     paths = body.get("paths")
     return {"mode": body.get("mode", "on"), "paths": None if paths is None else list(paths)}
 

@@ -1,0 +1,33 @@
+{
+  "description": "plainspoken hooks for Codex: the optional prompt nudge, and lint + claims integrity after each apply_patch edit. Codex asks you to trust them once (/hooks).",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/hooks/nudge.py\" --host codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/hooks/lint_watch.py\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/hooks/integrity.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

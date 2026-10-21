@@ -19,7 +19,7 @@
     "kaizen"
   ],
   "skills": "./skills/",
-  "hooks": {},
+  "hooks": "./hooks/codex.json",
   "interface": {
     "displayName": "plainspoken",
     "shortDescription": "Check and fix AI writing tells, in your own voice",

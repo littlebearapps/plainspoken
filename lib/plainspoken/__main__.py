@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -67,6 +68,35 @@ def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
                                      target if isinstance(target, Path) else None)
 
 
+STDIN_SOCIAL_WORDS = 300  # a stdin draft under this many words lints as social unless --content-type says otherwise
+
+
+def _check_stdin(args: argparse.Namespace, root: Path) -> int:
+    """Lint a draft read from stdin: a chat reply, a text or a post that never becomes a file. Nothing is saved and
+    no kaizen event is recorded (there is no document to key them to)."""
+    if args.out is not None or args.reports is not None:
+        print("plainspoken: check - (stdin) saves nothing; drop --out/--reports, or write the draft to a file",
+              file=sys.stderr)
+        return 2
+    text = sys.stdin.read()
+    if not text.strip():
+        print("plainspoken: can't check stdin: the draft is empty", file=sys.stderr)
+        return 2
+    content_type = args.content_type or ("social" if len(text.split()) < STDIN_SOCIAL_WORDS else "article")
+    with tempfile.TemporaryDirectory(prefix="plainspoken-stdin-") as tmp:
+        draft = Path(tmp) / "draft.md"
+        draft.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+        args.path = None  # no file: the project's [engine] profiles entries don't apply
+        try:
+            prof = _profile(args, root)
+            lint = report.run_lint(draft, prof, content_type, load_config())
+        except _INPUT_ERRORS as e:
+            return _input_error(Path("<stdin>"), e)
+    lint["article"] = "<stdin>"
+    print(json.dumps(lint, indent=2, ensure_ascii=False) if args.json else report.summarise(lint))
+    return 1 if report.lint_status(lint) == "BLOCK" else 0
+
+
 def _profile(args: argparse.Namespace, root: Path) -> Profile:
     return _profile_ex(args, root)[0]
 
@@ -97,11 +127,12 @@ def main(argv: list[str] | None = None) -> int:
 def _main(argv: list[str] | None) -> int:
     ap = argparse.ArgumentParser(prog="plainspoken")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    c = sub.add_parser("check", help="deterministic lint of one article")
-    c.add_argument("path", type=Path)
+    c = sub.add_parser("check", help="deterministic lint of one article, or of a draft on stdin with `-`")
+    c.add_argument("path", type=Path, help="the article, or - to lint a draft read from stdin (nothing is saved)")
     c.add_argument("--profile")
     c.add_argument("--plugin-profile")
-    c.add_argument("--content-type", choices=CONTENT_TYPES, default="article")
+    c.add_argument("--content-type", choices=CONTENT_TYPES,
+                   help="default: article; for stdin, social under 300 words, else article")
     c.add_argument("--json", action="store_true")
     c.add_argument("--out", type=Path)
     c.add_argument("--reports", type=Path)
@@ -181,7 +212,10 @@ def _main(argv: list[str] | None) -> int:
     args = ap.parse_args(argv)
     root = config.project_root(Path.cwd())  # run from anywhere in the project: reports and config live at its root
 
+    if args.cmd == "check" and str(args.path) == "-":
+        return _check_stdin(args, root)
     if args.cmd == "check":
+        args.content_type = args.content_type or "article"
         try:
             prof = _profile(args, root)
             cfg = load_config()

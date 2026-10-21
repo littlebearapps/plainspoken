@@ -30,6 +30,10 @@ def main() -> int:
     event = _common.read_event(sys.stdin)
     if not event:
         return 0
+    return _common.for_each_edit(event, _one)
+
+
+def _one(event: dict) -> int:
     try:  # the library needs Python 3.11+ (tomllib); an older python3 must not crash every Write/Edit
         from plainspoken import config, report  # _common puts lib/ on sys.path
         path = (event.get("tool_input") or {}).get("file_path")

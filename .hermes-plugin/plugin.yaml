@@ -6,3 +6,4 @@ description: >-
 author: Little Bear Apps
 provides_hooks:
   - pre_llm_call
+  - transform_tool_result

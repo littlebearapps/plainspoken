@@ -55,6 +55,10 @@ def main() -> int:
     event = _common.read_event(sys.stdin)
     if not event:
         return 0
+    return _common.for_each_edit(event, _one)
+
+
+def _one(event: dict) -> int:
     tool_input = event.get("tool_input")
     path = tool_input.get("file_path") if isinstance(tool_input, dict) else None
     if not isinstance(path, str) or not path:
