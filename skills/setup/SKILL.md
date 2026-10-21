@@ -29,7 +29,8 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
    named a host in the arguments, use that one.
 2. **For claude.ai or ChatGPT chat**, run `RUN setup --host claude-ai` (or `chatgpt`), show the printed text and
    where to paste it, and stop. Nothing is written.
-3. **Ask once.** Recommend: nudge on, drafting rule on (Claude Code only), lint after edits on, scope `project`.
+3. **Ask once.** Recommend: nudge on, drafting rule on (Claude Code only), lint after edits on, scope `project`
+   (Hermes: scope `user`, because Hermes runs plugins outside the project folder and reads the user-wide file).
    Scope `user` applies in every project on this machine, but only where plainspoken is installed. Ask the person to
    confirm or change these in one message. Don't change anything they didn't agree to.
 4. **Preview.** Run `RUN setup --host <host> --scope <scope> --nudge on|off [--rule on|off] --lint-watch on|off

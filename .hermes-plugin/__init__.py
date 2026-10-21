@@ -51,7 +51,7 @@ def edit_paths(tool_name: str, args: dict) -> list[str]:
         return []
     if tool_name == "patch" and args.get("mode") == "patch" and isinstance(args.get("patch"), str):
         common = _load("_plainspoken_hook_common", ROOT / "hooks" / "_common.py")
-        events = common.edited_events({"tool_name": "apply_patch", "cwd": os.getcwd(),
+        events = common.edited_events({"tool_name": "apply_patch", "cwd": os.environ.get("TERMINAL_CWD") or os.getcwd(),
                                        "tool_input": {"command": args["patch"]}})
         return [e["tool_input"]["file_path"] for e in events]
     path = args.get("path")
@@ -99,8 +99,11 @@ def register(ctx):
         # (off unless [nudge] mode = "on" in the project's or the user-wide config).
         parts = [text] if is_first_turn else []
         if nudge.intent(user_message):
+            # Hermes runs plugins in a host process whose working folder isn't the user's project, so the
+            # user-wide config (`setup --host hermes --scope user`) is what usually turns the nudge on here.
             line = _run_hook("nudge.py", {"hook_event_name": "UserPromptSubmit", "prompt": user_message,
-                                          "cwd": os.getcwd(), "session_id": session_id}, "--host", "hermes")
+                                          "cwd": os.environ.get("TERMINAL_CWD") or os.getcwd(),
+                                          "session_id": session_id}, "--host", "hermes")
             if line:
                 parts.append(line)
         return {"context": "\n\n".join(parts)} if parts else None
@@ -112,8 +115,10 @@ def register(ctx):
             return None
         lines = []
         for path in edit_paths(tool_name, args):
+            # The project is found from the file's own folder (its nearest .plainspoken/config.toml or .git): the
+            # plugin host's working folder isn't the user's.
             event = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": session_id or "hermes",
-                     "cwd": os.getcwd(), "tool_input": {"file_path": path}}
+                     "cwd": str(Path(path).parent), "tool_input": {"file_path": path}}
             lines += [line for script in ("lint_watch.py", "integrity.py") if (line := _run_hook(script, event))]
         return result + "\n\n" + "\n".join(lines) if lines else None
 

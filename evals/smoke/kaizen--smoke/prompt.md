@@ -6,7 +6,7 @@ plugins: ["../../.."]
 runs: 1
 max_turns: 60
 timeout_seconds: 1200
-allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, "Bash(python3 *)"]
+allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 ---
 
 /plainspoken:kaizen review

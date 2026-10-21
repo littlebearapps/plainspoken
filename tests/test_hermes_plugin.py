@@ -110,3 +110,27 @@ class HermesHooks(unittest.TestCase):
         clean = self.project / "clean.md"
         clean.write_text("I fixed the login bug on Friday.\n", encoding="utf-8")
         self.assertIsNone(hook(tool_name="write_file", args={"path": str(clean)}, result="ok", session_id="h2"))
+
+
+class HermesHostCwd(unittest.TestCase):
+    """Hermes runs plugins in a host process whose working folder isn't the project: lint must still find it."""
+
+    def test_lint_finds_the_project_from_the_file(self):
+        import os
+        import shutil
+        import tempfile
+        project, elsewhere = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, project, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, elsewhere, ignore_errors=True)
+        (project / ".git").mkdir()
+        (project / "docs").mkdir()
+        art = project / "docs" / "post.md"
+        art.write_text("We delve into a robust tapestry.\n", encoding="utf-8")
+        old = os.getcwd()
+        os.chdir(elsewhere)
+        self.addCleanup(os.chdir, old)
+        ctx = FakeCtx()
+        load_shim().register(ctx)
+        got = ctx.hooks["transform_tool_result"](tool_name="write_file", args={"path": str(art)}, result="ok",
+                                                 session_id="host")
+        self.assertIn("BLOCK", got or "")

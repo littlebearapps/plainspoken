@@ -6,10 +6,10 @@ plugins: ["../../.."]
 runs: 1
 max_turns: 60
 timeout_seconds: 1200
-allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, "Bash(python3 *)"]
+allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 ---
 
-/plainspoken:humanize
+/plainspoken:humanize Just send back the rewritten version, nothing else.
 
 > In today's fast-paced world, our community garden stands as a testament to what neighbours can achieve.
 > Moreover, the new raised beds will foster a vibrant sense of belonging. Working bees run on the first
