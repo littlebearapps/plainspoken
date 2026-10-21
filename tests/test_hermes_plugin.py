@@ -129,8 +129,13 @@ class HermesHostCwd(unittest.TestCase):
         old = os.getcwd()
         os.chdir(elsewhere)
         self.addCleanup(os.chdir, old)
+        clean = {k: v for k, v in os.environ.items()
+                 if not k.startswith(("CLAUDE_", "PLAINSPOKEN_")) and k != "XDG_CONFIG_HOME"}
+        env = unittest.mock.patch.dict(os.environ, {**clean, "HOME": str(elsewhere)}, clear=True)
+        env.start()
+        self.addCleanup(env.stop)
         ctx = FakeCtx()
         load_shim().register(ctx)
         got = ctx.hooks["transform_tool_result"](tool_name="write_file", args={"path": str(art)}, result="ok",
-                                                 session_id="host")
+                                                 session_id=f"host-{project.name}")
         self.assertIn("BLOCK", got or "")

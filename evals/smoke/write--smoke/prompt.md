@@ -11,6 +11,8 @@ allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 
 /plainspoken:write brief.md --type email
 
+This folder is the project: save an empty file at `.plainspoken/config.toml` here first.
+
 brief.md doesn't exist yet. Save the text below to it first, exactly as written (without the > markers), then go on.
 
 > # Brief: declining a meeting

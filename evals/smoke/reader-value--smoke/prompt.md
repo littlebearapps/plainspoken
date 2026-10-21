@@ -11,6 +11,8 @@ allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
 
 /plainspoken:reader-value outline garden.md
 
+This folder is the project: save an empty file at `.plainspoken/config.toml` here first.
+
 garden.md doesn't exist yet. Save the text below to it first, exactly as written (without the > markers), then go on.
 
 > In today's fast-paced world, our community garden stands as a testament to what neighbours can achieve.
