@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/littlebearapps/plainspoken/compare/v0.6.0...v0.6.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **tests:** keep shell Trello credentials out of the CLI tests ([a784515](https://github.com/littlebearapps/plainspoken/commit/a7845152c510976584aeda164527be91ecc1b1b7))
+* **tests:** keep shell Trello credentials out of the CLI tests ([ac48aec](https://github.com/littlebearapps/plainspoken/commit/ac48aecf22f8a971fc4150b10cea498055f5e0ff))
+
 ## [0.6.0](https://github.com/littlebearapps/plainspoken/compare/v0.5.0...v0.6.0) (2026-10-20)
 
 ### Highlights
