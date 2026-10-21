@@ -35,6 +35,7 @@ REWRITE = [
     "De-AI this short paragraph",
     "Make it less stiff: we are delighted to announce...",
     "Here's our newsletter opening. Make it less stiff. Just send back the rewritten version.",
+    "Rewrite this product update so our customers actually want to read it. Plain words, please.",
 ]
 QUIET = [
     "What's the capital of France?",

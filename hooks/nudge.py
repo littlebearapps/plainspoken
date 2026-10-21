@@ -22,7 +22,8 @@ EDGE = 600  # the ask sits at the start or the end of a prompt; a long paste in 
 _CONTENT = (r"e-?mails?|texts?|sms|messages?|repl(?:y|ies)|posts?|tweets?|threads?|captions?|linkedin|bluesky|"
             r"instagram|facebook|tiktok|youtube|mastodon|newsletters?|blog(?: posts?)?|articles?|pages?|copy|bios?|"
             r"scripts?|podcasts?|videos?|voice-?overs?|pamphlets?|flyers?|brochures?|press releases?|speech(?:es)?|"
-            r"letters?|announcements?|ads?|adverts?|intros?|outros?|descriptions?|summar(?:y|ies) for")
+            r"letters?|announcements?|ads?|adverts?|intros?|outros?|descriptions?|summar(?:y|ies) for|updates?|"
+            r"release notes|newsletter items?")
 _NOUN = re.compile(rf"\b(?:{_CONTENT})\b", re.I)
 _DRAFT_VERB = re.compile(r"\b(?:draft|write|compose|put together|prepare|come up with|help me (?:word|write|phrase|"
                          r"say|reply|respond))\b", re.I)

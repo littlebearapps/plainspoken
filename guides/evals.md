@@ -97,18 +97,25 @@ suite, two invocations, about twice that:
 ```bash
 claude plugin eval . --tag trigger --ablation none --allow-tools "Bash(python3 *)" --runs 1 -j 4 \
   --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin
-claude plugin eval . --tag rewrite --tag rewrite-slash --runs 1 -j 4 --keep-temp \
+claude plugin eval . --tag rewrite --runs 2 -j 3 --keep-temp \
   --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin --json rewrite.json
 python3 lib/run.py eval rewrite-delta rewrite.json
+claude plugin eval . --tag rewrite-slash --runs 2 -j 3 --keep-temp \
+  --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin --json rewrite-slash.json
+python3 lib/run.py eval rewrite-delta rewrite-slash.json
 claude plugin eval . --tag smoke --ablation none -j 2 \
-  --allow-tools "Bash(python3 *)" Write Edit --no-publish --max-cost-usd 15 --threshold 0.8 --trust-plugin
+  --allow-tools Bash Write Edit --no-publish --max-cost-usd 15 --threshold 0.8 --trust-plugin
 ```
 
 The rewrite cases' regex graders only pass or fail, and a strong model passes most of them without the plugin, so
 `eval rewrite-delta` reads each run's final reply from its kept trace and counts the lint's BLOCK and WARN findings per
 arm. The delta is without minus with: positive favours the plugin. `--keep-temp` is what keeps the traces; without it
 every run is listed as missing. The smoke cases run each skill once through its slash command on a draft the case
-saves first, including the full check with its four judges, so they cost more than the trigger suite.
+saves first, including the full check with its four judges, so they cost more than the trigger suite (about
+US$5 for all twelve on 2026-10-21). On Claude Code 2.1.306 the eval sandbox can't run a skill's `` !`…` `` load lines
+(see `docs/acceptance/v0.7-drafting-hooks.md`), so the slash and smoke suites ran on 2.1.303 there:
+`npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI version at a time: two at once on one login
+revoked a token mid-run.
 
 The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm. The
 rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The
