@@ -24,9 +24,7 @@ Next:
   (`eval rewrite-delta`), so the re-run can show a difference if there is one. The tier-2 blind reader test runs
   after v1.0, once samples of the author's unassisted writing exist; tier 1, with human readers, comes later.
 - **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
-  ([#1](https://github.com/littlebearapps/plainspoken/issues/1)), and `kaizen apply --target profile` editing the
-  proposal's own profile rather than the one the project resolves now
-  ([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
+  ([#1](https://github.com/littlebearapps/plainspoken/issues/1)).
 - **After v1.0:** an editor agent that can rewrite, not only cut. The publish gate and the kaizen nudges for Codex
   and Hermes Agent.
 

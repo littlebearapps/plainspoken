@@ -5,8 +5,9 @@ lives in the ledger: a `decision` event (outcome `approved` or `rejected`, facet
 recorded from the adapter by `kaizen decisions`. The latest decision wins. Nothing in the plugin writes one itself.
 
 `apply` is the only code that edits a ruleset or a profile, and it fails closed: no approval, a rejection, a
-`review` proposal, an installed plugin's own ruleset, a target the proposal doesn't allow, or an edit that no
-longer applies all raise `Refused` and write nothing to the target. Staleness is per edit: when the
+`review` proposal, an installed plugin's own ruleset, a target the proposal doesn't allow, a profile target whose
+profile (the one the proposal was made for) isn't a project file, or an edit that no longer applies all raise
+`Refused` and write nothing to the target. Staleness is per edit: when the
 target changed since calibrate (the base hash differs), the stored edits are re-applied to the current text, and only
 an edit whose `old` value (or list, or rule) moved refuses (`Stale`); otherwise the proposal applies, "rebased onto
 the current ruleset".
@@ -329,8 +330,42 @@ def _keeps_project_profiles(path: Path, new: str, root: Path) -> None:
                           "the rule out of its [rules] disabled first, then apply again") from None
 
 
-def _edit(p: dict, path: Path, text: str, target: str, rebased: bool, root: Path, env: Mapping[str, str],
-          settings: Mapping) -> tuple:
+def _own_profile(p: Mapping, root: Path):
+    """The profile the proposal was made for (its `profile` name), as a project file: among the profiles the project
+    config names and the files in .plainspoken/profiles/, the one whose [profile] name it is. Not the profile the
+    project resolves now (PLAINSPOKEN_PROFILE, [engine] profile): with per-folder profiles that may be another one.
+    Refuses, naming it, when the proposal names no profile, or no project file (or more than one) has that name."""
+    name = p.get("profile")
+    if not isinstance(name, str) or not name:
+        raise Refused(f"{p.get('id')} doesn't name the profile it was made for (calibrate had no profile), so "
+                      "apply won't guess one: reject it, or apply it to a ruleset checkout with --rules")
+    folder = Path(root) / ".plainspoken" / "profiles"
+    try:
+        refs = config.project_profile_refs(root)
+    except (ValueError, OSError) as e:
+        raise Refused(f"can't read the project config ({_first_line(e)})") from None
+    found, broken = {}, []
+    for ref in [*refs, *(str(f) for f in sorted(folder.glob("*.toml")))]:
+        try:
+            prof = _profile.load(ref, search=(folder,))
+        except (ValueError, OSError) as e:
+            if Path(ref).stem == name:
+                broken.append(f"{ref}: {_first_line(e)}")
+            continue
+        src = Path(prof.source).resolve()
+        if prof.name == name and src.is_relative_to(Path(root).resolve()):
+            found.setdefault(src, prof)
+    if len(found) > 1:
+        raise Refused(f"more than one project file has the profile name {name!r} "
+                      f"({', '.join(str(f) for f in found)}): give each its own name, then apply again")
+    if not found:
+        why = f" (it doesn't load: {broken[0]})" if broken else ""
+        raise Refused(f"the proposal's profile {name!r} isn't a project file{why}: copy it into "
+                      f".plainspoken/profiles/{name}.toml first, then apply again")
+    return next(iter(found.values()))
+
+
+def _edit(p: dict, path: Path, text: str, target: str, rebased: bool, root: Path, settings: Mapping) -> tuple:
     """(out path, old text, new text, version, changelog, changelog title, entry heading) for the edit `apply` would
     write. Raises `Stale` when an edit no longer applies and `Refused` for anything else; writes nothing."""
     if target == "ruleset":
@@ -349,15 +384,10 @@ def _edit(p: dict, path: Path, text: str, target: str, rebased: bool, root: Path
         return path, text, new, version, path.parent / CHANGELOG, CHANGELOG_TITLE, version
     try:
         cfg = registry.load_config(path)
-        prof = config.resolve_profile(None, root, env, plugin_option=config.PLUGIN_DEFAULT)
     except (ValueError, OSError) as e:
-        raise Refused(f"can't resolve the project profile ({_first_line(e)})") from None
+        raise Refused(f"{path}: the ruleset doesn't load ({_first_line(e)})") from None
+    prof = _own_profile(p, root)
     out_path = Path(prof.source)
-    try:
-        out_path.resolve().relative_to(root.resolve())
-    except ValueError:
-        raise Refused(f"the profile {prof.name!r} isn't a project file ({out_path}): copy it into "
-                      ".plainspoken/profiles/ and name it in [engine] profile first") from None
     try:
         old_text = out_path.read_text(encoding="utf-8")
     except OSError as e:
@@ -396,13 +426,12 @@ def rubric_notes(edits: Iterable[Mapping], rules_path: Path) -> list[str]:
 
 
 def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = None, target: str = "ruleset",
-          dry_run: bool = False, *, env: Mapping[str, str] | None = None, now: datetime | None = None) -> dict:
+          dry_run: bool = False, *, now: datetime | None = None) -> dict:
     """Apply an approved proposal. Returns `{"id", "target", "path", "diff", "version", "changelog", "dry_run",
     "logged", "changelog_error", "rebased", "rubric_notes"}` (`rebased`: the ruleset changed since calibrate and the
     edits still applied; `rubric_notes`: the rubric sections a removed rule leaves behind). Raises `Refused`
     (nothing written), `Stale` (nothing written to the target; outside a dry run the proposal is recorded as
     superseded) or `UnknownProposal`."""
-    env = os.environ if env is None else env
     now = datetime.now(timezone.utc) if now is None else now
     p = load(pid, settings)
     if not _intact(p):
@@ -443,7 +472,7 @@ def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = Non
         if spent is not None:
             raise Stale(f"{STALE} (another proposal for rule {p.get('rule')} was applied since this one was made, "
                         f"{spent.get('proposal')}: the evidence it rests on is spent)")
-        made = _edit(p, path, text, target, rebased, Path(root), env, settings)
+        made = _edit(p, path, text, target, rebased, Path(root), settings)
     except Stale as e:
         try:
             seen = registry.load_config(path).version
