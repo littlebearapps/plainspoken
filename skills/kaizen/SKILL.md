@@ -123,8 +123,8 @@ it does, then stop and let the person pick.
 
 1. `RUN kaizen decisions`, then `RUN kaizen review`: the proposal must show as approved by a person.
 2. `RUN kaizen apply <id> --dry-run`, and show the diff to the person. Use `--target profile` when the proposal is
-   threshold-only and the person wants it in their project profile, and `--rules <path>` for a ruleset checkout that
-   isn't the plugin's own.
+   threshold-only and the person wants it in the profile it was made for, and `--rules <path>` for a ruleset
+   checkout that isn't the plugin's own.
 3. When they say go, `RUN kaizen apply <id>` with the same options.
 4. Exit 1 is a refusal (no approval, a stale proposal, a hand-edited proposal, already applied, an installed
    plugin's ruleset): quote it and stop. A stale proposal needs no decision: with the person's OK, run

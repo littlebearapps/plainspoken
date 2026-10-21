@@ -147,13 +147,13 @@ bumps the ruleset version and adds an entry to `RULESET-CHANGELOG.md` beside the
   entry, and apply reports that as applied, naming the changelog it couldn't write.
 
 Where it writes: the ruleset of a plainspoken checkout (`--rules <path>`, or the plugin's own when it's a git
-checkout), or, for a threshold-only proposal, your project profile (`--target profile`; the profile must be a file
-in your project, such as `.plainspoken/profiles/<name>.toml`). It won't write into an installed plugin's own files.
-With `--target profile`, apply edits the profile the project resolves when you run it (`PLAINSPOKEN_PROFILE`, else
-`[engine] profile`), not the profile the proposal was made for, and per-folder `[engine] profiles` globs aren't
-consulted. In a project with several profiles, check the path `--dry-run` prints first, or set
-`PLAINSPOKEN_PROFILE` for the run. Editing the proposal's own profile is planned
-([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
+checkout), or, for a threshold-only proposal, a profile in your project (`--target profile`). It won't write into an
+installed plugin's own files. With `--target profile`, apply edits the profile the proposal was made for, by its
+`[profile] name`, not the one the project resolves when you run it (`PLAINSPOKEN_PROFILE`, `[engine] profile`), so in
+a project with per-folder `[engine] profiles` the edit lands in the profile whose evidence it rests on. That profile
+must be a file in your project: one your config names, or one in `.plainspoken/profiles/`. When it isn't (the
+plugin's own `default`, or a file since deleted or renamed), when two project files share its name, or when the
+proposal names no profile (calibrate had none to resolve), apply refuses, naming the profile, and writes nothing.
 If you use the installed plugin, send the evidence upstream instead (section 9). It never edits the rubrics: when it
 removes a judged rule, it names the rubric section left behind, for you to delete in the same change.
 

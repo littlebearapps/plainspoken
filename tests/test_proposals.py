@@ -9,6 +9,7 @@ import sys
 import tomllib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from plainspoken import calibrate, ledger, proposals, report, rulesedit
@@ -29,11 +30,11 @@ class Base(TmpCase):
         super().setUp()
         self.rules = self.copy()
 
-    def proposal(self, rules=None, when=NOW, events=None):
+    def proposal(self, rules=None, when=NOW, events=None, profile=None):
         events = fp_events() if events is None else events
         cfg = load_config(rules or self.rules) if rules is not False else CFG
         c = self.cands(events, cfg=cfg)[0]
-        p = calibrate.materialise(c, None if rules is False else (rules or self.rules), cfg, None, [], when)
+        p = calibrate.materialise(c, None if rules is False else (rules or self.rules), cfg, profile, [], when)
         proposals.save(p, self.settings)
         return p
 
@@ -433,6 +434,90 @@ class ProfileTarget(Base):
         self.profile = profiles / "mine.toml"
         self.profile.write_text(text.replace('name = "default"', 'name = "mine"'), encoding="utf-8")
         (self.root / ".plainspoken" / "config.toml").write_text('[engine]\nprofile = "mine"\n', encoding="utf-8")
+        self.default_text = text
+
+    def proposal(self, rules=None, when=NOW, events=None, profile="mine"):
+        """Made by calibrate for `profile` (a name; None for a proposal made with no profile)."""
+        made_for = None if profile is None else SimpleNamespace(name=profile)
+        return super().proposal(rules=rules, when=when, events=events, profile=made_for)
+
+    def add_profile(self, name, file=None):
+        path = self.root / ".plainspoken" / "profiles" / f"{file or name}.toml"
+        path.write_text(self.default_text.replace('name = "default"', f'name = "{name}"'), encoding="utf-8")
+        return path
+
+    def two_profiles(self):
+        """A project with two profiles: `mine` by default and `blog` for files under blog/."""
+        blog = self.add_profile("blog")
+        (self.root / ".plainspoken" / "config.toml").write_text(
+            '[engine]\nprofile = "mine"\nprofiles = [{ glob = "blog/**", profile = "blog" }]\n', encoding="utf-8")
+        return blog
+
+    def changelog(self):
+        return self.root / ".plainspoken" / "kaizen" / "CHANGELOG.md"
+
+    def test_profile_target_edits_the_proposals_own_profile(self):
+        """Two profiles: a proposal made for `blog` edits blog.toml, whatever the project resolves now (its
+        [engine] profile or PLAINSPOKEN_PROFILE), and leaves `mine` alone."""
+        blog = self.two_profiles()
+        p = self.proposal(rules=False, profile="blog")
+        self.approve(p["id"])
+        mine = sha(self.profile)
+        r = cli("kaizen", "apply", p["id"], "--target", "profile", "--dry-run", cwd=self.root,
+                env={"PLAINSPOKEN_PROFILE": "mine"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(str(blog), r.stdout)
+        r = cli("kaizen", "apply", p["id"], "--target", "profile", cwd=self.root, env={"PLAINSPOKEN_PROFILE": "mine"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(tomllib.loads(blog.read_text(encoding="utf-8"))["thresholds"]["claude_warn_total"], 5)
+        self.assertEqual(sha(self.profile), mine)
+        self.assertIn("profile blog", self.changelog().read_text(encoding="utf-8"))
+        applied = [e for e in ledger.read(self.settings)[0] if e.get("event") == "apply"]
+        self.assertEqual([(e["outcome"], e["profile"]) for e in applied], [("applied", "blog")])
+
+    def _refused_for_missing(self, name):
+        """The proposal's profile isn't a project file: it refuses, naming it, writes nothing and stays approved,
+        even though the project resolves `mine`."""
+        self.two_profiles()
+        p = self.proposal(rules=False, profile=name)
+        self.approve(p["id"])
+        before = {f.name: sha(f) for f in (self.root / ".plainspoken" / "profiles").iterdir()}
+        r = cli("kaizen", "apply", p["id"], "--target", "profile", cwd=self.root)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn(f"profile {name!r}", r.stderr)
+        self.assertIn("isn't a project file", r.stderr)
+        self.assertEqual({f.name: sha(f) for f in (self.root / ".plainspoken" / "profiles").iterdir()}, before)
+        self.assertFalse(self.changelog().exists())
+        self.assertEqual(proposals.status(p["id"], ledger.read(self.settings)[0]), "approved")
+
+    def test_proposal_for_the_plugins_own_profile_is_refused(self):
+        self._refused_for_missing("default")
+
+    def test_proposal_for_a_deleted_profile_is_refused(self):
+        self._refused_for_missing("gone")
+
+    def test_proposal_with_no_profile_is_refused(self):
+        """Made when calibrate had no profile (`profile` is null): it refuses rather than guess, writing nothing."""
+        p = self.proposal(rules=False, profile=None)
+        self.assertIsNone(p["profile"])
+        self.approve(p["id"])
+        before = sha(self.profile)
+        r = cli("kaizen", "apply", p["id"], "--target", "profile", cwd=self.root)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("doesn't name the profile", r.stderr)
+        self.assertEqual(sha(self.profile), before)
+        self.assertFalse(self.changelog().exists())
+
+    def test_two_project_files_with_the_proposals_profile_name_are_refused(self):
+        self.two_profiles()
+        self.add_profile("blog", file="blog-copy")
+        p = self.proposal(rules=False, profile="blog")
+        self.approve(p["id"])
+        before = {f.name: sha(f) for f in (self.root / ".plainspoken" / "profiles").iterdir()}
+        r = cli("kaizen", "apply", p["id"], "--target", "profile", cwd=self.root)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("more than one", r.stderr)
+        self.assertEqual({f.name: sha(f) for f in (self.root / ".plainspoken" / "profiles").iterdir()}, before)
 
     def test_profile_target_edits_the_project_profile_only(self):
         p = self.proposal(rules=False)  # made against the shipped ruleset

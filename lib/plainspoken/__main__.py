@@ -1106,7 +1106,7 @@ def _kaizen_parser(sub) -> None:
                                     "(never sends anything)")
     rv = ks.add_parser("review", help="the proposals waiting for a decision or for `kaizen apply`")
     rv.add_argument("--json", action="store_true")
-    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the project profile")
+    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the profile it was made for")
     ap_.add_argument("id")
     ap_.add_argument("--rules", type=Path, help="the rules.toml to edit (default: the plugin's own, if it's a "
                                                 "git checkout)")
