@@ -413,6 +413,52 @@ class CheckCli(unittest.TestCase):
         paths = json.loads(cli("paths", "post.md", cwd=self.root).stdout)
         self.assertEqual(Path(paths["checked"]).read_bytes(), ARTICLE.encode("utf-8"))  # the keyed snapshot stays
 
+    def tree(self, folder: Path) -> dict:
+        return {p.relative_to(folder): p.read_bytes() for p in sorted(folder.rglob("*")) if p.is_file()}
+
+    def test_no_record_prints_the_lint_and_writes_nothing(self):  # #1
+        r = self.check("--no-record", "--json")
+        self.assertEqual(r.returncode, 1, r.stderr)  # same exit as a recorded check: the delve BLOCK
+        self.assertTrue(json.loads(r.stdout)["findings"])
+        self.assertEqual(r.stderr, "")
+        self.assertFalse((self.root / ".plainspoken").exists())  # no ledger, no friction, no reports, no snapshot
+
+    def test_no_record_leaves_ledger_lint_and_snapshots_alone(self):
+        self.check()
+        self.art.write_text(EDITED, encoding="utf-8")
+        self.check()  # now there's a previous pair as well as the current lint and snapshot
+        reports = self.root / ".plainspoken" / "reports"
+        ledger_before, reports_before = self.lines(), self.tree(reports)
+        self.art.write_text(ARTICLE, encoding="utf-8")
+        r = self.check("--no-record")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(self.lines(), ledger_before)
+        self.assertEqual(self.tree(reports), reports_before)
+
+    def test_no_record_keeps_snapshots_when_capture_is_off(self):
+        self.check()
+        reports = self.root / ".plainspoken" / "reports"
+        before = self.tree(reports)
+        (self.root / ".plainspoken" / "config.toml").write_text("[kaizen]\ncapture = false\n", encoding="utf-8")
+        self.check("--no-record")
+        self.assertEqual(self.tree(reports), before)  # a plain check here would delete the snapshot
+
+    def test_no_record_out_elsewhere_writes_only_that_file(self):
+        r = self.check("--no-record", "--out", "elsewhere/lint.json")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertTrue((self.root / "elsewhere" / "lint.json").exists())
+        self.assertFalse((self.root / ".plainspoken").exists())
+
+    def test_no_record_refuses_out_at_the_report_key(self):
+        self.check()
+        reports = self.root / ".plainspoken" / "reports"
+        ledger_before, reports_before = self.lines(), self.tree(reports)
+        lint = json.loads(cli("paths", "post.md", cwd=self.root).stdout)["lint"]
+        r = self.check("--no-record", "--out", lint)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--no-record", r.stderr)
+        self.assertEqual((self.lines(), self.tree(reports)), (ledger_before, reports_before))
+
     def test_missing_previous_snapshot_still_gives_fixed_without_section(self):
         self.check()
         paths = json.loads(cli("paths", "post.md", cwd=self.root).stdout)

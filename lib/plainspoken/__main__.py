@@ -185,6 +185,8 @@ def _main(argv: list[str] | None) -> int:
     c.add_argument("--out", type=Path)
     c.add_argument("--reports", type=Path)
     c.add_argument("--no-save", action="store_true")
+    c.add_argument("--no-record", action="store_true",
+                   help="a read-only look: print the lint, save no report and record no kaizen event or snapshot")
     pr = sub.add_parser("profile", help="print the resolved profile summary, or its stamps with --json")
     pr.add_argument("path", nargs="?", type=Path, help="the article the profile is for (its [engine] profiles entry)")
     pr.add_argument("--profile")
@@ -298,10 +300,14 @@ def _main(argv: list[str] | None) -> int:
         payload = json.dumps(lint, indent=2, ensure_ascii=False)
         paths = report.report_paths(args.path, args.reports or report.reports_dir_default(root), root)
         target = args.out
-        if target is None and not args.no_save:
+        if target is None and not (args.no_save or args.no_record):
             target = paths["lint"]
         # The snapshot and the fixed diff pair with <key>.lint.json, so they run only when that's what was saved.
         keyed = target is not None and _same_file(target, paths["lint"])
+        if keyed and args.no_record:  # <key>.lint.json pairs with the snapshot, which --no-record leaves alone
+            print(f"plainspoken: --no-record saves no report: --out {target} is this article's lint report; drop "
+                  f"--out or name another file", file=sys.stderr)
+            return 2
         previous = report.read_json(paths["lint"]) if keyed else None  # before it's overwritten
         if target:
             try:
@@ -312,8 +318,9 @@ def _main(argv: list[str] | None) -> int:
                     target.write_text(payload + "\n", encoding="utf-8")
             except OSError as e:
                 return _input_error(target, e, "write")
-        capture.for_check(lint, args.path, prof, cfg, root, previous=previous,
-                          snapshot=paths["checked"] if keyed else None, reports=paths["checked"].parent)
+        if not args.no_record:
+            capture.for_check(lint, args.path, prof, cfg, root, previous=previous,
+                              snapshot=paths["checked"] if keyed else None, reports=paths["checked"].parent)
         print(payload if args.json else report.summarise(lint))
         return 1 if report.lint_status(lint) == "BLOCK" else 0
     if args.cmd == "profile":

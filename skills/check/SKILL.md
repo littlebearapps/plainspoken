@@ -37,6 +37,7 @@ argument; quote it in every command (`"drafts/my post.md"`). Pass `--content-typ
 asks for it or the file is a social post. When the project gives files their own profile (`[engine] profiles` in
 `.plainspoken/config.toml`), every call that takes FILE uses FILE's profile by itself; the summary injected above is
 the project's default (`RUN config profile-for FILE` prints FILE's).
+Asked only for a quick lint that shouldn't count as kaizen evidence? Run step 1 with `--no-record` and stop there.
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
 run.py status.
 

@@ -12,8 +12,9 @@ Each subcommand prints its own `--help`.
 Capture happens as you work, without a separate step:
 
 - `check` records one `fired` event per BLOCK or WARN finding, with `--no-save` and `--out` too. When it saves a new
-  lint for an edited article, it also records a `fixed` event for each finding the edit removed. There's no
-  read-only lint flag yet (planned: [#1](https://github.com/littlebearapps/plainspoken/issues/1)).
+  lint for an edited article, it also records a `fixed` event for each finding the edit removed. For a one-off look
+  that shouldn't count as evidence, `check --no-record` prints the lint and records nothing: no event, no report,
+  and the snapshots already there stay as they are. A draft linted on stdin (`check -`) records nothing either.
 - The lint-watch hook records `fired` when a file's result changes after an edit.
 - `merge` records each judge's own verdict, whether the judge agreed with the lint on rules both look at, and each
   justification the JR judge accepted or rejected. An INCOMPLETE merge, and a judge reply `judge-record` refuses,
