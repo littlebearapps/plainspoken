@@ -103,6 +103,19 @@ def passage(prompt: str) -> str:
     return "\n".join(ln[2:] if ln.startswith("> ") else ln[1:] for ln in prompt.splitlines() if ln.startswith(">"))
 
 
+def marked(text: str) -> str:
+    """`text` as the drafting, longform and fix cases ask for it: between a line `<<<PIECE` and a line `PIECE>>>`."""
+    return f"<<<PIECE\n{text}\nPIECE>>>"
+
+
+def facts_source(d: Path, prompt: str) -> str:
+    """What carries a marker case's facts: the draft its scaffold saves (evals/fix), else the brief without its line
+    about the markers."""
+    script = (d / "scaffold.sh").read_text(encoding="utf-8")
+    m = re.search(r"<<'DRAFT'\n(.*?)\nDRAFT\n", script, re.S)
+    return m.group(1) if m else "\n".join(ln for ln in prompt.splitlines() if "<<<PIECE" not in ln)
+
+
 def compiled(g: dict) -> re.Pattern:
     flags = 0
     for f in g.get("flags", ""):
@@ -373,7 +386,8 @@ class EvalCases(unittest.TestCase):
                     for name, g, _ in graders:
                         rx = compiled(g)
                         if name == "kept-the-facts.md":
-                            self.assertTrue(rx.search(prompt), "the brief itself carries every kept fact")
+                            self.assertTrue(rx.search(marked(facts_source(d, prompt))),
+                                            "the brief itself carries every kept fact")
                         else:
                             self.assertIsNone(rx.search(passage(prompt).replace("> - ", "")),
                                               "the brief's own numbers are allowed")
@@ -395,7 +409,29 @@ class EvalCases(unittest.TestCase):
                     self.assertIn("[nudge]", script)
                     self.assertEqual("<<'DRAFT'" in script, tag == "fix")
                     kept = compiled(next(g for n, g, _ in graders if n == "kept-the-facts.md"))
-                    self.assertTrue(kept.search(script if tag == "fix" else prompt))
+                    self.assertTrue(kept.search(marked(facts_source(d, prompt))))
+
+    def test_marker_graders_read_the_piece_only(self):
+        """Every case that asks for the piece between markers grades only that piece: a report around it that
+        repeats the facts doesn't pass a piece that left them out, and neither does the prompt's own mention of the
+        markers."""
+        for folder in (*DRAFTING, *EXTRA):
+            for d in sorted(p for p in folder.iterdir() if p.is_dir()):
+                _, fm, prompt, graders = _case(d)
+                facts = facts_source(d, prompt)
+                for name, g, _ in graders:
+                    if g.get("type") != "regex" or g.get("match", "contains") != "contains":
+                        continue
+                    rx = compiled(g)
+                    with self.subTest(case=d.name, grader=name):
+                        self.assertEqual(g.get("target", "last_message"), "last_message")
+                        self.assertTrue(g["pattern"].startswith(r"(?:^|\n)<<<PIECE"), "anchor to the opening marker")
+                        self.assertTrue(rx.search(f"Report: done.\n\n{marked(facts)}\n\nmerge: PASS"))
+                        self.assertTrue(rx.search(marked(facts).replace("\n", "\r\n")))
+                        self.assertIsNone(rx.search(f"{facts}\n{marked('A short piece.')}\n{facts}"),
+                                          "the report around the piece counts")
+                        self.assertIsNone(rx.search(f"{prompt}\n{facts}"), "the prompt's marker mention counts")
+                        self.assertIsNone(rx.search(f"<<<PIECE\n{facts}"), "a piece with no closing marker counts")
 
     def test_smoke_cases_run_every_skill_once_by_slash(self):
         """evals/smoke: one case per skill that does real work on a saved draft (paid; `--tag smoke`)."""

@@ -1,5 +1,5 @@
 ---
 type: regex
-pattern: '^(?=[\s\S]*Doyle)(?=[\s\S]*Wollongong)(?=[\s\S]*15)(?=[\s\S]*Josh)'
+pattern: '(?:^|\n)<<<PIECE(?=(?:(?!PIECE>>>)[\s\S])*?Doyle)(?=(?:(?!PIECE>>>)[\s\S])*?Wollongong)(?=(?:(?!PIECE>>>)[\s\S])*?15)(?=(?:(?!PIECE>>>)[\s\S])*?Josh)(?:(?!PIECE>>>)[\s\S])*PIECE>>>'
 flags: i
 ---

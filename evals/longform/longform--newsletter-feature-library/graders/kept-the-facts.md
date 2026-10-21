@@ -1,5 +1,5 @@
 ---
 type: regex
-pattern: '^(?=[\s\S]*Coburg)(?=[\s\S]*Petrakis)(?=[\s\S]*212)(?=[\s\S]*151)'
+pattern: '(?:^|\n)<<<PIECE(?=(?:(?!PIECE>>>)[\s\S])*?Coburg)(?=(?:(?!PIECE>>>)[\s\S])*?Petrakis)(?=(?:(?!PIECE>>>)[\s\S])*?212)(?=(?:(?!PIECE>>>)[\s\S])*?151)(?:(?!PIECE>>>)[\s\S])*PIECE>>>'
 flags: i
 ---
