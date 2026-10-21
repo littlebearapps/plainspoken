@@ -78,7 +78,8 @@ def nudge_text(kind: str, host: str, root: str | Path, profile: str) -> str:
                 f"what's missing instead.")
     else:
         text = (f"plainspoken: this asks for writing people will read. Short piece: draft it, pipe it to {lint} and "
-                f"cut what it flags (remove, never add facts). Long or going out: use {_skill(host, 'write')}.")
+                f"cut what it flags (remove, never add facts). Long or going out: use {_skill(host, 'write')}; inside "
+                f"it, this lint never replaces its check and claims steps.")
     return text[:LIMIT]
 
 

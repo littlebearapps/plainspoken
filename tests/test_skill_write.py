@@ -27,6 +27,10 @@ class WriteSkill(SkillBasics, unittest.TestCase):
                        "list as many items as there really are", "anchors"):
             self.assertIn(needle, core)
 
+    def test_bare_lint_is_not_step_6(self):  # #23: the drafting rule's short-piece lint doesn't apply inside write
+        core = " ".join(self.text.split("## Steps", 1)[0].split())
+        self.assertRegex(core, r"The bare lint on its own \(`RUN check [^`]*`\) isn't step 6")
+
     def step(self, n: int) -> str:
         return self.text.split(f"### {n}. ", 1)[1].split(f"### {n + 1}. ", 1)[0]
 

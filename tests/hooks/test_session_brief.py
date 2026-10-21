@@ -230,3 +230,14 @@ class DraftingRule(unittest.TestCase):
         ctx = self.context(self.run_hook())
         self.assertIn("Drafting rule", ctx)
         self.assertIn("When you write prose for a reader", ctx)
+
+    def test_short_piece_lint_never_stands_in_for_write(self):  # #23: write ran the bare lint instead of 6 and 7
+        flat = " ".join(session_brief.rule_text(REPO, "default").split())
+        self.assertIn("Short piece, outside /plainspoken:write:", flat)
+        self.assertIn("Inside /plainspoken:write, this lint never replaces its check and claims steps.", flat)
+
+    def test_rule_fits_whole_under_a_long_plugin_root(self):  # a cut would drop the fabrication guard at the end
+        root = "/home/someone-with-a-long-name/.claude/plugins/cache/a-long-marketplace-name/plainspoken/9.99.99"
+        text = session_brief.rule_text(REPO, "default")
+        self.assertTrue(text.endswith("ask instead."))
+        self.assertLessEqual(len(text) - len(str(REPO)) + len(root), session_brief.RULE_LIMIT)
