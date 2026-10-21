@@ -80,7 +80,7 @@ class HermesHooks(unittest.TestCase):
         self.assertIsNone(hook(is_first_turn=False, user_message="Draft an email to the parents about Friday"))
         (self.project / ".plainspoken" / "config.toml").write_text('[nudge]\nmode = "on"\n', encoding="utf-8")
         got = hook(is_first_turn=False, user_message="Draft an email to the parents about Friday")["context"]
-        self.assertIn("plainspoken:check", got)
+        self.assertIn("plainspoken:write", got)
         self.assertNotIn("/plainspoken:", got)
         self.assertIsNone(hook(is_first_turn=False, user_message="what's the weather like"))
 

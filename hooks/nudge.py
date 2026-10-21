@@ -35,12 +35,16 @@ _STRONG_REWRITE = re.compile(
     r"machine|llm)\b"
     r"|\bless (?:like )?(?:chatgpt|gpt|ai|an ai|a bot|robotic|stiff|formal|corporate|salesy|wooden)\b"
     r"|\b(?:sound|read)s? (?:more )?(?:natural|human)\b", re.I)
+# Long-form cues: the kind of piece, or a word count of 250 or more. These go to the write skill (draft, check, fix).
+_LONG = re.compile(r"\b(?:blog(?: posts?)?|articles?|features?|essays?|(?:web |landing |service |about )?pages?|"
+                   r"newsletters?|press releases?|reports?|guides?)\b|\b(?:[2-9][0-9]{2}|[1-9][0-9]{3,})\s*(?:-\s*)?words?\b",
+                   re.I)
 _CODE = re.compile(r"\b(?:python|javascript|typescript|bash|shell|sql|regex|function|bug|unit tests?|"
                    r"code|commit message|docstring|json|yaml|stack ?trace)\b|\w\.(?:py|js|ts|sh|rb|go)\b", re.I)
 
 
 def intent(prompt: str) -> str | None:
-    """'rewrite', 'draft' or None for one user prompt."""
+    """'rewrite', 'draft-long', 'draft' or None for one user prompt."""
     if not isinstance(prompt, str) or not prompt.strip():
         return None
     if prompt.lstrip().startswith("/") or re.search(r"\bplainspoken\b", prompt, re.I):
@@ -53,7 +57,7 @@ def intent(prompt: str) -> str | None:
     if _REWRITE_VERB.search(text):
         return "rewrite"
     if _DRAFT_VERB.search(text):
-        return "draft"
+        return "draft-long" if _LONG.search(text) else "draft"
     return None
 
 
@@ -68,10 +72,13 @@ def nudge_text(kind: str, host: str, root: str | Path, profile: str) -> str:
     if kind == "rewrite":
         text = (f"plainspoken: this asks for text that sounds like a person wrote it. Use {_skill(host, 'humanize')} "
                 f"(remove the AI patterns, never add facts), then pipe the result to {lint} and cut what it flags.")
+    elif kind == "draft-long":
+        text = (f"plainspoken: this is a long piece people will read. Use {_skill(host, 'write')}: it drafts from the "
+                f"notes, runs the full check and fixes what it finds. Never add a fact the notes don't give; say "
+                f"what's missing instead.")
     else:
         text = (f"plainspoken: this asks for writing people will read. Short piece: draft it, pipe it to {lint} and "
-                f"cut what it flags (remove, never add facts). Long or going out: save it and run "
-                f"{_skill(host, 'check')}.")
+                f"cut what it flags (remove, never add facts). Long or going out: use {_skill(host, 'write')}.")
     return text[:LIMIT]
 
 
