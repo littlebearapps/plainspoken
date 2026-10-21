@@ -1,6 +1,6 @@
 ---
 name: check
-description: "Checks a draft for AI writing tells: a fixed lint, four isolated judges and a merge that fails closed, then removal-only fixes or reviewed reasons. Use before an article, page, email or post goes out, or when asked whether text sounds like AI."
+description: "Checks a draft for AI writing tells with a fixed lint and four isolated judges, then fixes by removal only. Use before an article, page, email, post or script goes out, and whenever asked if any text, even one line, sounds like AI."
 argument-hint: <file> [--content-type social]
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspoken/reports/*.reply.json), Edit(.plainspoken/reports/*.justify.json)
 ---

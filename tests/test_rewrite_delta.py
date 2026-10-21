@@ -30,12 +30,13 @@ class Delta(unittest.TestCase):
             "name": "rewrite--email--slash", "dir": "evals/rewrite-slash/rewrite--email--slash",
             "arms": {"with": [{"tracePath": trace(self.tmp / "w", PLAIN)}],
                      "without": [{"tracePath": trace(self.tmp / "o", STIFF)},
-                                 {"tracePath": str(self.tmp / "gone" / "trace.jsonl")}]}}]}
+                                 {"tracePath": str(self.tmp / "gone" / "trace.jsonl")},
+                                 {"tracePath": trace(self.tmp / "e", "API Error: 400 usage limits"), "error": "exit 1"}]}}]}
 
     def test_counts_per_arm_and_missing_runs(self):
         d = rewrite.delta(self.result, REPO, default_profile())
         self.assertEqual(d["runs"], {"with": 1, "without": 1})
-        self.assertEqual(d["missing"], ["rewrite--email--slash without #2"])
+        self.assertEqual(d["missing"], ["rewrite--email--slash without #2", "rewrite--email--slash without #3"])
         s = d["summary"]["blocks"]
         self.assertEqual(s["with"], 0.0)
         self.assertGreater(s["without"], 0)
@@ -60,3 +61,26 @@ class Delta(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Pieces(unittest.TestCase):
+    def test_piece_between_markers_else_whole_reply(self):
+        self.assertEqual(rewrite.piece("Report line\n<<<PIECE\nHi Tom.\nSee you.\nPIECE>>>\nmerge: PASS"), "Hi Tom.\nSee you.")
+        self.assertEqual(rewrite.piece("just the text"), "just the text")
+        self.assertEqual(rewrite.piece("---\n\nSubject: Hi\n\nBody."), "Subject: Hi\n\nBody.")
+        self.assertEqual(rewrite.piece("Hi all.\n\n(`/plainspoken:humanize` isn't installed, so I rewrote it.)"), "Hi all.")
+
+    def test_content_type_for(self):
+        self.assertEqual(rewrite.content_type_for("drafting--sms-dentist-reschedule"), "social")
+        self.assertEqual(rewrite.content_type_for("drafting-hooks--x-thread-bin-changes"), "social")
+        self.assertEqual(rewrite.content_type_for("rewrite--linkedin-post--slash"), "social")
+        self.assertEqual(rewrite.content_type_for("drafting--newsletter-school"), "article")
+
+    def test_save_writes_each_piece(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        result = {"suite": {"root": str(REPO)}, "cases": [{
+            "name": "rewrite--email--slash", "dir": "evals/rewrite-slash/rewrite--email--slash",
+            "arms": {"with": [{"tracePath": trace(tmp / "w", "<<<PIECE\n" + PLAIN + "\nPIECE>>>")}], "without": []}}]}
+        rewrite.delta(result, REPO, default_profile(), save=tmp / "out")
+        self.assertEqual((tmp / "out" / "rewrite--email--slash" / "with-1.md").read_text(encoding="utf-8"), PLAIN + "\n")

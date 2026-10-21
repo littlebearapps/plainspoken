@@ -1,5 +1,5 @@
 ---
 type: regex
-pattern: 'writing nudge[*_`]*\s*(?::|\|)\s*[*_`]*on\b'
+pattern: 'writing nudge[^\n]*(?::|\|)[^\n]*\bon\b'
 flags: i
 ---

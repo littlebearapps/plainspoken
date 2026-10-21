@@ -127,6 +127,29 @@ def summarise(g: dict) -> str:
 
 # --- the rewrite delta: both arms of a `claude plugin eval` rewrite run, lint-counted --------------------------------
 SOCIAL_CASES = ("rewrite--linkedin-post",)  # graded with the social caps, as in the case-file tests
+# Drafting cases whose piece is a short social text: `<suite>--<kind>-…` with one of these kinds.
+SOCIAL_KINDS = ("sms-", "linkedin-", "instagram-", "x-thread-", "bluesky-", "facebook-")
+PIECE = re.compile(r"<<<PIECE[ \t]*\n(.*?)\n[ \t]*PIECE>>>", re.S)
+
+
+def content_type_for(case: str) -> str:
+    """`social` for the short social pieces (their caps differ), else `article`."""
+    base = case.removesuffix("--slash")
+    kind = base.split("--", 1)[1] if "--" in base else base
+    return "social" if base in SOCIAL_CASES or kind.startswith(SOCIAL_KINDS) else "article"
+
+
+def piece(reply: str) -> str:
+    """The piece itself: the text between `<<<PIECE` and `PIECE>>>` when a case asks for those markers (a skill's
+    report around it isn't the writing being judged), else the whole reply."""
+    found = PIECE.findall(reply)
+    text = found[-1].strip() if found else reply
+    # A model without the plugin sometimes adds a note that the slash command isn't installed: that's about the run,
+    # not the writing, and a reader would spot it at once.
+    lines = [ln for ln in text.splitlines() if "plainspoken" not in ln.lower()]
+    while lines and lines[0].strip() in ("", "---", "***", "___"):  # a leading rule would read as frontmatter
+        lines.pop(0)
+    return "\n".join(lines).strip()
 
 
 def passage(prompt: str) -> str:
@@ -148,31 +171,42 @@ def final_reply(trace: Path) -> str | None:
     return reply
 
 
-def delta(result: dict, suite_root: Path, profile: Profile, cfg=None) -> dict:
+def delta(result: dict, suite_root: Path, profile: Profile, cfg=None, save: Path | None = None) -> dict:
     """Grade every run of a with-without rewrite run (the `aggregate-result.json` of `claude plugin eval --tag
     rewrite[-slash] --keep-temp`) with the engine, per arm: lint BLOCK and WARN findings, em dashes over the cap, new
     numbers. The regex graders only pass or fail; the counts show a difference even when both arms pass them all.
-    A run whose trace is gone (no --keep-temp) is listed as missing, never counted as clean."""
+    A run whose trace is gone (no --keep-temp) is listed as missing, never counted as clean. `save` writes each graded
+    piece to `<save>/<case>/<arm>-<run>.md`, for the blind readers (`eval pairwise`)."""
     import tempfile
     cfg = load_config() if cfg is None else cfg
     rows, missing = [], []
     for case in result.get("cases", []):
         name = case["name"]
-        base = name.removesuffix("--slash")
-        ctype = "social" if base in SOCIAL_CASES else "article"
+        ctype = content_type_for(name)
         prompt = (Path(suite_root) / case["dir"] / "prompt.md").read_text(encoding="utf-8")
+        scaffold = Path(suite_root) / case["dir"] / "scaffold.sh"
+        draft_in = re.search(r"<<'DRAFT'\n(.*?)\nDRAFT", scaffold.read_text(encoding="utf-8"), re.S) if scaffold.is_file() else None
         with tempfile.TemporaryDirectory(prefix="plainspoken-delta-") as tmp:
             source = Path(tmp) / "source.md"
-            source.write_text(passage(prompt.split("\n---\n", 1)[-1]) + "\n", encoding="utf-8")
+            # the source is the pasted passage, or for a fix case the draft its scaffold saved
+            source.write_text((draft_in.group(1) if draft_in else passage(prompt.split("\n---\n", 1)[-1])) + "\n",
+                              encoding="utf-8")
             for arm in ("with", "without"):
                 for i, run in enumerate(case.get("arms", {}).get(arm, [])):
                     trace = run.get("tracePath")
-                    text = final_reply(Path(trace)) if trace and Path(trace).is_file() else None
+                    # a run that ended on an API error has an error message, not a rewrite, as its final reply
+                    text = (final_reply(Path(trace)) if trace and Path(trace).is_file() and not run.get("error")
+                            else None)
                     if text is None:
                         missing.append(f"{name} {arm} #{i + 1}")
                         continue
+                    text = piece(text)
                     draft = Path(tmp) / f"{arm}-{i}.md"
                     draft.write_text(text + "\n", encoding="utf-8")
+                    if save is not None:
+                        out = Path(save) / name
+                        out.mkdir(parents=True, exist_ok=True)
+                        (out / f"{arm}-{i + 1}.md").write_text(text + "\n", encoding="utf-8")
                     g = grade(draft, source, profile, ctype, cfg)
                     rows.append({"case": name, "arm": arm, "run": i + 1, "blocks": g["block_findings"],
                                  "warns": g["warn_findings"], "em_dashes_over": max(0, g["em_dashes"] - g["em_dash_cap"]),

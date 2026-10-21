@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/littlebearapps/plainspoken/compare/v0.7.0...v0.8.0) (2026-10-21)
+
+
+### Features
+
+* tuned humanize, write and check from the pre-v1.0 eval campaign; drafting, long-form and fix eval suites ([#17](https://github.com/littlebearapps/plainspoken/issues/17)) ([5717832](https://github.com/littlebearapps/plainspoken/commit/57178320ca211540c3360041ba28c0cc45786af4))
+
 ## [0.7.0](https://github.com/littlebearapps/plainspoken/compare/v0.6.1...v0.7.0) (2026-10-21)
 
 
