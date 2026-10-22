@@ -40,6 +40,8 @@ sequence, a cause or a real contrast. If they're stacked only for punch, rewrite
   different way.
 - **Don't join unrelated ideas.** A comma or "and" between two things that have nothing to do with each other is
   worse than two sentences.
+- **Don't add to make a join.** A join adds no clause, detail or reason: use "because" or "so" only where the text
+  already says why.
 - **Keep short lines for headlines, buttons and emphasis.** Short, sharp language is part of most writers' voices.
 - **Mixed lengths are the goal.** There is no length cap and no minimum. Some short lines and some connected
   explanation sounds like a person thinking.

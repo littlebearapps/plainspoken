@@ -58,7 +58,9 @@ class NotABlogPost(unittest.TestCase):
         five_short = "I went. It rained. We left. Nobody cared. That was it.\n"
         found = STRUCTURAL["7d"](parse(five_short, profile=PRODUCT, content_type="social"), CFG)
         self.assertFalse([f for f in found if "No sentence over" in f.message], found)
-        self.assertEqual([f.message for f in found], ["4 consecutive sentences under 8 words"])
+        self.assertEqual([f.message for f in found],
+                         ['4 consecutive sentences under 8 words — join two with "and" or "but", or merge them; '
+                          'add no clause, detail or reason'])
         # the same text as an article still gets the no-long-sentence WARN
         art = STRUCTURAL["7d"](parse(five_short, profile=PRODUCT), CFG)
         self.assertTrue([f for f in art if "No sentence over" in f.message], art)
