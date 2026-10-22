@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.11.0](https://github.com/littlebearapps/plainspoken/compare/v0.10.1...v0.11.0) (2026-10-22)
+
+
+### Features
+
+* **evals:** claims-checker golden set and an eval claims runner ([8d4c484](https://github.com/littlebearapps/plainspoken/commit/8d4c484434efc028223b3ebf78947d2a65bcb73c)), closes [#59](https://github.com/littlebearapps/plainspoken/issues/59)
+
+
+### Bug Fixes
+
+* **check:** a 7d join links with "and" or "but" and adds nothing ([9f0f875](https://github.com/littlebearapps/plainspoken/commit/9f0f8750f4b280aaa9ca8d0a85b8a35fb9bdb138)), closes [#73](https://github.com/littlebearapps/plainspoken/issues/73)
+* **check:** judge-input holds back an open lint BLOCK or WARN ([d7cac24](https://github.com/littlebearapps/plainspoken/commit/d7cac24818579c9a51233102ab739567eb6e8bbb)), closes [#74](https://github.com/littlebearapps/plainspoken/issues/74)
+* **hooks:** write guard lets reads through and reads a script run by name ([52195c6](https://github.com/littlebearapps/plainspoken/commit/52195c6a499a61a94bf486dd2898a589f1d96b7a)), closes [#57](https://github.com/littlebearapps/plainspoken/issues/57)
+* **judges:** input_digest hashes the whole judge-input line ([e8d1463](https://github.com/littlebearapps/plainspoken/commit/e8d1463333859fbec6a71089b11c5eec0bd397ab)), closes [#61](https://github.com/littlebearapps/plainspoken/issues/61)
+* **nudge:** ignore host wrapper blocks before reading the ask ([36bc1d5](https://github.com/littlebearapps/plainspoken/commit/36bc1d532651ae33a0a9b1b15dfab14c3e122a1e)), closes [#55](https://github.com/littlebearapps/plainspoken/issues/55)
+* **status:** the words line says what it counts ([281e2bc](https://github.com/littlebearapps/plainspoken/commit/281e2bc4e90ff6056c1c85dea3bdce37a4223532)), closes [#63](https://github.com/littlebearapps/plainspoken/issues/63)
+
 ## [0.10.1](https://github.com/littlebearapps/plainspoken/compare/v0.10.0...v0.10.1) (2026-10-22)
 
 
