@@ -48,8 +48,8 @@ it. What counts as a source, and what to do when two of them disagree: `referenc
 
 If the user asked for a length, estimate whether the sources can carry it. If they can't, say so before you draft and
 ask for more material; when you can't ask (a run with no one to answer, or the user said not to), write it shorter
-and say why at the top of the report. Never pad. A definition or background line the sources don't give is a new
-fact, so it needs a source too.
+and say why in the report, straight after step 8's block. Never pad. A definition or background line the sources
+don't give is a new fact, so it needs a source too.
 
 ### 2. Reader value
 
@@ -125,8 +125,9 @@ runs, whatever they say.
 ### 8. Report
 
 Run `RUN status '<draft>' --plugin-profile '${user_config.profile}'` (plus step 2's `--profile`, if any). It reads
-the last saved check and claims results back; it runs and writes nothing. Start the report with this block, filled
-in, with the `status` lines copied exactly as printed, never from memory or in other words:
+the last saved check and claims results back; it runs and writes nothing. Start the report with this block, with
+no words before it; a report without it is incomplete. Fill it in, with the `status` lines copied exactly as
+printed, never from memory or in other words:
 
     Draft: <draft path>
     <every line `status` printed: check, claims and its reasons, words, the reader-value contract>
@@ -135,9 +136,9 @@ in, with the `status` lines copied exactly as printed, never from memory or in o
     Anchors: <ids used>; no anchors: <tags, or none>; <every (skipped anchor …) line>
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 
-Then say whatever else the user needs, in plain words. Any length you give is the `words:` line's, never an
-estimate. A check or claims result that isn't PASS is never described as passed. The person records a `For kaizen`
-item with `/plainspoken:kaizen dismiss` if they agree.
+Then give any length shortfall (step 1) and whatever else the user needs, in plain words. Any length you give is
+the `words:` line's, never an estimate. A check or claims result that isn't PASS is never described as passed. The
+person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
 
 A piece step 2 parked, or left INCOMPLETE, gets only the `Reader value` line and the reason. Before a drafted piece
 ships, the user runs `/plainspoken:reader-value deliver <draft>` to check the draft keeps the contract's promise.
