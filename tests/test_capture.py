@@ -977,7 +977,8 @@ class MergeCli(unittest.TestCase):
     def test_recorded_reply_logs_no_friction(self):
         self.check()
         sha = hashlib.sha256(self.art.read_bytes()).hexdigest()
-        line = json.loads(self.run_cli("judge-input", "post.md", "--profile", "default").stdout.splitlines()[0])
+        line = json.loads(self.run_cli("judge-input", "post.md", "--profile", "default",
+                                       "--keep", "2,4b,7d").stdout.splitlines()[0])
         p = self.reply({"group": "J1", "article_sha256": sha, "input_digest": line["input_digest"], "verdicts": []})
         r = self.run_cli("judge-record", "post.md", "--group", "J1", "--from", str(p))
         self.assertEqual(r.returncode, 0, r.stderr)
