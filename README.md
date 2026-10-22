@@ -168,8 +168,8 @@ to a source. Your own data takes an `<!-- integrity:allow -->` comment inside or
 TL;DR (a marker inside a chart covers that chart, never the TL;DR), or `# integrity: allow` in the frontmatter, and a
 `first_hand` claim in the ledger. When the file has a claim ledger, the hook lists the ledger's gaps instead.
 It says nothing when there's nothing to flag; in warn mode it repeats itself only when a file's result changes.
-A Bash hook refuses a shell command that writes a judge or checker reply, or a claim ledger: those go through the
-Write and Edit tools.
+A Bash hook refuses a shell command that writes a judge or checker reply, or a claim ledger, including through a script
+it runs by name: those go through the Write and Edit tools. Reading them is fine.
 
 Settings for all three go in `.plainspoken/config.toml`:
 
