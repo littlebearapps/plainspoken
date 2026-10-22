@@ -78,29 +78,6 @@ def _append(events: list[dict], settings: dict) -> list[dict]:
     return events
 
 
-def _profile_for(lint: dict, root: Path, cli_value: str | None = None):
-    """The profile the lint was made with (matched on `profile_sha256`), or None. It tries the lint's profile name,
-    then the project's default profile. With `cli_value`, only that profile is tried, and a different one is a
-    refusal."""
-    want = lint.get("profile_sha256")
-    if cli_value:
-        prof = config.resolve_profile(cli_value, Path(root), os.environ)
-        if prof.sha256 != want:
-            raise ValueError(f"profile {prof.name} isn't the one the check used ({lint.get('profile')}): "
-                             "pass that profile, or run check again")
-        return prof
-    article = lint.get("article")
-    target = Path(article) if isinstance(article, str) and article else None
-    for value in (lint.get("profile"), None):
-        try:  # with no name, the profile the project config names for the article ([engine] profiles first)
-            prof = config.resolve_profile(value, Path(root), os.environ, target=target)
-        except (ValueError, OSError):
-            continue
-        if prof.sha256 == want:
-            return prof
-    return None
-
-
 def _parse(data: bytes, article: Path, profile, content_type: str) -> Doc | None:
     """The parsed text, or None (only the `section` facet is lost)."""
     if profile is None:
@@ -130,7 +107,7 @@ def _override_events(data: bytes, lint: dict, article: Path, root: Path, rule: s
     """The override events for rule `rule` in one check: `data` is the text it checked, `lint` its lint."""
     sha = hashlib.sha256(data).hexdigest()
     findings = [f for f in lint.get("findings") or () if capture.well_formed(f)]
-    doc = _parse(data, article, _profile_for(lint, root, profile), _ctype(lint))
+    doc = _parse(data, article, config.profile_for_lint(lint, root, profile), _ctype(lint))
     base = {"ruleset_version": str(lint["ruleset_version"]), "profile": str(lint["profile"]),
             "doc_id": ledger.doc_id(article, root), "doc_sha": sha}
     events = []
@@ -423,7 +400,8 @@ def missed(article: Path, root: Path, n: int, rule: str | None = None, pattern: 
         raise ValueError(f"hunk {n} only adds text, so there's nothing the check could have missed")
     settings = _settings(root)
     facets: dict = {} if pattern is None else {"pattern": pattern}
-    section = capture.section_of(hunk["old_lines"][0], _parse(snap, article, _profile_for(lint, root), _ctype(lint)))
+    section = capture.section_of(hunk["old_lines"][0],
+                                 _parse(snap, article, config.profile_for_lint(lint, root), _ctype(lint)))
     if section is not None:
         facets["section"] = section
     event = ledger.make_event(event="diff", actor="human", outcome="missed", rule=rule or PATTERN_RULE,
@@ -490,7 +468,7 @@ def published(article: Path, root: Path, *, reports_dir: Path | None = None,
     if saved.get("ruleset_version") != cfg.version:
         raise ValueError(f"the ruleset changed since the check ({saved.get('ruleset_version')} → {cfg.version}): "
                          "run check again")
-    prof = _profile_for(saved, root, profile)
+    prof = config.profile_for_lint(saved, root, profile)
     if prof is None:
         raise ValueError(f"can't find the profile the check used ({saved.get('profile')}): pass it with --profile")
     settings = _settings(root)

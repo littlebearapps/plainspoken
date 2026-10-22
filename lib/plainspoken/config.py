@@ -499,6 +499,29 @@ def profile_for(path: Path, root: Path | None = None) -> str | None:
     return _profile_ref(config_path, value) if value else None
 
 
+def profile_for_lint(lint: dict, root: Path, cli_value: str | None = None) -> Profile | None:
+    """The profile the lint was made with (matched on `profile_sha256`), or None. It tries the lint's profile name,
+    then the project's default profile. With `cli_value`, only that profile is tried, and a different one is a
+    refusal."""
+    want = lint.get("profile_sha256")
+    if cli_value:
+        prof = resolve_profile(cli_value, Path(root), os.environ)
+        if prof.sha256 != want:
+            raise ValueError(f"profile {prof.name} isn't the one the check used ({lint.get('profile')}): "
+                             "pass that profile, or run check again")
+        return prof
+    article = lint.get("article")
+    target = Path(article) if isinstance(article, str) and article else None
+    for value in (lint.get("profile"), None):
+        try:  # with no name, the profile the project config names for the article ([engine] profiles first)
+            prof = resolve_profile(value, Path(root), os.environ, target=target)
+        except (ValueError, OSError):
+            continue
+        if prof.sha256 == want:
+            return prof
+    return None
+
+
 def project_profile_refs(root: Path) -> list[str]:
     """Every profile the project config names (`[engine] profile`, then each `[engine] profiles` entry's), once
     each, as `profile.load` takes them. A bad config raises ConfigError; no config gives []."""
