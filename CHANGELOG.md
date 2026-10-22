@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.10.1](https://github.com/littlebearapps/plainspoken/compare/v0.10.0...v0.10.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **check:** fix lint findings before the judges; write does it before claims ([eeed1b7](https://github.com/littlebearapps/plainspoken/commit/eeed1b7b8d977e8522b07ca7cde483968c514083)), closes [#42](https://github.com/littlebearapps/plainspoken/issues/42)
+* **claims:** refuse shell writes to reply files and the ledger; judge each claim's binding ([d835da7](https://github.com/littlebearapps/plainspoken/commit/d835da790074a952e77063fade80609ad8a8b033)), closes [#44](https://github.com/littlebearapps/plainspoken/issues/44)
+* **evals:** fact graders take numbers in words, and the bin thread needn't name its own council ([c9862de](https://github.com/littlebearapps/plainspoken/commit/c9862deb92ba71d0d5c9e02a2e4699452a56248c)), closes [#47](https://github.com/littlebearapps/plainspoken/issues/47)
+* judge-record refuses a reply to a hand-built judge input ([5670d36](https://github.com/littlebearapps/plainspoken/commit/5670d36f07b502ccac619e0e60cab5fa978dd53b)), closes [#43](https://github.com/littlebearapps/plainspoken/issues/43)
+* route drafting by the piece's size, not its type name ([48c9580](https://github.com/littlebearapps/plainspoken/commit/48c95808ce9d86cab48f2310f779768e874339de)), closes [#37](https://github.com/littlebearapps/plainspoken/issues/37)
+* **write:** needs the owner comes from the ledger; a fact labelled opinion fails claims ([396ed13](https://github.com/littlebearapps/plainspoken/commit/396ed13e9db5ccf09dc86ca0509390e948a5c42e)), closes [#45](https://github.com/littlebearapps/plainspoken/issues/45)
+* **write:** start the report with the status block, shortfall after it ([3bb5a30](https://github.com/littlebearapps/plainspoken/commit/3bb5a30cb4c67adf8616b144dd0f4ffd5a55f07f)), closes [#41](https://github.com/littlebearapps/plainspoken/issues/41)
+
 ## [0.10.0](https://github.com/littlebearapps/plainspoken/compare/v0.9.0...v0.10.0) (2026-10-22)
 
 
