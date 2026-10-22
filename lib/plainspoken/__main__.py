@@ -56,7 +56,7 @@ def _record_all(args: argparse.Namespace, text: str, root: Path) -> int:
     """`judge-record --all`: J1-J4 from one input in one call (#28). Prints each recorded path; names each group it
     didn't record on stderr, so only those judges run again. Exit 0 = all four recorded, 1 = any not, 2 = I/O."""
     try:
-        rows = judges.record_all(args.path, text, args.reports or report.reports_dir_default(root), root)
+        rows = judges.record_all(args.path, text, args.reports or report.reports_dir_default(root), root, args.profile)
     except ValueError as e:
         print(f"plainspoken: judge replies not recorded: {_first_line(e)}", file=sys.stderr)
         capture.for_rejected_reply(_first_line(e), root)
@@ -264,6 +264,7 @@ def _main(argv: list[str] | None) -> int:
     which.add_argument("--all", action="store_true",
                        help="record J1-J4 from one input: their replies one after another, or one JSON list")
     jr.add_argument("--reports", type=Path)
+    jr.add_argument("--profile", help="the profile the check used, when it can't be found from the lint (a path)")
     jr.add_argument("--from", dest="reply_file", type=Path,
                     help="read the reply from this file; the `reply` path from `paths` is deleted afterwards, "
                          "any other file is kept")
@@ -449,7 +450,7 @@ def _main(argv: list[str] | None) -> int:
             return _record_all(args, text, root)
         try:
             written = judges.record_reply(args.path, args.group, text,
-                                          args.reports or report.reports_dir_default(root), root)
+                                          args.reports or report.reports_dir_default(root), root, args.profile)
         except ValueError as e:
             print(f"plainspoken: judge reply not recorded: {_first_line(e)}", file=sys.stderr)
             capture.for_rejected_reply(_first_line(e), root)

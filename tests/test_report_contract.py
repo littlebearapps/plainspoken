@@ -127,11 +127,11 @@ class AtomicWrites(unittest.TestCase):  # every report file goes through write_a
         self.reports.mkdir(parents=True)
         lint = report.run_lint(self.art, PRODUCT)
         self.paths["lint"].write_text(json.dumps(lint), encoding="utf-8")
+        line = judges.judge_input(self.art, PRODUCT, self.reports, self.cwd)[1]
         reply = json.dumps({"group": "J2", "article_sha256": report.sha256(self.art),
-                            "input_digest": judges.input_digest(lint, "J2"),
-                            "judged_at": "2026-10-10T00:00:00Z", "verdicts": []})
+                            "input_digest": line["input_digest"], "judged_at": "2026-10-10T00:00:00Z", "verdicts": []})
         with self._atomic() as atomic:
-            out = judges.record_reply(self.art, "J2", reply, self.reports, self.cwd)
+            out = judges.record_reply(self.art, "J2", reply, self.reports, self.cwd, PRODUCT)
         atomic.assert_called_once()
         self.assertEqual(Path(atomic.call_args.args[0]), self.paths["J2"])
         self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["group"], "J2")

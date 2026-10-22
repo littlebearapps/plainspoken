@@ -9,8 +9,9 @@ Each file, what writes it, and what it's bound to:
 
 - `<key>.lint.json`: written by `check`; bound to article_sha256, profile_sha256, ruleset_version, content_type.
 - `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn` (or `--all` for all four);
-  bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint) and input_digest (the
-  reply must echo the digest its `judge-input` line carried for the current lint, so a hand-built input is refused).
+  bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint) and input_digest (a hash
+  of the whole `judge-input` line; `judge-record` rebuilds that line for the current draft and refuses a reply
+  whose digest doesn't match it; `merge` doesn't read it, so judge files with the older digest still merge).
 - `<key>.justify.json`: written by `justify --template --write` (then filled in by the check skill); bound to
   article_sha256.
 - `<key>.JR.judge.json`: written by `judge-record --group JR`; bound to article_sha256 + justify_sha256,
