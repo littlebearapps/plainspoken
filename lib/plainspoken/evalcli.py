@@ -22,6 +22,15 @@ records every transport's sampling: OpenRouter at temperature 0, the CLI at its 
 once the run is allowed, so a dry or refused run writes nothing. Exit 0 the run finished and every model meets the
 accept bar · 1 refused without `--yes`, stopped early, or the bar is missed · 2 bad input.
 
+`eval claims [--model M] [--golden DIR] [--out DIR] [--status S] [--dry-run] [--max-cost-usd N] [--concurrency N]
+[--price-in X --price-out Y]`: put every CL golden case to the claims checker on one Claude model (`claude -p` on the
+subscription; no other vendor) and score its verdict on each labelled claim. Prints the plan and the notional
+estimate first; `--dry-run` stops there (nothing sent, nothing written). Nothing is billed, but the run stops before
+the notional spend the CLI reports would pass `--max-cost-usd` (default 1). Run files go to `--out`, default
+`.plainspoken/evals/claims-<UTC time>/`: `run.json`, `replies.jsonl` (resumable), `summary.json` and `report.md`.
+Exit 0 every case scored · 1 stopped early, or a call failed or a reply couldn't be scored (re-run to retry) · 2 bad
+input.
+
 `eval rewrite DRAFT [--source FILE] [--profile P] [--content-type T] [--json]`: grade one rewrite with the engine
 (`rewrite.grade`): any lint BLOCK, em dashes over the content type's cap, or a number the source doesn't have fails
 it. Without `--source` the number check is skipped and says so. Free: no model is called. Exit 0 PASS · 1 FAIL · 2 a
@@ -83,7 +92,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plainspoken import blind, blind_score, config, evalhistory, evaljudges, evaltrace, golden, kaizen, rewrite
+from plainspoken import (blind, blind_score, config, evalclaims, evalhistory, evaljudges, evaltrace, golden, kaizen,
+                         rewrite)
 from plainspoken import evalmetrics as em
 from plainspoken.adapters import llm_panel
 from plainspoken.doc import CONTENT_TYPES
@@ -129,7 +139,7 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
                     help="the panel file (default: the plugin's evals/panel.toml)")
     jd.add_argument("--out", type=Path, help="the run folder (default: .plainspoken/evals/judges-<UTC time>/); "
                                              "re-run with the same folder to resume")
-    jd.add_argument("--group", help=f"comma-separated judge groups ({', '.join(golden.GROUPS)}; default: all)")
+    jd.add_argument("--group", help=f"comma-separated judge groups ({', '.join(golden.JUDGE_GROUPS)}; default: all)")
     jd.add_argument("--status", help=f"comma-separated label statuses ({', '.join(golden.STATUSES)}; default: all)")
     jd.add_argument("--dry-run", action="store_true", help="print the estimate only: nothing sent, nothing written")
     jd.add_argument("--yes", action="store_true", help="allow the billed (OpenRouter) calls")
@@ -137,6 +147,7 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
                     help="stop before billed spend in the run folder would pass this (default 5); one budget per "
                          "batch, so the stop also holds back the unbilled claude-cli calls until you resume")
     jd.add_argument("--concurrency", type=int, default=4, help="calls in flight at once (default 4)")
+    _claims_parser(es)
     rd = es.add_parser("rewrite-delta", help="lint-count both arms of a `claude plugin eval` rewrite run (needs "
                                              "--keep-temp; free)")
     rd.add_argument("result", type=Path, metavar="RESULT", help="the run's aggregate-result.json (or its --json file)")
@@ -171,6 +182,27 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
                                         "notice")
     gh.add_argument("--history", type=Path, metavar="FILE",
                     help="the history file (default: .plainspoken/evals/history.jsonl in the project)")
+
+
+def _claims_parser(es: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+    cl = es.add_parser("claims", help="put the CL golden cases to the claims checker on one Claude model and score "
+                                      "its verdicts (claude -p; nothing billed)")
+    cl.add_argument("--model", default="claude-opus-5-5",
+                    help="the Claude model `claude -p --model` runs (default claude-opus-5-5, the agent's model)")
+    cl.add_argument("--golden", type=Path, default=golden.DEFAULT_DIR,
+                    help="the golden-set folder (default: the plugin's evals/golden/)")
+    cl.add_argument("--out", type=Path, help="the run folder (default: .plainspoken/evals/claims-<UTC time>/); "
+                                             "re-run with the same folder to resume")
+    cl.add_argument("--status", help=f"comma-separated label statuses ({', '.join(golden.STATUSES)}; default: all)")
+    cl.add_argument("--dry-run", action="store_true", help="print the plan and the estimate only: nothing sent, "
+                                                           "nothing written")
+    cl.add_argument("--max-cost-usd", type=float, default=1.0,
+                    help="stop before the notional spend recorded in the run folder, plus the next calls' estimate, "
+                         "would pass this (default 1)")
+    cl.add_argument("--concurrency", type=int, default=4, help="calls in flight at once (default 4)")
+    cl.add_argument("--price-in", type=float, help="list price, US$ per million input tokens, for the estimate "
+                                                    "(default: the model's, when it's known)")
+    cl.add_argument("--price-out", type=float, help="list price, US$ per million output tokens, for the estimate")
 
 
 def _blind_parser(es: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
@@ -213,6 +245,8 @@ def run(args: argparse.Namespace) -> int:
         return _panel_estimate(args)
     if args.eval_cmd == "judges":
         return _judges(args)
+    if args.eval_cmd == "claims":
+        return _claims(args)
     if args.eval_cmd == "judges-report":
         return _judges_report(args)
     if args.eval_cmd == "rewrite":
@@ -432,7 +466,8 @@ def _judges(args: argparse.Namespace) -> int:
             print(f"problem: {p}")
         return _fail(cmd, f"the golden set has {len(problems)} problem{'' if len(problems) == 1 else 's'}: "
                           "fix them first (eval golden validate)")
-    picked = [c for c in cases if (not groups or c.group in groups) and (not statuses or c.status in statuses)]
+    picked = [c for c in cases if c.group in golden.JUDGE_GROUPS and (not groups or c.group in groups)
+              and (not statuses or c.status in statuses)]
     if not picked:
         return _fail(cmd, "no golden case matches --group/--status")
     try:
@@ -509,6 +544,144 @@ def _judges(args: argparse.Namespace) -> int:
     misses = [r for r in results if not r["ok"]]
     if misses:
         return _fail(cmd, "accept bar missed: " + "; ".join(f"{r['group']} {r['model']}" for r in misses), 1)
+    return 0
+
+
+# ---------------------------------------------------------------- claims checker
+
+def _claims_prices(args: argparse.Namespace) -> tuple[float, float]:
+    known = evalclaims.list_price(args.model)
+    price_in = args.price_in if args.price_in is not None else (known[0] if known else None)
+    price_out = args.price_out if args.price_out is not None else (known[1] if known else None)
+    if price_in is None or price_out is None:
+        raise _Usage(f"no list price for {args.model}: pass --price-in and --price-out (US$ per million tokens)")
+    if not all(math.isfinite(x) and x >= 0 for x in (price_in, price_out)):
+        raise _Usage("--price-in and --price-out must be numbers, 0 or more")
+    return price_in, price_out
+
+
+def _claims_budgeted(todo: list[tuple[str, llm_panel.PanelModel, str]], model: llm_panel.PanelModel, out: Path,
+                     args: argparse.Namespace) -> str | None:
+    """Run `todo` in batches of --concurrency. Before each batch, the notional US$ recorded in the folder plus the
+    batch's estimate must stay within --max-cost-usd, else stop: why it stopped, or None when every job ran."""
+    panel = llm_panel.Panel(models=(model,), base_url="https://claude-cli.invalid", key_env="OPENROUTER_API_KEY",
+                            max_out_tokens=evalclaims.EST_OUT_TOKENS)
+    path = out / llm_panel.REPLIES
+    for i in range(0, len(todo), args.concurrency):
+        batch = todo[i:i + args.concurrency]
+        spent = sum(r.cost_usd for r in llm_panel.reply_lines(path))
+        need = sum(evalclaims.estimate(p, model) for _, _, p in batch)
+        if spent + need > args.max_cost_usd + 1e-12:
+            return (f"budget reached: US${llm_panel.usd(spent)} notional spent of the US${args.max_cost_usd:.2f} "
+                    f"limit (--max-cost-usd), and the next {len(batch)} call{'' if len(batch) == 1 else 's'} are "
+                    f"estimated at US${llm_panel.usd(need)}")
+        result = llm_panel.run_batch(batch, panel, out, max_cost_usd=args.max_cost_usd, concurrency=args.concurrency)
+        if result.stopped:
+            return result.stopped
+    return None
+
+
+def _claims(args: argparse.Namespace) -> int:
+    cmd = "claims"
+    try:
+        if not evalclaims.claude_model(args.model):
+            raise _Usage(f"--model {args.model!r}: eval claims runs on Claude only, through `claude -p`; give a "
+                         "Claude model id (claude-opus-5-5) or alias (opus, sonnet, haiku)")
+        statuses = _csv(args.status, golden.STATUSES, "--status")
+        bad = _run_limits(args)
+        if bad:
+            raise _Usage(bad)
+        model = evalclaims.make_model(args.model.strip(), *_claims_prices(args))
+    except _Usage as e:
+        return _fail(cmd, str(e))
+    try:
+        cases = golden.load(args.golden)
+        problems = golden.validate(cases, require_counts=False)
+    except (ValueError, OSError) as e:  # GoldenError, or a ruleset that won't load
+        return _fail(cmd, _first_line(e))
+    if problems:
+        for p in problems:
+            print(f"problem: {p}")
+        return _fail(cmd, f"the golden set has {len(problems)} problem{'' if len(problems) == 1 else 's'}: "
+                          "fix them first (eval golden validate)")
+    picked = [c for c in cases if c.group == golden.CLAIMS and (not statuses or c.status in statuses)]
+    if not picked:
+        return _fail(cmd, f"no {golden.CLAIMS} golden case matches --status")
+    root = config.project_root(Path.cwd())
+    out = args.out or root / ".plainspoken" / "evals" / f"claims-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}"
+    bad = _not_a_folder(out, "the run folder (a new one, or a run to resume)")
+    if bad:
+        return _fail(cmd, bad)
+    try:
+        all_jobs = evalclaims.jobs(picked, model)
+    except (KeyError, ValueError, OSError) as e:
+        return _fail(cmd, f"can't build the prompts: {_first_line(e)}")
+    psha = evalclaims.prompts_sha256(all_jobs)
+    meta_path = out / "run.json"
+    meta = _read_json(meta_path) if meta_path.exists() else None
+    if meta_path.exists():
+        if not isinstance(meta, dict):
+            return _fail(cmd, f"{meta_path}: can't read it: use a new --out")
+        for k, want, what in (("prompts_sha256", psha, "the cases, rubric or --status differ"),
+                              ("model", model.model, "the model differs")):
+            if meta.get(k) != want:
+                return _fail(cmd, f"{out}: {what} since this run started: use a new --out to start a new run")
+    latest, _ = llm_panel.read_replies(out / llm_panel.REPLIES)
+    done = {k for k, r in latest.items() if r.error is None}
+    todo = [j for j in all_jobs if j[0] not in done]
+    claims_n = sum(len(c.claims) for c in picked)
+    print(f"{len(picked)} {golden.CLAIMS} case{'' if len(picked) == 1 else 's'} ({claims_n} labelled claims) × "
+          f"{model.model} via claude -p: {len(all_jobs)} calls, {len(all_jobs) - len(todo)} already done in {out}")
+    by_key = {c.id: c for c in picked}
+    total = 0.0
+    for key, _, prompt in todo:
+        case = by_key[key.split("|", 1)[0]]
+        est = evalclaims.estimate(prompt, model)
+        total += est
+        print(f"  {case.id}: {len(case.claims)} claims, ~{llm_panel.estimate_tokens(prompt)} prompt tokens, "
+              f"est. US${est:.4f}")
+    print(f"total notional estimate: US${total:.4f} at US${model.price_in:g}/US${model.price_out:g} per million "
+          f"tokens (each call: the prompt plus {evalclaims.CLI_OVERHEAD_TOKENS} tokens of CLI overhead in, "
+          f"{evalclaims.EST_OUT_TOKENS} out); nothing is billed, and the run stops before the notional spend would "
+          f"pass US${args.max_cost_usd:.2f} (--max-cost-usd)")
+    if args.dry_run:
+        print("dry run: nothing sent, nothing written")
+        return 0
+    if meta is None:
+        meta = {"schema": 1, "golden_dir": str(Path(args.golden).resolve()), "golden_cases": len(picked),
+                "prompts_sha256": psha, "model": model.model, "filters": {"status": statuses or None},
+                "started": _now()}
+        try:
+            out.mkdir(parents=True, exist_ok=True)
+            _write_atomic(meta_path, json.dumps(meta, indent=2) + "\n")
+        except OSError as e:
+            return _fail(cmd, f"{meta_path}: can't write it ({e.strerror or type(e).__name__})")
+    try:
+        stopped = _claims_budgeted(todo, model, out, args)
+    except llm_panel.PanelError as e:
+        return _fail(cmd, _first_line(e))
+    except OSError as e:
+        return _fail(cmd, f"{out}: can't write the replies ({e.strerror or type(e).__name__})")
+    keys = {k for k, _, _ in all_jobs}
+    latest, _ = llm_panel.read_replies(out / llm_panel.REPLIES)
+    summary = evalclaims.score(picked, {k: r for k, r in latest.items() if k in keys}, model.name,
+                               calls=llm_panel.reply_lines(out / llm_panel.REPLIES))
+    summary["run"] = {"id": out.name, "dir": str(out), "started": meta.get("started"), "scored": _now(),
+                      "stopped": stopped, "max_cost_usd": args.max_cost_usd}
+    text = evalclaims.render(summary)
+    try:
+        _write_atomic(out / "summary.json", json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
+        _write_atomic(out / "report.md", text)
+    except OSError as e:
+        return _fail(cmd, f"{out}: can't write the summary ({e.strerror or type(e).__name__})")
+    print(text, end="")
+    print(f"wrote {out / 'report.md'} (notional US${llm_panel.usd(summary['notional_usd'])})")
+    if stopped:
+        return _fail(cmd, f"stopped early: {stopped}; re-run with --out {out} to resume", 1)
+    errors = summary["cases"]["errors"]
+    if errors:
+        return _fail(cmd, f"{errors} case{'' if errors == 1 else 's'} had a failed call or an unscorable reply: re-run "
+                          f"with --out {out} to retry a failed call", 1)
     return 0
 
 

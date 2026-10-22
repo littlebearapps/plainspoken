@@ -10,8 +10,8 @@ Status: v0.7. It has:
 - claims integrity and reader value (claims, reader-value), with the claims-checker and delivery-checker agents and
   the integrity hook;
 - the kaizen loop: a ledger of what the checks flagged and what you did, calibrate, and approval-gated `kaizen apply`;
-- evals: a 232-case golden set, a cross-vendor judge panel, rewrite evals, a smoke case per skill, a blind reader
-  test and ablations;
+- evals: a 232-case golden set for the judges and 16 cases for the claims checker, a cross-vendor judge panel,
+  rewrite evals, a smoke case per skill, a blind reader test and ablations;
 - optional pieces you switch on with `/plainspoken:setup`: a writing nudge, a drafting rule, and lint after each
   edit in Claude Code, Codex and Hermes Agent.
 
