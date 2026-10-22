@@ -38,7 +38,8 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         step = " ".join(self.step(1).split())
         self.assertIn("estimate whether the sources can carry it", step)
         self.assertIn("say so before you draft and ask for more material", step)
-        self.assertIn("write it shorter and say why at the top of the report", step)
+        self.assertIn("write it shorter and say why in the report, straight after step 8's block", step)
+        self.assertNotIn("top of the report", step)  # #41: the shortfall never comes before the status block
         self.assertIn("Never pad", step)
         self.assertIn("A definition or background line the sources don't give is a new fact", step)
         gate = (REFS / "research-gate.md").read_text(encoding="utf-8")
@@ -99,6 +100,15 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
         self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
+
+    def test_report_starts_with_the_block(self):  # #41: no prose before the block, and the shortfall comes after it
+        flat = " ".join(self.text.split("### 8. Report", 1)[1].split())
+        self.assertIn("Start the report with this block, with no words before it", flat)
+        self.assertIn("a report without it is incomplete", flat)
+        self.assertIn("Then give any length shortfall (step 1)", flat)
+        gate = " ".join((REFS / "research-gate.md").read_text(encoding="utf-8").split())
+        self.assertIn("say why in the report, straight after its status block", gate)
+        self.assertNotIn("top of the report", self.text + gate)
 
     def test_unresolved_check_and_skipped_claims_are_never_silent(self):  # #24
         claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
