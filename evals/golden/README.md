@@ -1,7 +1,8 @@
 # The golden set
 
-The golden set is the labelled text the judges are measured against: `plainspoken eval judges` asks each judge
-model about every case and compares its answer with the label here. It is **held out**: no case text is ever
+The golden set is the labelled text the judges and the claims checker are measured against: `plainspoken eval judges`
+asks each judge model about every J1–J4 and JR case and compares its answer with the label here, and
+`plainspoken eval claims` does the same for the claims checker on the CL cases (`CL.toml`). It is **held out**: no case text is ever
 quoted in a rubric, a skill, a guide or a prompt, and a label never reaches a model.
 
 Check it with:
@@ -16,7 +17,7 @@ isn't the format.
 
 ## What's in it
 
-232 cases (as of 19 October 2026):
+248 cases (as of 22 October 2026): 232 for the judges, 16 for the claims checker.
 
 | Group | Cases | Labels | Confirmed | Endorsed | Provisional |
 |---|---|---|---|---|---|
@@ -25,7 +26,8 @@ isn't the format.
 | J3 | 60 | fail 30 · pass 30 | 11 | 0 | 49 |
 | J4 | 40 | fail 20 · pass 20 | 4 | 0 | 36 |
 | JR | 42 | accept 18 · reject 24 | 5 | 0 | 37 |
-| **All** | **232** | fail 97 · pass 93 · accept 18 · reject 24 | **33** | **9** | **190** |
+| **Judges** | **232** | fail 97 · pass 93 · accept 18 · reject 24 | **33** | **9** | **190** |
+| CL | 16 | fail 11 · pass 5 (claims: fail 11 · pass 27) | 0 | 0 | 16 |
 
 42 cases carry a human label. 17 came from the owner's recorded decisions, anonymised. On 18 October 2026 the
 owner reviewed 25 cases one by one (the doubtful ones first, stratified by group and label): all 25 are now
@@ -37,8 +39,8 @@ them.
 
 ## Files
 
-One TOML file per judge group: `J1.toml`, `J2.toml`, `J3.toml`, `J4.toml` and `JR.toml` (the reviewer of WARN
-justifications). Every `*.toml` file in this folder is loaded, in name order, so a group may be split across
+One TOML file per group: `J1.toml`, `J2.toml`, `J3.toml`, `J4.toml`, `JR.toml` (the reviewer of WARN
+justifications) and `CL.toml` (the claims checker). Every `*.toml` file in this folder is loaded, in name order, so a group may be split across
 files if one grows too long. Case ids are unique across all of them.
 
 ```toml
@@ -76,6 +78,53 @@ JR cases carry three more keys, and only JR cases may:
 | `reason` | The justification under review. |
 | `evidence` | `[{line = 3, quote = "…"}]`: at least one quote, each appearing word for word on that line of `text` (lines count from 1, after the opening `"""`). |
 
+## The claims checker's cases (CL)
+
+`CL.toml` measures the claims checker (`agents/claims-checker.md`, rubric `data/rubrics/claims.md`). A CL case is a
+short article and the claims of its ledger. Each claim carries the ledger's own fields (`claim_id`, `text`,
+`claim_type`, `prominence`, `status`, `locations`, and `source`, `binding`, `derivation` or `first_hand_scope` as
+the claim needs) plus two label keys:
+
+| Key | What it holds |
+|---|---|
+| `expect` | `fail`: the checker should file a `blocking` finding against this claim. `pass`: it shouldn't (a warning is fine). |
+| `why` | One line, at most 240 characters, that a person can check by reading the case. |
+
+```toml
+[[case]]
+id = "CL-opinion_label-001"
+rule = "opinion_label"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "minimal pair for the opinion-label rule"
+text = """
+The article the checker reads.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "Why the checker should block it."
+text = "Words the article holds word for word."
+claim_type = "duration"
+prominence = "medium"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "a heading"}]
+
+[case.claim.binding]  # optional, and so on: any table a ledger claim has
+```
+
+A CL case has no `label` key: it's `fail` when any claim's `expect` is `fail` (the checker's result should be
+BLOCKED), else `pass`. `rule` names the part of the rubric the case tests: `opinion_label`, `derivation`,
+`entailment`, `first_hand_scope`, `quote`, `brief` or `aggregator`. `eval golden validate` checks that every claim's
+`text` is in the article, that the ledger the claims make is valid against the claim-ledger schema, that a
+derivation names other claims of the case, and that a claim's status is one the checker is scored on (not `removed`
+or `blocking`). The checker reads the ledger `golden.claims_ledger` builds: fixed top-level fields, a
+`source_content_hash` of the case text, and the claims without `expect` and `why`. With `--require-counts`, CL needs
+at least 10 cases, 4 of each label, and 10 claims of each verdict, so a checker that blocks everything (or nothing)
+can't score well.
+
 ## Where a label comes from
 
 Every case says who decided its label, and the two keys must agree:
@@ -101,11 +150,13 @@ Run `eval golden validate` afterwards.
 
 ## The held-out rule
 
-- No case text, and no JR `reason`, is ever quoted in `data/`, `agents/`, `skills/`, `guides/`, `hooks/`,
+- No case text, no JR `reason` and no CL claim prose (its `text`, `why`, `notes`, pinned passages, derivation
+  method and first-hand scope) is ever quoted in `data/`, `agents/`, `skills/`, `guides/`, `hooks/`,
   `output-styles/`, `templates/` or `evals/briefs/`. `eval golden validate` fails if any file there shares a run
-  of 8 or more consecutive words with a case's text or reason, or holds the whole of one shorter than 8 words
+  of 8 or more consecutive words with one of them, or holds the whole of one shorter than 8 words
   (compared case-folded, ignoring punctuation and spacing). A folder or file there it can't read is a problem too.
-- A label never goes into a prompt. The eval commands send the text and the rubric, never the answer.
+- A label never goes into a prompt. The eval commands send the text and the rubric, never the answer (for CL, the
+  ledger without `expect` and `why`).
 - Text taken from a real article is anonymised first: no person, client or business names. The repo's leak guard
   (`scripts/dev/leak_guard.py`) scans this folder too.
 - When a rubric needs an example, write a fresh one; never copy or paraphrase a case into it.

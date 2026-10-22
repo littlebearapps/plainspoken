@@ -41,6 +41,35 @@ def write_group(d: Path, name: str, group: str, *cases: str) -> Path:
     return p
 
 
+def cl_claim(cid: str = "C001", expect: str = "fail", **over) -> dict:
+    """One CL ledger claim with its label keys: an opinion-labelled fact by default."""
+    claim = {"claim_id": cid, "expect": expect, "why": "A checkable fact labelled as opinion, with no passage.",
+             "text": "I have run the shop for ten years.", "claim_type": "duration", "prominence": "medium",
+             "status": "opinion_or_inference", "locations": [{"kind": "body", "anchor": "About"}]}
+    claim.update(over)
+    return {k: v for k, v in claim.items() if v is not None}
+
+
+def cl_case(n: int = 1, *claims: dict, text: str = "I have run the shop for ten years. I'd keep it small.",
+            **over) -> golden.GoldenCase:
+    base = {"id": f"CL-opinion_label-{n:03d}", "group": "CL", "rule": "opinion_label",
+            "label": "fail" if any(c.get("expect") == "fail" for c in claims or (cl_claim(),)) else "pass",
+            "text": text, "content_type": "article", "source": "constructed", "status": "provisional",
+            "origin": "constructed", "file": "CL.toml", "claims": claims or (cl_claim(),)}
+    base.update(over)
+    return golden.GoldenCase(**base)
+
+
+def cl_full() -> list:
+    """Enough CL cases for the count gate: 6 that should block and 6 that should pass, 12 claims of each verdict."""
+    opinion = cl_claim("C002", "pass", text="I'd keep it small.", claim_type="premise", why="A real opinion.")
+    fails = [cl_case(i, cl_claim(), opinion, cl_claim("C003", text="I have run the shop", why="Same fact.")) for i in
+             range(1, 7)]
+    passes = [cl_case(i, opinion, cl_claim("C003", "pass", text="I'd keep it", claim_type="premise", why="Opinion."))
+              for i in range(7, 13)]
+    return fails + passes
+
+
 def make(group: str, n: int, label: str, start: int = 1, rule: str = "5b") -> list:
     return [golden.GoldenCase(id=f"{group}-{rule}-{i:03d}", group=group, rule=rule, label=label,
                               text=f"Plain case number {i}.", content_type="article", source="constructed",
@@ -244,7 +273,7 @@ class Counts(unittest.TestCase):
         return [*self.full("J1", "5b"), *self.full("J2", "7c"), *self.full("J3", "2"), *self.full("J4", "9"),
                 *[golden.GoldenCase(**{**vars(c), "kind": "format", "reason": "a reason",
                                        "evidence": ({"line": 1, "quote": "Plain"},)})
-                  for c in self.full("JR", "12e", ("accept", "reject"))]]
+                  for c in self.full("JR", "12e", ("accept", "reject"))], *cl_full()]
 
     def test_counts_gate(self):
         self.assertEqual(golden.validate(self.everything(), require_counts=True), [])
@@ -266,6 +295,169 @@ class Counts(unittest.TestCase):
         p = golden.validate([c for c in self.everything() if c.group != "J4"], require_counts=True)
         self.assertEqual(len(p), 1, p)
         self.assertIn("J4", p[0])
+
+    def test_claims_group_has_its_own_gate(self):
+        p = golden.validate([c for c in self.everything() if c.group != "CL"], require_counts=True)
+        self.assertEqual(len(p), 1, p)
+        self.assertIn("CL: no cases", p[0])
+        few = [c for c in self.everything() if c.id not in ("CL-opinion_label-011", "CL-opinion_label-012",
+                                                           "CL-opinion_label-010")]  # 9 cases, 3 pass cases
+        p = golden.validate(few, require_counts=True)  # still 12 pass claims (6 + 3 × 2)
+        self.assertEqual(p, ["CL: 9 cases (need at least 10)", "CL: 3 pass cases (need at least 4)"])
+        self.assertEqual(golden.validate(few, require_counts=False), [])
+
+    def test_claims_gate_counts_claim_verdicts(self):  # enough cases, but too few claims a checker should pass
+        only_fail = [c for c in self.everything() if c.group != "CL"]
+        only_fail += [cl_case(i, cl_claim(), cl_claim("C003", text="I have run the shop", why="Same fact."))
+                      for i in range(1, 11)]
+        only_fail += [cl_case(i, cl_claim("C002", "pass", text="I'd keep it small.", claim_type="premise",
+                                          why="A real opinion.")) for i in range(11, 15)]
+        p = golden.validate(only_fail, require_counts=True)
+        self.assertEqual(p, ["CL: 4 pass claims (need at least 10)"])
+
+    def test_claims_counts_row(self):
+        row = golden.counts(cl_full())["CL"]
+        self.assertEqual((row["cases"], row["fail"], row["pass"], row["claims fail"], row["claims pass"]),
+                         (12, 6, 6, 12, 18))
+        self.assertIn("claims fail 12 · claims pass 18", golden.count_line("CL", row))
+
+
+CL_TOML = """schema = 1
+group = "CL"
+
+[[case]]
+id = "CL-derivation-001"
+rule = "derivation"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "constructed for a test"
+text = \"\"\"The hall has 20 chairs at $5 each. That's $100 of chairs.
+\"\"\"
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The inventory says 20 chairs at $5."
+text = "The hall has 20 chairs at $5 each."
+claim_type = "count"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "opening"}]
+
+[case.claim.source]
+url = "https://example.org/hall/inventory"
+title = "Hall inventory"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Chairs: 20, bought at $5 each."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "20 × $5 is $100."
+text = "That's $100 of chairs."
+claim_type = "derived_metric"
+prominence = "low"
+status = "derived"
+locations = [{kind = "body", anchor = "opening"}]
+
+[case.claim.derivation]
+method = "20 chairs (C001) at $5 (C001)."
+inputs = ["C001"]
+"""
+
+
+class ClaimsCases(TempDir):
+    """The CL group: a short article plus ledger claims, each labelled with `expect` and `why`."""
+
+    def load_one(self, text: str = CL_TOML) -> golden.GoldenCase:
+        (self.d / "CL.toml").write_text(text, encoding="utf-8")
+        cases = golden.load(self.d)
+        self.assertEqual(len(cases), 1)
+        return cases[0]
+
+    def problems(self, text: str) -> list[str]:
+        (self.d / "CL.toml").write_text(text, encoding="utf-8")
+        return golden.validate(golden.load(self.d), require_counts=False)
+
+    def test_loads_and_validates(self):
+        case = self.load_one()
+        self.assertEqual((case.group, case.rule, case.label), ("CL", "derivation", "pass"))
+        self.assertEqual([c["claim_id"] for c in case.claims], ["C001", "C002"])
+        self.assertEqual(case.claims[0]["binding"]["passage"], "Chairs: 20, bought at $5 each.")
+        self.assertEqual(golden.validate([case], require_counts=False), [])
+
+    def test_label_is_fail_when_any_claim_should_fail(self):
+        case = self.load_one(CL_TOML.replace('expect = "pass"\nwhy = "20', 'expect = "fail"\nwhy = "20'))
+        self.assertEqual(case.label, "fail")
+
+    def test_ledger_drops_the_labels_and_binds_the_text(self):
+        case = self.load_one()
+        ledger = golden.claims_ledger(case)
+        self.assertEqual(ledger["source_content_hash"], golden.text_sha256(case.text))
+        self.assertTrue(all(not set(c) & {"expect", "why"} for c in ledger["claims"]))
+        self.assertTrue(all("expect" in c for c in case.claims))  # the case itself keeps them
+        self.assertNotIn(case.id, repr(ledger))
+        self.assertEqual(ledger["coverage_status"], "complete")
+
+    def test_label_key_is_refused(self):
+        with self.assertRaises(golden.GoldenError) as cm:
+            self.load_one(CL_TOML.replace('rule = "derivation"', 'rule = "derivation"\nlabel = "pass"'))
+        self.assertIn("label", str(cm.exception))
+        with self.assertRaises(golden.GoldenError) as cm:
+            self.load_one(CL_TOML.replace('rule = "derivation"', 'rule = "derivation"\nkind = "format"'))
+        self.assertIn("kind", str(cm.exception))
+
+    def test_claims_are_required_tables(self):
+        with self.assertRaises(golden.GoldenError) as cm:
+            self.load_one(CL_TOML.split("[[case.claim]]")[0])
+        self.assertIn("claim", str(cm.exception))
+
+    def test_claim_problems(self):
+        for old, new, says in (
+                ('expect = "pass"\nwhy = "The inventory', 'expect = "maybe"\nwhy = "The inventory', "expect"),
+                ('why = "20 × $5 is $100."', 'why = ""', "why"),
+                ('text = "That\'s $100 of chairs."', 'text = "That\'s $120 of chairs."', "word for word"),
+                ('inputs = ["C001"]', 'inputs = ["C009"]', "C009"),
+                ('text = "The hall has 20 chairs at $5 each."\nclaim_type', 'text = "x"\nclaim_type', "word for"),
+                ('status = "derived"', 'status = "blocking"\nresolution = "Held for the owner."', "status"),
+                ('claim_type = "count"', 'claim_type = "headcount"', "ledger: "),
+                ('rule = "derivation"', 'rule = "5b"', "rule"),
+                ('inputs = ["C001"]\n', 'inputs = ["C001"]\n\n[[case.claim]]\nclaim_id = "C001"\nexpect = "pass"\n'
+                 'why = "Again."\ntext = "The hall has 20 chairs"\nclaim_type = "count"\nprominence = "low"\n'
+                 'status = "opinion_or_inference"\nlocations = [{kind = "body"}]\n', "duplicate")):
+            with self.subTest(says=says):
+                self.assertIn(old, CL_TOML)
+                p = self.problems(CL_TOML.replace(old, new, 1))
+                self.assertEqual(len(p), 1, p)
+                self.assertIn("CL-derivation-001", p[0])
+                self.assertIn(says, p[0])
+
+    def test_claim_prose_is_held_out(self):
+        case = self.load_one()
+        root = self.d / "data"
+        root.mkdir()
+        (root / "rubric.md").write_text("For example: chairs 20, bought at $5 each.\n", encoding="utf-8")
+        p = golden.heldout_leaks([case], [root])
+        self.assertEqual(len(p), 1, p)
+        self.assertIn("CL-derivation-001", p[0])
+
+    def test_shipped_claims_set(self):
+        cases = [c for c in golden.load(golden.DEFAULT_DIR) if c.group == "CL"]
+        self.assertEqual(golden.validate(cases, require_counts=False), [])
+        row = golden.counts(cases)["CL"]
+        self.assertGreaterEqual(row["cases"], golden.CL_MIN_CASES)
+        self.assertGreaterEqual(min(row["claims fail"], row["claims pass"]), golden.CL_MIN_CLAIMS_PER_LABEL)
+        self.assertIn("opinion_label", {c.rule for c in cases})  # #45's rule has cases of both verdicts
+        verdicts = {cl["expect"] for c in cases if c.rule == "opinion_label" for cl in c.claims}
+        self.assertEqual(verdicts, {"fail", "pass"})
 
 
 class Heldout(TempDir):
@@ -379,7 +571,7 @@ class FollowUpsT1(TempDir):
         import inspect
 
         from plainspoken import evalcli
-        for fn in (evalcli.add_parser, evalcli._blind_parser):
+        for fn in (evalcli.add_parser, evalcli._blind_parser, evalcli._claims_parser):
             sig = inspect.signature(fn)
             with self.subTest(fn=fn.__name__):
                 self.assertTrue(all(p.annotation is not inspect.Parameter.empty for p in sig.parameters.values()))
