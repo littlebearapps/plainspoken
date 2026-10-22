@@ -49,11 +49,19 @@ _LONG = re.compile(
 _URL = re.compile(r"https?://", re.I)
 _CODE = re.compile(r"\b(?:python|javascript|typescript|bash|shell|sql|regex|function|bug|unit tests?|"
                    r"code|commit message|docstring|json|yaml|stack ?trace)\b|\w\.(?:py|js|ts|sh|rb|go)\b", re.I)
+# Blocks the host wraps around a turn nobody typed: reminders, a subagent's hand-back, a task's report (#55). A whole
+# block is dropped; a lone or unclosed tag goes on its own, so it never takes a real ask with it.
+_WRAPPERS = r"system-reminder|agent-message|task-notification"
+_WRAPPED = re.compile(rf"<({_WRAPPERS})(?:\s[^<>]*)?>.*?</\1\s*>", re.I | re.S)
+_WRAPPER_TAG = re.compile(rf"</?(?:{_WRAPPERS})(?:\s[^<>]*)?>|</?(?:{_WRAPPERS})(?![\w-])", re.I)
 
 
 def intent(prompt: str) -> str | None:
     """'rewrite', 'draft-long', 'draft' or None for one user prompt."""
-    if not isinstance(prompt, str) or not prompt.strip():
+    if not isinstance(prompt, str):
+        return None
+    prompt = _WRAPPER_TAG.sub(" ", _WRAPPED.sub(" ", prompt))
+    if not prompt.strip():
         return None
     if prompt.lstrip().startswith("/") or re.search(r"\bplainspoken\b", prompt, re.I):
         return None
