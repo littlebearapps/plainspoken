@@ -1,0 +1,94 @@
+import json
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+HOOK = REPO / "hooks" / "write_guard.py"
+CLAIMS_REPLY = ".plainspoken/reports/netball-rosters-547ed482.claims-reply.json"
+CHECK_REPLY = ".plainspoken/reports/post-1234abcd.reply.json"
+DELIVERY_REPLY = ".plainspoken/reports/post-1234abcd.delivery-reply.json"
+LEDGER = ".plainspoken/claims/post-1234abcd.claims.toml"
+REPLY_JSON = '{"article_sha256": "sha256:ab", "result": "PASS", "findings": []}'
+
+
+def run_guard(command, raw=None) -> dict:
+    payload = raw if raw is not None else json.dumps(
+        {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}})
+    r = subprocess.run([sys.executable, str(HOOK)], input=payload, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout) if r.stdout.strip() else {}
+
+
+class WriteGuard(unittest.TestCase):
+    def assertDenied(self, command):
+        out = run_guard(command)
+        self.assertEqual(out.get("hookSpecificOutput", {}).get("permissionDecision"), "deny", command)
+        self.assertIn("Write", out["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def assertAllowed(self, command):
+        self.assertEqual(run_guard(command), {}, command)
+
+    def test_the_eval_printf_is_refused(self):  # #44: the claims-checker reply written with printf
+        self.assertDenied(f"mkdir -p .plainspoken/reports && printf '%s\\n' '{REPLY_JSON}' > {CLAIMS_REPLY}\n"
+                          'R="python3 /p/lib/run.py"; A=a.md\n$R claims record $A --from ' + CLAIMS_REPLY)
+
+    def test_every_reply_file_is_refused_through_the_shell(self):
+        for path in (CLAIMS_REPLY, CHECK_REPLY, DELIVERY_REPLY):
+            with self.subTest(path=path):
+                self.assertDenied(f"echo '{REPLY_JSON}' > {path}")
+                self.assertDenied(f"echo '{REPLY_JSON}' >> \"{path}\"")
+                self.assertDenied(f"cat > {path} <<'EOF'\n{REPLY_JSON}\nEOF")
+                self.assertDenied(f"printf '%s' '{REPLY_JSON}' | tee -a {path} >/dev/null")
+                self.assertDenied(f"python3 -c \"open('{path}', 'w').write('{{}}')\"")
+                self.assertDenied(f"bash -c \"printf x > {path}\"")
+                self.assertDenied(f"cp /tmp/reply.json {path}")
+                self.assertDenied(f"echo \"$(printf x > {path})\"")
+
+    def test_a_variable_holding_the_path_is_followed(self):
+        self.assertDenied(f"F={CLAIMS_REPLY}; printf '%s' '{REPLY_JSON}' > \"$F\"")
+        self.assertDenied(f"export F=\"{CHECK_REPLY}\"\nprintf x > ${{F}}")
+
+    def test_a_ledger_built_by_a_script_is_refused(self):  # #44: three runs set every binding judgement in a loop
+        self.assertDenied(f"cat > \"$TMPDIR/build.py\" <<'EOF'\nL=\"{LEDGER}\"\nout=['same_subject = true']\n"
+                          "open(L, 'w').write(chr(10).join(out))\nEOF\npython3 -I \"$TMPDIR/build.py\"")
+        self.assertDenied(f"python3 - <<'EOF'\nopen('{LEDGER}', 'w').write('x')\nEOF")
+        self.assertDenied(f"sed -i 's/= false/= true/' {LEDGER}")
+        self.assertDenied(f"cp /tmp/ledger.toml {LEDGER}")
+
+    def test_an_unparseable_command_naming_a_reply_is_refused(self):
+        self.assertDenied(f"printf '{{ > {CLAIMS_REPLY}")
+
+    def test_the_cli_and_reads_are_allowed(self):
+        self.assertAllowed(f"python3 /p/lib/run.py claims record \"drafts/a b.md\" --from {CLAIMS_REPLY}")
+        self.assertAllowed(f'R="python3 /p/lib/run.py"; $R judge-record a.md --all --from {CHECK_REPLY} && '
+                           "$R merge a.md --plugin-profile 'default'")
+        self.assertAllowed(f"python3 -m plainspoken reader-value deliver a.md --from {DELIVERY_REPLY} "
+                           "--reviewer delivery-checker")
+        self.assertAllowed(f"python3 /p/lib/run.py claims scaffold a.md --out {LEDGER}")
+        self.assertAllowed(f"cat {LEDGER}")
+        self.assertAllowed(f"git add {LEDGER} && git commit -m ledger")
+        self.assertAllowed(f"rm -f {CHECK_REPLY}")
+        self.assertAllowed(f"cp {LEDGER} /tmp/ledger-backup.toml")
+        self.assertAllowed(f"ls .plainspoken/reports/*.claims-reply.json 2>/dev/null")
+
+    def test_other_commands_are_left_alone(self):
+        self.assertAllowed("printf '{}' > out.json")
+        self.assertAllowed("git push")
+        self.assertAllowed("echo 'unbalanced")
+        self.assertEqual(run_guard(None, raw="not json"), {})
+        self.assertEqual(run_guard(None, raw=json.dumps({"tool_input": {"command": 3}})), {})
+
+    def test_registered_on_bash_beside_the_publish_gate(self):
+        cfg = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
+        pre = cfg["PreToolUse"][0]
+        self.assertEqual(pre["matcher"], "Bash")
+        guard = [h for h in pre["hooks"] if h["args"][0].endswith("/hooks/write_guard.py")]
+        self.assertEqual(len(guard), 1)
+        self.assertNotIn("onFailure", guard[0])  # runs on every Bash call: a failed start must not block them all
+        self.assertNotIn("if", guard[0])
+
+
+if __name__ == "__main__":
+    unittest.main()
