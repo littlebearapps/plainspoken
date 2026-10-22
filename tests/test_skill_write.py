@@ -126,6 +126,14 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("tell the user to run `/plainspoken:claims <draft>` again", check)
         self.assertIn("list for step 6", " ".join(self.step(2).split()))
 
+    def test_lint_only_passes_before_claims(self):  # #42: a lint fix after claims would stale the ledger
+        claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
+        self.assertIn("First make the check's lint-only passes here, so a lint fix lands before the ledger is built",
+                      claims)
+        self.assertLess(claims.index("lint-only passes"), claims.index("Run `/plainspoken:claims`"))
+        self.assertIn("by cutting, joining, splitting or restating, at most twice", claims)
+        self.assertIn("Its two lint-only passes include step 6's", check)
+
     def test_other_skills_named_from_the_plugin_folder(self):
         notes = (REFS / "claude-code.md").read_text(encoding="utf-8")
         for name in ("reader-value", "claims", "check"):

@@ -86,9 +86,19 @@ class CheckSkill(unittest.TestCase):
 
     def test_which_edits_count_as_fix_passes(self):  # #29: uncounted pre-judge edits, edits after JR
         head = " ".join(self.text[: self.text.index("## Steps")].split())
-        self.assertIn("Before the judges start you may fix lint findings once", head)
-        self.assertIn("isn't a fix pass", head)
+        self.assertIn("Before the judges start, step 1 fixes lint findings the same way in at most two lint-only "
+                      "passes", head)
+        self.assertIn("they aren't fix passes", head)
+        self.assertNotIn("fix lint findings once", head)
         self.assertIn("Once the judges start, every edit to FILE is a fix pass (after justify or JR too)", head)
+
+    def test_lint_findings_fixed_before_the_judges(self):  # #42: a lint-only WARN cost a second round of judges
+        step = " ".join(self.text[self.text.index("1. **Lint.**"):self.text.index("2. **Judge input.**")].split())
+        self.assertIn("on its own: read it before step 2", step)
+        self.assertIn("Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again "
+                      "(at most two lint-only passes)", step)
+        self.assertIn("so the judges read a lint-clean draft", step)
+        self.assertIn("or one still there after two, goes on to step 2 as it is", step)
 
     def test_report_reads_status_and_reruns_when_stale(self):  # #29: no clean finish after an uncounted edit
         step = " ".join(self.text[self.text.index("8. **Report.**"):].split())
