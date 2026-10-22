@@ -14,9 +14,10 @@ Core rules (these hold for the whole run):
 - The engine decides. You run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py <subcommand>` and act on its exit codes;
   you never score, merge or name report files yourself (`run.py paths <file>` prints every path).
 - Judges are `plainspoken:tells-judge` subagents. They are read-only; you record their replies with `judge-record`.
-- A fix cuts, joins or splits sentences, or restates plainly, using only what the text already says. You never edit
-  an article to add a fact, number, name, quote, example, opinion or detail that isn't already in the text or given
-  by the user. You never edit or add `anti-ai-allow` markers.
+- A fix cuts, joins or splits sentences, or restates plainly, using only what the text already says. A join uses
+  "and" or "but", or merges two sentences; it never adds a clause, detail or reason (such as "because …"). You never
+  edit an article to add a fact, number, name, quote, example, opinion or detail that isn't already in the text or
+  given by the user. You never edit or add `anti-ai-allow` markers.
 - At most two fix passes, and fix passes come before justify: justify only what you keep after the last fix pass.
   Before the judges start, step 1 fixes lint findings the same way in at most two lint-only passes; no judge has
   read that text, so they aren't fix passes. Once the judges start, every edit to FILE is a fix pass (after justify

@@ -18,6 +18,9 @@ Check = Callable[[Doc, Config], list[Finding]]
 _LEAD = re.compile(r"^[\s\"'“‘(\[*_]*")
 _CONTRACTION = re.compile(r"\b\w+'(?:s|t|re|ve|ll|d|m)\b")
 _FAQ = re.compile(r"\b(?:faqs?|frequently asked)\b", re.I)  # v4: FAQ sections get the relaxed 7d check
+# #73: the 7d / 7 join remedy. A join only links what is there; it adds no clause, detail or reason ("because").
+_NO_ADD = "add no clause, detail or reason"
+_JOIN = f'with "and" or "but", or merge them; {_NO_ADD}'
 
 
 def _prose_sentences(paragraphs, kinds=("prose",)) -> list[Sentence]:
@@ -60,7 +63,8 @@ def uniform_sentences(doc: Doc, cfg: Config) -> list[Finding]:
         sents = _prose_sentences(sec.paragraphs)
         for i in _runs([len(s.words) for s in sents], t["uniform_tolerance"], t["uniform_sentence_run"]):
             out.append(Finding("7", "WARN", sents[i].line, sents[i].text[:160],
-                               f"{t['uniform_sentence_run']}+ consecutive sentences of near-identical length — join or split one"))
+                               f"{t['uniform_sentence_run']}+ consecutive sentences of near-identical length — join or split one; "
+                               f"{_NO_ADD}"))
     return out
 
 
@@ -112,24 +116,23 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
             run_end = _short_run(sents, short_len, faq_run)
             if run_end:
                 out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
-                                   f"{faq_run} consecutive sentences under {short_len} words in the FAQ"))
+                                   f"{faq_run} consecutive sentences under {short_len} words in the FAQ — join two {_JOIN}"))
             continue
         no_long = max(len(s.words) for s in sents) <= long_
         run_end = _short_run(sents, short_len, run_len)
         if narrative and any(p.search(heading) for p in doc.profile.long_sentence_headings) and no_long:
             out.append(Finding("7d", "WARN", at, where,
-                               f"'{heading}' section with no sentence over {long_} words — join two short sentences that share a thought"))
+                               f"No sentence over {long_} words in this section — join two short sentences {_JOIN}"))
         elif narrative:
             if no_long and run_end:
                 out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
-                                   f"{run_len} consecutive sentences under {short_len} words and none over {long_} "
-                                   "in this section"))
+                                   f"{run_len} consecutive sentences under {short_len} words, none over {long_} — join two {_JOIN}"))
         elif no_long and not run_only:
             out.append(Finding("7d", "WARN", at, where,
-                               f"No sentence over {long_} words in this section — join two short sentences that share a thought"))
+                               f"No sentence over {long_} words in this section — join two short sentences {_JOIN}"))
         elif run_end:
             out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
-                               f"{run_len} consecutive sentences under {short_len} words"))
+                               f"{run_len} consecutive sentences under {short_len} words — join two {_JOIN}"))
     return out
 
 

@@ -199,3 +199,15 @@ class NoLoadTimeCommands(unittest.TestCase):  # #12: Hermes rates any load-time 
             text = f.read_text(encoding="utf-8")
             if "First, before any other step" in text and f.parent.name != "kaizen":
                 assert_first_step(self, text, PROFILE_CALL)
+
+
+class JoinRemedy(unittest.TestCase):  # #73: a 7d join padded a sentence or added a reason ("because …")
+    def test_every_fix_step_says_a_join_adds_nothing(self):
+        texts = {name: " ".join(skill(name)[1].split()) for name in ("check", "humanize", "write")}
+        texts["rhythm"] = " ".join((REPO / "skills" / "plain-language" / "references" / "rhythm.md")
+                                   .read_text(encoding="utf-8").split())
+        for name in ("check", "humanize"):
+            self.assertIn('A join uses "and" or "but", or merges two sentences; it never adds a clause, detail or '
+                          'reason (such as "because …")', texts[name], name)
+        self.assertIn("at most twice (a join adds no clause, detail or reason)", texts["write"])
+        self.assertIn("A join adds no clause, detail or reason", texts["rhythm"])

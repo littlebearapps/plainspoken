@@ -99,7 +99,8 @@ class Facets(unittest.TestCase):
     def test_7d_no_long_under_faq(self):
         doc = self.doc(ARTICLE)
         line = next(ln for ln, _, t in doc.headings if t == "FAQ")
-        f = _finding("7d", line, "FAQ", "No sentence over 25 words in this section — join two short sentences that share a thought")
+        f = _finding("7d", line, "FAQ", 'No sentence over 25 words in this section — join two short sentences with "and" '
+                     'or "but", or merge them; add no clause, detail or reason')
         facets = capture.facets(f, doc, CFG)
         self.assertEqual((facets["section"], facets["form"]), ("faq", "no-long"))
 
