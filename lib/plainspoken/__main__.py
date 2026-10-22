@@ -1,7 +1,8 @@
 """CLI: python3 -m plainspoken {check|profile|config|paths|merge|status|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
 register-checklist|claims|reader-value|kaizen|eval} …
 Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
-invalid justifications or nothing to review (justify), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
+invalid justifications or nothing to review (justify), a lint BLOCK or WARN left
+without --keep (judge-input), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
 (checker-input, record), reader-value or action-module findings, a delivery record or status other than a
 current PASS (every self-check), a stale delivery reply or a contract that doesn't validate (deliver-input,
 deliver, status), or a kaizen refusal (no current check or snapshot, no finding, a bad hunk number, capture off, a
@@ -250,6 +251,9 @@ def _main(argv: list[str] | None) -> int:
     ji.add_argument("--reports", type=Path)
     ji.add_argument("--profile")
     ji.add_argument("--plugin-profile")
+    ji.add_argument("--keep", action="append", default=[], metavar="RULE",
+                    help="a rule whose open lint BLOCK or WARN you leave (repeat, or comma-separate); without it, "
+                         "judge-input exits 1 while the lint has one")
     ag = sub.add_parser("agent-prompt", help="print an agent's self-contained prompt with stdin as its input, for "
                                              "hosts without plugin agents (Codex, Hermes)")
     ag.add_argument("name", choices=list(hosts.AGENTS))
@@ -405,11 +409,21 @@ def _main(argv: list[str] | None) -> int:
     if args.cmd == "status":
         return _draft_status(args, root)
     if args.cmd == "judge-input":
+        reports_dir = args.reports or report.reports_dir_default(root)
         try:
-            items = judges.judge_input(args.path, _profile(args, root),
-                                       args.reports or report.reports_dir_default(root), root)
+            items = judges.judge_input(args.path, _profile(args, root), reports_dir, root)
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "prepare judge input for")
+        keep = {k.strip() for arg in args.keep for k in arg.split(",") if k.strip()}
+        held = judges.open_lint(args.path, reports_dir, root, keep)
+        if held:
+            print("plainspoken: the lint still has lines the judges can't clear (merge fails them whatever the "
+                  "judges say):", file=sys.stderr)
+            for f in held:
+                print(f"  {f['severity']:5} r{f['rule']:<4} L{f.get('line', '?')}", file=sys.stderr)
+            print("Fix them and run `check` again, or rerun with --keep <rule> for each one you leave (a WARN you'll "
+                  "justify after merge).", file=sys.stderr)
+            return 1
         for item in items:
             print(json.dumps(item, ensure_ascii=False))
         return 0

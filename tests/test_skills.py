@@ -98,7 +98,11 @@ class CheckSkill(unittest.TestCase):
         self.assertIn("Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again "
                       "(at most two lint-only passes)", step)
         self.assertIn("so the judges read a lint-clean draft", step)
-        self.assertIn("or one still there after two, goes on to step 2 as it is", step)
+        self.assertIn("one still there after two, or any once the judges have started) goes to step 2 as "
+                      "`--keep <rule>`", step)  # #74: judge-input holds an open lint line back without it
+        self.assertIn("Justify a kept WARN in step 7 rather than fix it", step)
+        step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
+        self.assertIn("Exit 1 → it names lint lines still open: fix them (step 1) or keep them.", step2)
 
     def test_report_reads_status_and_reruns_when_stale(self):  # #29: no clean finish after an uncounted edit
         step = " ".join(self.text[self.text.index("8. **Report.**"):].split())

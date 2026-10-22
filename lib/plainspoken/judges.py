@@ -66,6 +66,24 @@ def judge_input(article: Path, profile: Profile, reports_dir: Path, cwd: Path) -
     return out
 
 
+def open_lint(article: Path, reports_dir: Path, cwd: Path, keep: set[str] = frozenset()) -> list[dict]:
+    """The current lint's findings that fail at merge whatever the judges say (#74): every BLOCK, and every WARN of
+    a rule the lint owns (a `lint+judge` rule's WARN is the judge's call). Judges on a draft with one of these can't
+    pass it, and fixing it after them reruns all four, so `judge-input` holds them back. A rule in `keep` (with or
+    without the lint's `r` prefix) is one the writer leaves on purpose, such as a WARN they'll justify."""
+    lint = read_json(report.report_paths(article, reports_dir, cwd)["lint"]) or {}
+    rules = load_config().rules
+    out = []
+    for f in lint.get("findings", []):
+        rid = f.get("rule")
+        rule = rules.get(rid)
+        if rid in keep or f"r{rid}" in keep or rule is None:
+            continue
+        if f.get("severity") == "BLOCK" or (f.get("severity") == "WARN" and rule.method == "lint"):
+            out.append(f)
+    return out
+
+
 def _parse(text: str) -> dict:
     m = _FENCE.match(text)
     body = m.group(1) if m else text

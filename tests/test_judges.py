@@ -57,6 +57,27 @@ class JudgeInput(unittest.TestCase):
             judges.judge_input(self.art, PRODUCT, self.reports, self.cwd)
 
 
+    def test_open_lint_is_what_merge_fails_whatever_the_judges_say(self):  # #74
+        lint_path = report.report_paths(self.art, self.reports, self.cwd)["lint"]
+        f = lambda rid, sev: {"rule": rid, "severity": sev, "line": 1, "message": "m"}
+        lint_path.write_text(json.dumps({**self.lint, "findings": [
+            f("2", "BLOCK"),       # a lint BLOCK stands, even on a lint+judge rule
+            f("5e", "WARN"),       # lint+judge: the judge owns a WARN
+            f("6", "CANDIDATE"),   # the judge decides
+            f("7d", "WARN"),       # lint-owned
+            f("4b", "INFO"),       # a shadow rule's finding
+            f("zz", "WARN"),       # not in the ruleset
+        ]}), encoding="utf-8")
+        held = lambda keep=frozenset(): [x["rule"] for x in judges.open_lint(self.art, self.reports, self.cwd, keep)]
+        self.assertEqual(held(), ["2", "7d"])
+        self.assertEqual(held({"r2"}), ["7d"])
+        self.assertEqual(held({"2", "7d"}), [])
+
+    def test_open_lint_without_a_lint_is_empty(self):  # judge-input has already refused a missing lint
+        report.report_paths(self.art, self.reports, self.cwd)["lint"].unlink()
+        self.assertEqual(judges.open_lint(self.art, self.reports, self.cwd), [])
+
+
 class Record(unittest.TestCase):
     def setUp(self):
         self.cwd = Path(tempfile.mkdtemp())
