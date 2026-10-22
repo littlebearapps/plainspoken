@@ -57,15 +57,34 @@ class Matcher(unittest.TestCase):
             with self.subTest(p=p):
                 self.assertIn(nudge.intent(p), ("draft", "draft-long"))
 
-    def test_long_pieces_go_to_write(self):
+    def test_long_pieces_go_to_write(self):  # #37: size, a long-form kind or sources to research, never the type alone
         for p in ("Write a blog post (about 600 words) for our club website about the rosters",
-                  "Draft the service page for my bookkeeping business's website",
+                  "Draft the service page (about 450 words) for my bookkeeping business's website",
                   "Can you write a newsletter feature on the repair cafe?",
-                  "Write a 300-word email to the board about the budget"):
+                  "Write a 300-word email to the board about the budget",
+                  "Write a press release, around 1,000 words, on the merger",
+                  "Write an article for the local paper about the community garden",
+                  "Draft a short guide for new volunteers on the sign-in process",
+                  "Write a report for the committee on this year's fundraising",
+                  "Write a newsletter piece on the new rules, using these sources: the council notice and the act",
+                  "Write a pamphlet about heat safety; research what the health department recommends",
+                  "Draft a few paragraphs for the newsletter about the new library",
+                  "Write a page for the site from https://example.org/a and https://example.org/b"):
             with self.subTest(p=p):
                 self.assertEqual(nudge.intent(p), "draft-long")
+
+    def test_short_pieces_take_the_short_path_whatever_their_type(self):  # #37
         for p in ("Draft a text message to Sam saying I'll be late", "Write three tweets announcing the release",
-                  "Write a short bio for the conference program"):
+                  "Write a short bio for the conference program",
+                  "Write the principal's message for this term's school newsletter.",
+                  "Write a press release announcing our festival.",
+                  "Write the text for a one-page pamphlet about pool safety for parents.",
+                  "Write a newsletter item about the working bee: Saturday, 9am, bring gloves",
+                  "Draft the About page for my plumbing business's website",
+                  "Write a 120-word blurb for the newsletter about the fete",
+                  "Write a LinkedIn post about the new feature in our booking app",
+                  "Draft an email inviting members to sign up at https://example.org/join",
+                  "Draft an email to the research team about Friday's meeting"):
             with self.subTest(p=p):
                 self.assertEqual(nudge.intent(p), "draft")
 
