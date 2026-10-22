@@ -27,6 +27,12 @@ accept bar · 1 refused without `--yes`, stopped early, or the bar is missed · 
 it. Without `--source` the number check is skipped and says so. Free: no model is called. Exit 0 PASS · 1 FAIL · 2 a
 missing or unreadable file, or a bad profile.
 
+`eval first-call RESULT [--expect CALL] [--json]`: the first engine call (`run.py <subcommand>`) in each run of a
+`claude plugin eval` run made with `--keep-temp` (RESULT: its `aggregate-result.json` or `--json` file), or in one
+`trace.jsonl`, against the call the skill runs first (`evaltrace.FIRST_CALL`; `--expect` for a lone trace, default
+`profile`). It says what each run called first, which the smoke cases' `*-first` graders can't. Free. Exit 0 every
+run starts with its call · 1 one doesn't, or its trace is gone · 2 an unreadable file.
+
 `eval blind build --spec FILE --out DIR [--words 350] --seed N`: turn a spec of matched texts (JSON list, or TOML
 `[[pair]]`, of `{id, human, generated, model[, brief]}`; paths relative to the spec) into unlabelled pairs: normalised,
 cut to whole sentences, A/B by a seeded, balanced shuffle. Writes `pairs.jsonl`, `key.json`, `build.json` (with each
@@ -77,7 +83,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plainspoken import blind, blind_score, config, evalhistory, evaljudges, golden, kaizen, rewrite
+from plainspoken import blind, blind_score, config, evalhistory, evaljudges, evaltrace, golden, kaizen, rewrite
 from plainspoken import evalmetrics as em
 from plainspoken.adapters import llm_panel
 from plainspoken.doc import CONTENT_TYPES
@@ -137,6 +143,13 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
     rd.add_argument("--profile", help="the voice profile (default: the project's, else the plugin default)")
     rd.add_argument("--json", action="store_true", help="print the rows and summary as JSON")
     rd.add_argument("--save", type=Path, help="write each graded piece to DIR/<case>/<arm>-<run>.md")
+    fc = es.add_parser("first-call", help="the first engine call in each run of a `claude plugin eval` run (needs "
+                                          "--keep-temp; free)")
+    fc.add_argument("result", type=Path, metavar="RESULT",
+                    help="the run's aggregate-result.json (or its --json file), or one trace.jsonl")
+    fc.add_argument("--expect", default="profile", metavar="CALL",
+                    help="for one trace.jsonl: the run.py call it should start with (default: profile)")
+    fc.add_argument("--json", action="store_true", help="print the rows as JSON")
     rw = es.add_parser("rewrite", help="grade one rewrite: lint BLOCKs, the em-dash cap and new numbers (free)")
     rw.add_argument("draft", type=Path, metavar="DRAFT")
     rw.add_argument("--source", type=Path, help="the text it rewrites: a number not in it fails the draft")
@@ -204,6 +217,8 @@ def run(args: argparse.Namespace) -> int:
         return _judges_report(args)
     if args.eval_cmd == "rewrite":
         return _rewrite(args)
+    if args.eval_cmd == "first-call":
+        return _first_call(args)
     if args.eval_cmd == "rewrite-delta":
         return _rewrite_delta(args)
     if args.eval_cmd == "lint-rate":
@@ -524,6 +539,21 @@ def _rewrite_delta(args: argparse.Namespace) -> int:
         return _fail(cmd, f"{args.result}: {_first_line(e)}")
     print(json.dumps(d, indent=2, ensure_ascii=False) if args.json else rewrite.summarise_delta(d))
     return 0 if d["rows"] else 1
+
+
+def _first_call(args: argparse.Namespace) -> int:
+    cmd = "first-call"
+    try:
+        if args.result.suffix == ".jsonl":
+            r = evaltrace.first_call(args.result, args.expect)
+            d = {"rows": [{"case": str(args.result), "arm": "", "run": 1, "expected": f"run.py {args.expect}", **r}],
+                 "missing": [], "exempt": [], "skipped": []}
+        else:
+            d = evaltrace.audit(json.loads(args.result.read_text(encoding="utf-8")))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
+        return _fail(cmd, f"{args.result}: {_first_line(e)}")
+    print(json.dumps(d, indent=2, ensure_ascii=False) if args.json else evaltrace.summarise(d))
+    return 0 if d["rows"] and all(r["passed"] for r in d["rows"]) and not d["missing"] else 1
 
 
 def _judges_report(args: argparse.Namespace) -> int:
