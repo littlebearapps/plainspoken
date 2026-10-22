@@ -225,8 +225,8 @@ def _main(argv: list[str] | None) -> int:
     m.add_argument("--reports", type=Path)
     m.add_argument("--profile")
     m.add_argument("--plugin-profile")
-    st = sub.add_parser("status", help="the last saved check and claims status lines for a draft, its word "
-                                       "count and its reader-value contract path, for a report to quote (runs and "
+    st = sub.add_parser("status", help="the last saved check and claims status lines for a draft, the claims "
+                                       "that need the owner, its word count and its reader-value contract path, for a report to quote (runs and "
                                        "writes nothing)")
     st.add_argument("path", type=Path)
     st.add_argument("--reports", type=Path)
@@ -848,17 +848,25 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
         words = report.word_count(args.path, prof)
     except _INPUT_ERRORS as e:
         return _input_error(args.path, e, "report the status of")
+    ledger = args.ledger
     try:
-        ledger = args.ledger or claims.ledger_path_for(args.path, root)
+        ledger = ledger or claims.ledger_path_for(args.path, root)
         rep = claims_tools.status_report(args.path, ledger, root,
                                          report.report_paths(args.path, reports_dir, root)["claims-check"],
                                          extraction.platform_names(root))
     except _INPUT_ERRORS as e:
         rep = {"status": "INCOMPLETE", "reasons": [f"can't report: {type(e).__name__}: {_first_line(e)}"]}
+    try:  # read from the ledger, so a report can't say "none" while a claim waits on the owner (#45)
+        if ledger is None:
+            raise FileNotFoundError("no ledger")
+        owner = claims.needs_owner(claims.load_ledger(ledger))
+        owner_lines = [f"needs the owner: {len(owner) or 'none'}", *(f"  {o}" for o in owner)]
+    except _INPUT_ERRORS:
+        owner_lines = ["needs the owner: unknown (no readable ledger)"]
     contract = reader_value.default_contract(args.path, root)
     shown = claims_tools.display_path(contract, root)
     print("\n".join([f"check: {check_lines[0]}", *check_lines[1:], f"claims: {rep['status']}",
-                     *(f"  {r}" for r in rep["reasons"]), f"words: {words}",
+                     *(f"  {r}" for r in rep["reasons"]), *owner_lines, f"words: {words}",
                      f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
     return 0 if check_status == rep["status"] == "PASS" else 1
 

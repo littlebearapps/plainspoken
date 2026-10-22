@@ -760,6 +760,27 @@ class DraftStatus(unittest.TestCase):
         gone = self._cli("status", str(self.tmp / "nope.md"), *PRODUCT_ARGS)
         self.assertEqual((gone.returncode, gone.stdout), (2, ""))
 
+    def test_needs_the_owner_comes_from_the_ledger(self):
+        """A report can't say "Needs the owner: none" while the ledger holds a claim open for the owner (#45)."""
+        r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+        self.assertIn("needs the owner: unknown (no readable ledger)", r.stdout.splitlines())
+        ledger = self.tmp / ".plainspoken" / "claims" / f"{self.key}.claims.json"
+        ledger.parent.mkdir(parents=True)
+        claim = {"claim_id": "A-C1", "text": "before I went out on my own", "locations": [{"kind": "body"}],
+                 "claim_type": "first_hand", "prominence": "medium"}
+        body = {"schema_version": 1, "article_id": "A", "source_file": self.art.name, "coverage_status": "complete",
+                "claims": [{**claim, "status": "opinion_or_inference"}]}
+        ledger.write_text(json.dumps(body), encoding="utf-8")
+        lines = self._cli("status", str(self.art), *PRODUCT_ARGS).stdout.splitlines()
+        self.assertIn("needs the owner: none", lines)
+        body["claims"] = [{**claim, "status": "blocking", "resolution": "Not in the brief: ask the owner."}]
+        ledger.write_text(json.dumps(body), encoding="utf-8")
+        lines = self._cli("status", str(self.art), *PRODUCT_ARGS).stdout.splitlines()
+        at = lines.index("needs the owner: 1")
+        self.assertEqual(lines[at + 1], "  A-C1: before I went out on my own (blocking)")
+        self.assertIn("claims: BLOCKED", lines)
+        self.assertTrue(lines[-1].startswith("reader-value contract: "))
+
     def test_gives_the_drafts_word_count_as_the_check_counts_it(self):
         """A report states the piece's real length from the engine, not an estimate (issue #32)."""
         want = run_lint(self.art, PRODUCT, "article", self.cfg)["metrics"]["words"]

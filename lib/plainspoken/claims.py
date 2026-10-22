@@ -267,6 +267,26 @@ def _derivation_reasons(ledger: dict) -> list[str]:
     return out
 
 
+def needs_owner(ledger: dict) -> list[str]:
+    """`<id>: <text> (<why>)` for each live claim that waits on the owner: left `blocking`, a sensitive first-hand
+    claim not yet approved, or one tagged with a `regulated_class`. A write report's "Needs the owner" is this list,
+    so a phrase it asks the owner about is in the ledger, never only in prose (issue #45)."""
+    out = []
+    for c in _claims(ledger):
+        if c.get("status") == "removed":
+            continue
+        scope = c.get("first_hand_scope")
+        why = ["blocking"] if c.get("status") == "blocking" else []
+        if isinstance(scope, dict) and scope.get("sensitive") is True and scope.get("approved_by_owner") is not True:
+            why.append("owner approval")
+        if isinstance(c.get("regulated_class"), str) and c["regulated_class"].strip():
+            why.append(f"regulated: {c['regulated_class'].strip()}")
+        if why:
+            text = " ".join(str(c.get("text", "")).split())[:120]
+            out.append(f"{c.get('claim_id') or '-'}: {text} ({', '.join(why)})")
+    return out
+
+
 def status(article: Path, ledger: Path, project_root: Path, gaps: list | None = None,
            check: dict | None = None, loaded: dict | LedgerError | None = None) -> dict:
     """PASS only when the ledger is valid, complete and fresh for this article, every live claim's pins recheck

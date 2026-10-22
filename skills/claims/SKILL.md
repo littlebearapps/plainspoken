@@ -61,8 +61,9 @@ says) · 2 = bad input or a refused pin (stop that call and act on its one-line 
    how a platform behaves, anything a reader would act on. Set each claim's `text` to the claim as the article words
    it, and give it one status from the closed list in [ledger-format.md](references/ledger-format.md), with the fields
    that status needs. A claim you can't support is softened into labelled judgement, cut (`removed`, with a
-   `resolution`) or left `blocking` with a `resolution` that says what the owner must decide. What counts as support
-   is in [evidence-rules.md](references/evidence-rules.md).
+   `resolution`) or left `blocking` with a `resolution` that says what the owner must decide. A fact about the writer
+   or the business (who, what, when, where, how long, what they did) is never `opinion_or_inference`, however it's
+   worded. What counts as support is in [evidence-rules.md](references/evidence-rules.md).
 3. **Pin every verified claim.** Fetch the source page, save its text under the `sources_dir` (one file per page),
    then `RUN claims pin --source <saved file> --passage '<passage copied from that file>' --article ARTICLE`, the
    passage in single quotes so the shell leaves `$` alone (pinning.md shows how to quote an apostrophe). It refuses a

@@ -107,6 +107,10 @@ class ClaimsSkill(SkillBasics, unittest.TestCase):
         self.assertIn("back to steps 2 to 5", step6)
         self.assertIn("re-pin", step6)
 
+    def test_a_fact_about_the_writer_is_never_opinion(self):  # #45: a made-up history labelled as inference
+        self.assertIn("A fact about the writer or the business (who, what, when, where, how long, what they did) is "
+                      "never `opinion_or_inference`", " ".join(self.text.split("## Steps", 1)[1].split()))
+
     def test_an_edit_after_the_checker_goes_back_to_step_2(self):
         self.assertIn("go back to steps 2 to 6 for the claims you edited", self.step(7))
 
