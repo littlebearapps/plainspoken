@@ -15,6 +15,7 @@ each one costs and the rules that keep the numbers honest. Every eval command pr
 | Rewrite cases | Are rewrites made with the plugin better than rewrites made without it? | `claude plugin eval . --tag rewrite` (a plain request) and `--tag rewrite-slash` (the same texts through `/plainspoken:humanize`) | paid |
 | Rewrite delta | How many lint findings does each arm's rewrite still have? | `eval rewrite-delta RESULT` on a run made with `--keep-temp` | free |
 | Smoke cases | Does every skill do its job end to end on a saved draft? | `claude plugin eval . --tag smoke` | paid |
+| First engine call | Did each smoke run start with its skill's profile call? | `eval first-call RESULT` on a smoke run made with `--keep-temp` | free |
 | Ablations | Does the output style, the session brief or a ban list in the prompt change the drafts? | `scripts/dev/draft_runs.py`, then `scripts/dev/ablation_table.py` | subscription |
 | Blind reader test | Can a reader tell plainspoken's drafts from the author's own writing? | `eval blind build`, `form`, `run`, `score` | people: free; panel: subscription or paid |
 | Lint pass rate | What share of a folder of drafts has no lint BLOCK? | `eval lint-rate --drafts DIR` | free |
@@ -103,8 +104,9 @@ python3 lib/run.py eval rewrite-delta rewrite.json
 claude plugin eval . --tag rewrite-slash --runs 2 -j 3 --keep-temp \
   --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin --json rewrite-slash.json
 python3 lib/run.py eval rewrite-delta rewrite-slash.json
-claude plugin eval . --tag smoke --ablation none -j 2 \
+claude plugin eval . --tag smoke --ablation none -j 2 --keep-temp --json smoke.json \
   --allow-tools Bash Write Edit --no-publish --max-cost-usd 15 --threshold 0.8 --trust-plugin
+python3 lib/run.py eval first-call smoke.json
 ```
 
 The rewrite cases' regex graders only pass or fail, and a strong model passes most of them without the plugin, so
@@ -119,6 +121,11 @@ commands (see `docs/acceptance/v0.7-drafting-hooks.md`), so the slash and smoke 
 Since #12 each skill runs that call as its first step instead, which should lift the pin; until a slash and smoke
 run on the current CLI confirms it, keep using `npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI
 version at a time: two at once on one login revoked a token mid-run.
+
+Each smoke case except `humanize` and `setup`, which have no profile step, also has a `*-first` grader: the run's first
+`run.py` call must be the skill's first step, `run.py profile` (`run.py kaizen review` for kaizen). When it fails, the
+runner says only "pattern not found in trace", so run the suite with `--keep-temp` and `--json`, then `eval first-call`
+on that file: it prints the first engine call of each run.
 
 The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm. The
 rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The
