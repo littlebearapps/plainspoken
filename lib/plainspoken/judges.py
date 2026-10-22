@@ -2,9 +2,11 @@
 
 The judges are read-only, so the CLI writes their replies. A reply is recorded only when it is one JSON object for
 the right group and the article's current hash (and, for JR, the justification file's current hash), and only
-while the article has a current lint, whose profile_sha256 and ruleset_version the recorded file carries."""
+while the article has a current lint, whose profile_sha256 and ruleset_version the recorded file carries. A J1–J4
+reply must also echo its input's `input_digest`, so a reply to a hand-built or stale input is refused (#43)."""
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -18,6 +20,16 @@ ROOT = Path(__file__).resolve().parents[2]
 RUBRIC = ROOT / "data" / "rubrics" / "judges.md"
 GROUPS = report.GROUPS
 _FENCE = re.compile(r"^\s*```(?:json)?\s*\n(.*)\n\s*```\s*$", re.S | re.I)
+
+
+def input_digest(lint: dict, group: str) -> str:
+    """A digest of what `judge_input` builds `group`'s input from: the lint's article hash, profile, ruleset, content
+    type and findings (so its candidates and human markers). `record_reply` recomputes it from the current lint, so
+    a reply whose input wasn't the one `judge-input` printed for this draft never records."""
+    keys = ("article_sha256", "profile_sha256", "ruleset_version", "content_type", "findings")
+    canon = json.dumps({"group": group, **{k: lint.get(k) for k in keys}}, sort_keys=True, ensure_ascii=False,
+                       separators=(",", ":"))
+    return hashlib.sha256(canon.encode("utf-8")).hexdigest()
 
 
 def judge_input(article: Path, profile: Profile, reports_dir: Path, cwd: Path) -> list[dict]:
@@ -45,6 +57,7 @@ def judge_input(article: Path, profile: Profile, reports_dir: Path, cwd: Path) -
             "calibration_notes": profile.calibration_notes or None,
             "visible_frontmatter_keys": list(profile.visible_frontmatter_keys),
             "faq_frontmatter_key": profile.faq_frontmatter_key,
+            "input_digest": input_digest(lint, g),
         }
         if g == "J4":
             item["human_markers"] = [f for f in lint["findings"] if f["rule"] in ("HM", "15")]
@@ -82,6 +95,9 @@ def record_reply(article: Path, group: str, text: str, reports_dir: Path, cwd: P
     if group == "JR":
         if not paths["justify"].is_file() or data.get("justify_sha256") != file_sha(paths["justify"]):
             raise ValueError("stale: the JR reply reviewed a different justify file")
+    elif data.get("input_digest") != input_digest(lint, group):
+        raise ValueError(f"the {group} reply's input_digest doesn't match this draft's judge input (hand-built or "
+                         f"stale input): rerun `judge-input` and give the judge its {group} line unchanged")
     # Bound to the profile and ruleset the lint used: merge treats a judge file from another one as stale.
     data["profile_sha256"], data["ruleset_version"] = lint["profile_sha256"], lint["ruleset_version"]
     paths[group].parent.mkdir(parents=True, exist_ok=True)

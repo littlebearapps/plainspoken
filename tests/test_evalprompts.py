@@ -35,7 +35,10 @@ class TestTemplates(unittest.TestCase):
         j_agent = [ln.strip() for ln in agent if ln.strip().startswith('{"group":"<J1-J4>"')]
         j_inline = [ln.strip() for ln in inline if ln.strip().startswith('{"group":"<J1-J4>"')]
         self.assertEqual(len(j_agent), 1)
-        self.assertEqual(j_inline, j_agent)
+        # The agent also echoes `input_digest` for judge-record (#43); eval judges are never recorded, so the
+        # inline input has no digest to echo. Otherwise the two reply shapes match exactly.
+        self.assertEqual(j_inline, [j_agent[0].replace('"input_digest":"<as given>",', "", 1)])
+        self.assertNotEqual(j_inline, j_agent)
 
         def jr_block(lines: list[str]) -> list[str]:
             start = next(i for i, ln in enumerate(lines) if ln.startswith('{"group": "JR"'))

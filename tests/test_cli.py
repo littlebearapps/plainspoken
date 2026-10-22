@@ -40,7 +40,7 @@ class JudgeCli(unittest.TestCase):
         import hashlib
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
         sha = hashlib.sha256(self.art.read_bytes()).hexdigest()
-        body = json.dumps({"group": "J2", "article_sha256": sha, "judged_at": "t", "verdicts": []})
+        body = json.dumps(self._reply("J2", sha))
         ok = cli("judge-record", "post.md", "--group", "J2", cwd=self.cwd, input="```json\n" + body + "\n```\n")
         self.assertEqual(ok.returncode, 0, ok.stderr)
         bad = cli("judge-record", "post.md", "--group", "J3", cwd=self.cwd, input=body)
@@ -54,7 +54,7 @@ class JudgeCli(unittest.TestCase):
         sha = hashlib.sha256(self.art.read_bytes()).hexdigest()
         reply = Path(json.loads(cli("paths", "post.md", cwd=self.cwd).stdout)["reply"])
         reply.parent.mkdir(parents=True, exist_ok=True)
-        reply.write_text(json.dumps({"group": "J2", "article_sha256": sha, "judged_at": "t", "verdicts": []}),
+        reply.write_text(json.dumps(self._reply("J2", sha)),
                          encoding="utf-8")
         ok = cli("judge-record", "post.md", "--group", "J2", "--from", str(reply), cwd=self.cwd)
         self.assertEqual(ok.returncode, 0, ok.stderr)
@@ -77,7 +77,7 @@ class JudgeCli(unittest.TestCase):
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
         sha = hashlib.sha256(self.art.read_bytes()).hexdigest()
         keep = self.cwd / "keep.md"
-        for body in (json.dumps({"group": "J2", "article_sha256": sha, "judged_at": "t", "verdicts": []}),
+        for body in (json.dumps(self._reply("J2", sha)),
                      '{"group": "J3"}'):
             with self.subTest(body=body[:20]):
                 keep.write_text(body, encoding="utf-8")
@@ -88,7 +88,14 @@ class JudgeCli(unittest.TestCase):
     def _reply(self, group: str, sha: str | None = None) -> dict:
         import hashlib
         sha = sha or hashlib.sha256(self.art.read_bytes()).hexdigest()
-        return {"group": group, "article_sha256": sha, "judged_at": "t", "verdicts": []}
+        return {"group": group, "article_sha256": sha, "input_digest": self._digest(group), "judged_at": "t",
+                "verdicts": []}
+
+    def _digest(self, group: str) -> str | None:
+        """The `input_digest` judge-input gives `group` now (#43), or None (JR has none)."""
+        r = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        return next((json.loads(x)["input_digest"] for x in r.stdout.splitlines()
+                     if json.loads(x)["group"] == group), None)
 
     def _scratch(self, text: str) -> Path:
         reply = Path(json.loads(cli("paths", "post.md", cwd=self.cwd).stdout)["reply"])
@@ -131,6 +138,20 @@ class JudgeCli(unittest.TestCase):
         self.assertIn("J4 reply not recorded: no reply", r.stderr)
         self.assertIn("JR", r.stderr)  # JR is recorded on its own, never with --all
         self.assertFalse(Path(paths["JR"]).exists())
+
+    def test_judge_record_all_refuses_a_hand_built_input(self):
+        """#43: J1 judged a line the model built from an older input; the other three are genuine."""
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        paths = json.loads(cli("paths", "post.md", cwd=self.cwd).stdout)
+        objs = [self._reply(g) for g in ("J1", "J2", "J3", "J4")]
+        objs[0]["input_digest"] = objs[1]["input_digest"]  # pasted from another line
+        r = cli("judge-record", "post.md", "--all", "--from", str(self._scratch("\n".join(map(json.dumps, objs)))),
+                cwd=self.cwd)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("J1 reply not recorded: the J1 reply's input_digest doesn't match", r.stderr)
+        self.assertIn("rerun `judge-input`", r.stderr)
+        self.assertFalse(Path(paths["J1"]).exists())
+        self.assertTrue(all(Path(paths[g]).is_file() for g in ("J2", "J3", "J4")))
 
     def test_judge_record_all_unparseable_file(self):
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
