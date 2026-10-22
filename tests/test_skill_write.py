@@ -46,6 +46,7 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("## When the sources can't carry the length", gate)
         report = " ".join(self.text.split("### 8. Report", 1)[1].split())
         self.assertIn("Any length you give is the `words:` line's, never an estimate", report)
+        self.assertIn("you say it counts body text only", report)  # #63: headings aren't in the count
 
     def test_reader_value_outline_before_drafting(self):  # the stub is gone
         step = self.step(2)

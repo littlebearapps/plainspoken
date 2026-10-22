@@ -865,8 +865,9 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
         owner_lines = ["needs the owner: unknown (no readable ledger)"]
     contract = reader_value.default_contract(args.path, root)
     shown = claims_tools.display_path(contract, root)
+    counted = f"words: {words} (body text; headings, tables, code and numbers not counted)"  # #63: say what it counts
     print("\n".join([f"check: {check_lines[0]}", *check_lines[1:], f"claims: {rep['status']}",
-                     *(f"  {r}" for r in rep["reasons"]), *owner_lines, f"words: {words}",
+                     *(f"  {r}" for r in rep["reasons"]), *owner_lines, counted,
                      f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
     return 0 if check_status == rep["status"] == "PASS" else 1
 

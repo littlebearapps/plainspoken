@@ -141,9 +141,9 @@ printed, never from memory or in other words:
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 
 Then give any length shortfall (step 1) and whatever else the user needs, in plain words. Any length you give is
-the `words:` line's, never an estimate. Ask the owner to check nothing that the `needs the owner` lines don't list.
-A check or claims result that isn't PASS is never described as passed. The person records a `For kaizen` item with
-`/plainspoken:kaizen dismiss` if they agree.
+the `words:` line's, never an estimate, and you say it counts body text only. Ask the owner to check nothing that
+the `needs the owner` lines don't list. A check or claims result that isn't PASS is never described as passed. The
+person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
 
 A piece step 2 parked, or left INCOMPLETE, gets only the `Reader value` line and the reason. Before a drafted piece
 ships, the user runs `/plainspoken:reader-value deliver <draft>` to check the draft keeps the contract's promise.
