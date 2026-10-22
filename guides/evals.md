@@ -10,11 +10,13 @@ each one costs and the rules that keep the numbers honest. Every eval command pr
 |---|---|---|---|
 | Golden set | Is the labelled test data well formed, and is it still held out? | `eval golden validate` | free |
 | Judge validation | Does each judge model find the tells a person would, and leave clean text alone? | `eval judges`, then `eval judges-report` | subscription or paid |
+| Claims-checker validation | Does the claims checker block the claims a person would, and pass the sound ones? | `eval claims` | subscription |
 | Rewrite graders | Does one rewrite keep its facts, drop the banned words and stay under the em-dash cap? | `eval rewrite DRAFT --source FILE` | free |
 | Trigger cases | Do the skills start when a request fits, and stay quiet when it doesn't? | `claude plugin eval . --tag trigger` | paid |
 | Rewrite cases | Are rewrites made with the plugin better than rewrites made without it? | `claude plugin eval . --tag rewrite` (a plain request) and `--tag rewrite-slash` (the same texts through `/plainspoken:humanize`) | paid |
 | Rewrite delta | How many lint findings does each arm's rewrite still have? | `eval rewrite-delta RESULT` on a run made with `--keep-temp` | free |
 | Smoke cases | Does every skill do its job end to end on a saved draft? | `claude plugin eval . --tag smoke` | paid |
+| First engine call | Did each smoke run start with its skill's profile call? | `eval first-call RESULT` on a smoke run made with `--keep-temp` | free |
 | Ablations | Does the output style, the session brief or a ban list in the prompt change the drafts? | `scripts/dev/draft_runs.py`, then `scripts/dev/ablation_table.py` | subscription |
 | Blind reader test | Can a reader tell plainspoken's drafts from the author's own writing? | `eval blind build`, `form`, `run`, `score` | people: free; panel: subscription or paid |
 | Lint pass rate | What share of a folder of drafts has no lint BLOCK? | `eval lint-rate --drafts DIR` | free |
@@ -103,8 +105,9 @@ python3 lib/run.py eval rewrite-delta rewrite.json
 claude plugin eval . --tag rewrite-slash --runs 2 -j 3 --keep-temp \
   --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin --json rewrite-slash.json
 python3 lib/run.py eval rewrite-delta rewrite-slash.json
-claude plugin eval . --tag smoke --ablation none -j 2 \
+claude plugin eval . --tag smoke --ablation none -j 2 --keep-temp --json smoke.json \
   --allow-tools Bash Write Edit --no-publish --max-cost-usd 15 --threshold 0.8 --trust-plugin
+python3 lib/run.py eval first-call smoke.json
 ```
 
 The rewrite cases' regex graders only pass or fail, and a strong model passes most of them without the plugin, so
@@ -120,16 +123,39 @@ Since #12 each skill runs that call as its first step instead, which should lift
 run on the current CLI confirms it, keep using `npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI
 version at a time: two at once on one login revoked a token mid-run.
 
+Each smoke case except `humanize` and `setup`, which have no profile step, also has a `*-first` grader: the run's first
+`run.py` call must be the skill's first step, `run.py profile` (`run.py kaizen review` for kaizen). When it fails, the
+runner says only "pattern not found in trace", so run the suite with `--keep-temp` and `--json`, then `eval first-call`
+on that file: it prints the first engine call of each run.
+
 The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm. The
 rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The
 same two suites run from GitHub through the manual `evals` workflow (`.github/workflows/evals.yml`), which skips with
 a notice when the repository has no `ANTHROPIC_API_KEY` secret. This repository doesn't set one, so here the workflow
 skips; run the suites locally, or from a fork that adds its own key. Pull requests never need it.
 
+## Claims-checker validation
+
+The CL group of the golden set (`evals/golden/CL.toml`) holds short articles with their ledgers, and says for each
+ledger claim whether the claims checker should block it. `eval claims` puts every CL case to the checker's rubric on
+one Claude model through `claude -p`, then reports per case which claims it got right, and overall the accuracy, the
+share of claims it should block that it did (TPR) and the share it should pass that it did (TNR). A claim counts as
+blocked when the reply files a `blocking` finding against it; a warning is still a pass. It runs on Claude only, so
+nothing is billed, but it stops before the notional cost the CLI reports would pass `--max-cost-usd` (default 1).
+Dry-run it first: it prints each case's estimate and sends nothing.
+
+```bash
+python3 lib/run.py eval claims --model claude-opus-5-5 --dry-run
+python3 lib/run.py eval claims --model claude-opus-5-5 --max-cost-usd 1
+```
+
+Re-run with the same `--out` to resume a stopped run or retry a failed call. File each miss the report lists; never
+fix the rubric to catch a held-out case (below).
+
 ## The golden set and its labels
 
-The golden set (`evals/golden/`) is the labelled text the judges are measured against. Each case records who decided
-its label:
+The golden set (`evals/golden/`) is the labelled text the judges and the claims checker are measured against. Each
+case records who decided its label:
 
 - `confirmed`: a person labelled it directly;
 - `endorsed`: a person approved it indirectly, for example by approving the fix that removed the tell;
@@ -147,7 +173,8 @@ To confirm a case, read it, decide whether the label is right, and edit it in pl
 
 The golden set and the blind-test pairs are held out. They measure the checks; they are never used to improve them.
 
-- No case text, and no JR `reason`, is quoted in a rubric, skill, guide, hook, output style, template or mining brief.
+- No case text, no JR `reason` and no CL claim prose is quoted in a rubric, skill, guide, hook, output style, template
+  or mining brief.
   `eval golden validate` fails when a file there shares a run of 8 or more words with a case, or holds the whole of
   one shorter than 8 words, and when it can't read a folder or file there (`evals/golden/README.md`).
 - A label never goes into a prompt.

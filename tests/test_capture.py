@@ -99,7 +99,8 @@ class Facets(unittest.TestCase):
     def test_7d_no_long_under_faq(self):
         doc = self.doc(ARTICLE)
         line = next(ln for ln, _, t in doc.headings if t == "FAQ")
-        f = _finding("7d", line, "FAQ", "No sentence over 25 words in this section — join two short sentences that share a thought")
+        f = _finding("7d", line, "FAQ", 'No sentence over 25 words in this section — join two short sentences with "and" '
+                     'or "but", or merge them; add no clause, detail or reason')
         facets = capture.facets(f, doc, CFG)
         self.assertEqual((facets["section"], facets["form"]), ("faq", "no-long"))
 
@@ -976,7 +977,8 @@ class MergeCli(unittest.TestCase):
     def test_recorded_reply_logs_no_friction(self):
         self.check()
         sha = hashlib.sha256(self.art.read_bytes()).hexdigest()
-        line = json.loads(self.run_cli("judge-input", "post.md", "--profile", "default").stdout.splitlines()[0])
+        line = json.loads(self.run_cli("judge-input", "post.md", "--profile", "default",
+                                       "--keep", "2,4b,7d").stdout.splitlines()[0])
         p = self.reply({"group": "J1", "article_sha256": sha, "input_digest": line["input_digest"], "verdicts": []})
         r = self.run_cli("judge-record", "post.md", "--group", "J1", "--from", str(p))
         self.assertEqual(r.returncode, 0, r.stderr)

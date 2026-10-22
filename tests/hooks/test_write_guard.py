@@ -1,6 +1,8 @@
 import json
+import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,22 +15,25 @@ LEDGER = ".plainspoken/claims/post-1234abcd.claims.toml"
 REPLY_JSON = '{"article_sha256": "sha256:ab", "result": "PASS", "findings": []}'
 
 
-def run_guard(command, raw=None) -> dict:
-    payload = raw if raw is not None else json.dumps(
-        {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}})
+def run_guard(command, raw=None, cwd=None) -> dict:
+    event = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}}
+    if cwd is not None:
+        event["cwd"] = cwd
+    payload = raw if raw is not None else json.dumps(event)
     r = subprocess.run([sys.executable, str(HOOK)], input=payload, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout) if r.stdout.strip() else {}
 
 
 class WriteGuard(unittest.TestCase):
-    def assertDenied(self, command):
-        out = run_guard(command)
+    def assertDenied(self, command, cwd=None):
+        out = run_guard(command, cwd=cwd)
         self.assertEqual(out.get("hookSpecificOutput", {}).get("permissionDecision"), "deny", command)
         self.assertIn("Write", out["hookSpecificOutput"]["permissionDecisionReason"])
+        self.assertIn("To read one, use cat", out["hookSpecificOutput"]["permissionDecisionReason"])
 
-    def assertAllowed(self, command):
-        self.assertEqual(run_guard(command), {}, command)
+    def assertAllowed(self, command, cwd=None):
+        self.assertEqual(run_guard(command, cwd=cwd), {}, command)
 
     def test_the_eval_printf_is_refused(self):  # #44: the claims-checker reply written with printf
         self.assertDenied(f"mkdir -p .plainspoken/reports && printf '%s\\n' '{REPLY_JSON}' > {CLAIMS_REPLY}\n"
@@ -56,6 +61,63 @@ class WriteGuard(unittest.TestCase):
         self.assertDenied(f"python3 - <<'EOF'\nopen('{LEDGER}', 'w').write('x')\nEOF")
         self.assertDenied(f"sed -i 's/= false/= true/' {LEDGER}")
         self.assertDenied(f"cp /tmp/ledger.toml {LEDGER}")
+
+    def test_code_that_only_reads_a_ledger_or_reply_is_allowed(self):  # #57: a read was refused like a write
+        self.assertAllowed(f"python3 -c \"import tomllib; print(tomllib.load(open('{LEDGER}', 'rb')))\"")
+        self.assertAllowed(f"python3 -c \"import json; d = json.load(open('{CLAIMS_REPLY}')); print(len(d))\"")
+        self.assertAllowed(f"python3 -c \"from pathlib import Path; print(Path('{LEDGER}').read_text()[:400])\"")
+        self.assertAllowed(f"python3 - <<'EOF'\nimport tomllib\nd = tomllib.load(open('{LEDGER}', 'rb'))\n"
+                           "print(sum(c.get('status') == 'verified' for c in d['claims']))\nEOF")
+        self.assertAllowed(f"node -e \"console.log(require('fs').readFileSync('{CHECK_REPLY}', 'utf8'))\"")
+        self.assertAllowed(f"bash -c \"cat {LEDGER} | grep -c same_subject\"")
+        self.assertAllowed(f"git commit -F - <<'EOF'\nfix: rebuild {LEDGER}\nEOF")
+
+    def test_code_that_writes_a_ledger_or_reply_is_refused(self):
+        self.assertDenied(f"python3 -c \"open('{LEDGER}', mode='w').write('x')\"")
+        self.assertDenied(f"python3 -c \"import pathlib; pathlib.Path('{LEDGER}').write_text('x')\"")
+        self.assertDenied(f"python3 -c \"import json; json.dump({{}}, open('{CHECK_REPLY}', 'a'))\"")
+        self.assertDenied(f"python3 -Ic \"import os; os.system('printf x > {LEDGER}')\"")
+        self.assertDenied(f"python3 - <<'EOF'\nimport re\nL = '{LEDGER}'\nt = open(L).read()\n"
+                          "with open(L, 'w') as f:\n    f.write(re.sub('= false', '= true', t))\nEOF")
+        self.assertDenied(f"python3 <<< \"open('{LEDGER}', 'w').write('x')\"")
+        self.assertDenied(f"node -e \"require('fs').writeFileSync('{CHECK_REPLY}', '{{}}')\"")
+        self.assertDenied(f"bash -lc 'L={LEDGER}; printf x > \"$L\"'")
+        self.assertDenied(f"bash <<'EOF'\nprintf x > {LEDGER}\nEOF")
+        self.assertDenied(f"perl -pi -e 's/false/true/' {LEDGER}")
+
+    def test_a_script_run_by_name_is_read(self):  # #57: a script written earlier, then run without naming the file
+        with tempfile.TemporaryDirectory() as d:
+            files = {
+                "build_ledger.py": f"L = '{LEDGER}'\nout = ['same_subject = true']\n"
+                                   "open(L, 'w').write('\\n'.join(out))\n",
+                "build_reply.js": f"require('fs').writeFileSync('{CLAIMS_REPLY}', '{{}}')\n",
+                "fill.sh": f"#!/bin/sh\nL={LEDGER}\nsed 's/false/true/' \"$L\" > /tmp/l && cp /tmp/l \"$L\"\n",
+                "outer.sh": "python3 build_ledger.py\n",
+                "count.py": f"import tomllib\nprint(len(tomllib.load(open('{LEDGER}', 'rb'))['claims']))\n",
+                "show.sh": f"cat {LEDGER}\n",
+                "unrelated.py": "open('notes.txt', 'w').write('x')\n",
+            }
+            for name, text in files.items():
+                Path(d, name).write_text(text, encoding="utf-8")
+            os.chmod(Path(d, "build_ledger.py"), 0o755)
+            for command in ("python3 build_ledger.py", f"python3 -u {d}/build_ledger.py", "./build_ledger.py",
+                            "python3 < build_ledger.py", "node build_reply.js", "bash fill.sh", "sh -e ./fill.sh",
+                            "bash outer.sh", f"cd drafts && python3 {d}/build_ledger.py || true"):
+                with self.subTest(command=command):
+                    self.assertDenied(command, cwd=d)
+            for command in ("python3 count.py", "bash show.sh", "python3 unrelated.py", "python3 missing.py",
+                            "python3 -m json.tool notes.json"):
+                with self.subTest(command=command):
+                    self.assertAllowed(command, cwd=d)
+
+    def test_plainspokens_own_scripts_are_not_read(self):  # its tests name and write ledgers
+        self.assertAllowed("python3 tests/hooks/test_write_guard.py", cwd=str(REPO))
+        self.assertAllowed(f"python3 {REPO}/tests/test_cli_claims.py -k scaffold")
+
+    def test_a_program_the_guard_cant_see_is_refused_when_the_command_names_the_file(self):  # fails safe
+        with tempfile.TemporaryDirectory() as d:
+            self.assertDenied(f"python3 missing.py {LEDGER}", cwd=d)
+            self.assertDenied(f"python3 -m some_tool {LEDGER}", cwd=d)
 
     def test_an_unparseable_command_naming_a_reply_is_refused(self):
         self.assertDenied(f"printf '{{ > {CLAIMS_REPLY}")

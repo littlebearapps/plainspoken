@@ -785,9 +785,10 @@ class DraftStatus(unittest.TestCase):
         """A report states the piece's real length from the engine, not an estimate (issue #32)."""
         want = run_lint(self.art, PRODUCT, "article", self.cfg)["metrics"]["words"]
         self.assertGreater(want, 0)
+        label = " (body text; headings, tables, code and numbers not counted)"  # #63: say what it counts
         r = self._cli("status", str(self.art), *PRODUCT_ARGS)  # before any check: the count doesn't need one
-        self.assertIn(f"words: {want}", r.stdout.splitlines())
+        self.assertIn(f"words: {want}{label}", r.stdout.splitlines())
         with self.art.open("a", encoding="utf-8") as f:
-            f.write("\nOne more short line here.\n")
+            f.write("\nOne more short line here.\n\n## A heading of five words\n\nIn 2026, 42 more.\n")
         r = self._cli("status", str(self.art), *PRODUCT_ARGS)
-        self.assertIn(f"words: {want + 5}", r.stdout.splitlines())  # read from the draft as it is now
+        self.assertIn(f"words: {want + 7}{label}", r.stdout.splitlines())  # read from the draft as it is now

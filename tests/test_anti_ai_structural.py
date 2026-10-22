@@ -80,12 +80,26 @@ class Structural(unittest.TestCase):
         markers = run("HM", "The system processes requests. The system returns responses. Latency remains consistently low.")
         messages = [f.message for f in staccato + uniform + bursty + markers]
         self.assertEqual(len(messages), 4)
-        self.assertTrue(staccato[0].message.endswith("join two short sentences that share a thought"))
-        self.assertTrue(uniform[0].message.endswith("join or split one"))
+        self.assertTrue(staccato[0].message.endswith(
+            'join two short sentences with "and" or "but", or merge them; add no clause, detail or reason'))
+        self.assertTrue(uniform[0].message.endswith("join or split one; add no clause, detail or reason"))
         self.assertIn("join or split sentences", bursty[0].message)
         self.assertIn("add nothing new", markers[0].message)
         for m in messages:
-            self.assertNotRegex(m.lower(), r"run long|vary the rhythm|\badd (?!nothing)")
+            self.assertNotRegex(m.lower(), r"run long|vary the rhythm|\badd (?!nothing|no )")
+
+    def test_every_7d_message_gives_the_same_join_remedy(self):  # #73: a join padded a sentence or added a reason
+        run5 = "## A\n\n" + " ".join(["Tiny one."] * 5) + " " + LONG
+        faq7 = "## FAQ\n\n" + " ".join(["It is short."] * 7) + " " + LONG
+        nar7 = "## Match\n\n" + " ".join(["Goal kicked here."] * 7)
+        venue = "## Venue profile: Harbour Oval\n\n" + " ".join(["The stand faces west."] * 4)
+        found = (run("7d", "## A\n\nShort one here. Another short one. And a third.") + run("7d", run5)
+                 + run("7d", faq7) + run("7d", nar7, profile=NARRATIVE) + run("7d", venue, profile=NARRATIVE))
+        self.assertEqual(len(found), 5)
+        for f in found:
+            self.assertIn('with "and" or "but", or merge them; add no clause, detail or reason', f.message)
+            self.assertNotIn("because", f.message)
+            self.assertLessEqual(len(f.message), 140, f.message)  # the lint summary cuts a message at 140
 
     def test_narrative_paragraph_variation(self):
         para = " ".join(["word"] * 50)

@@ -10,8 +10,8 @@ Status: v0.7. It has:
 - claims integrity and reader value (claims, reader-value), with the claims-checker and delivery-checker agents and
   the integrity hook;
 - the kaizen loop: a ledger of what the checks flagged and what you did, calibrate, and approval-gated `kaizen apply`;
-- evals: a 232-case golden set, a cross-vendor judge panel, rewrite evals, a smoke case per skill, a blind reader
-  test and ablations;
+- evals: a 232-case golden set for the judges and 16 cases for the claims checker, a cross-vendor judge panel,
+  rewrite evals, a smoke case per skill, a blind reader test and ablations;
 - optional pieces you switch on with `/plainspoken:setup`: a writing nudge, a drafting rule, and lint after each
   edit in Claude Code, Codex and Hermes Agent.
 
@@ -168,8 +168,8 @@ to a source. Your own data takes an `<!-- integrity:allow -->` comment inside or
 TL;DR (a marker inside a chart covers that chart, never the TL;DR), or `# integrity: allow` in the frontmatter, and a
 `first_hand` claim in the ledger. When the file has a claim ledger, the hook lists the ledger's gaps instead.
 It says nothing when there's nothing to flag; in warn mode it repeats itself only when a file's result changes.
-A Bash hook refuses a shell command that writes a judge or checker reply, or a claim ledger: those go through the
-Write and Edit tools.
+A Bash hook refuses a shell command that writes a judge or checker reply, or a claim ledger, including through a script
+it runs by name: those go through the Write and Edit tools. Reading them is fine.
 
 Settings for all three go in `.plainspoken/config.toml`:
 

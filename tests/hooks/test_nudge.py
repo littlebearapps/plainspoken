@@ -104,6 +104,54 @@ class Matcher(unittest.TestCase):
         self.assertEqual(nudge.intent(filler + "\n\nCan you draft a reply email to this?"), "draft")
 
 
+# The shape Claude Code uses to hand a subagent's final report back as a user turn (#55).
+HANDBACK = ('<system-reminder id="b4a1b873d28cd20d">\nAnother Claude session sent a message while you were working:\n'
+            '<agent-message from="a76304e6a21036de0">\n[Subagent hand-back] #37 is fixed in PR #40. I didn\'t write '
+            'the report yet; the nudge now treats an article, blog post or report as long-form.\n</agent-message>\n\n'
+            'That "other Claude session" is an agent working inside this same session.\n</system-reminder>')
+NOTICE = ('<task-notification>\n<task-id>a31</task-id>\n<status>completed</status>\n<summary>Agent "Fix #37" '
+          'finished</summary>\n<result>Done: write a short report and a blog post later.</result>\n'
+          '</task-notification>')
+
+
+class Wrappers(unittest.TestCase):  # #55: text the host wraps around a turn isn't the person's ask
+    def test_wrapped_hand_back_alone_is_silent(self):
+        for p in (HANDBACK, NOTICE, HANDBACK + "\n" + NOTICE, "  \n" + HANDBACK + "\n\n"):
+            with self.subTest(p=p[:40]):
+                self.assertIsNone(nudge.intent(p))
+
+    def test_real_ask_next_to_a_wrapper_still_nudges(self):
+        ask = "Write a blog post (about 600 words) for our club website about the rosters"
+        self.assertEqual(nudge.intent(HANDBACK + "\n\n" + ask), "draft-long")
+        self.assertEqual(nudge.intent(ask + "\n\n" + NOTICE), "draft-long")
+        self.assertEqual(nudge.intent("<system-reminder>Today is Tuesday.</system-reminder>\nhumanise this"),
+                         "rewrite")
+
+    def test_long_wrapper_does_not_push_the_ask_out_of_view(self):
+        reminder = "<system-reminder>" + "Lorem ipsum dolor sit amet. " * 200 + "</system-reminder>"
+        self.assertEqual(nudge.intent(reminder + "\nDraft a text message to Sam saying I'll be late"), "draft")
+
+    def test_unclosed_or_stray_tags_keep_the_ask(self):
+        # Only a complete block is dropped. A lone tag is removed and the text around it kept: a missed real ask is
+        # worse than one optional nudge line on a garbled hand-back.
+        ask = "Draft a text message to Sam saying I'll be late"
+        for p in ("<system-reminder>Note: the time is 4pm.\n" + ask, "<agent-message from=\"x\">" + ask,
+                  ask + "</system-reminder>", "</agent-message><system-reminder " + ask,
+                  "<system-reminder>Note.</system-reminder><agent-message>" + ask):
+            with self.subTest(p=p):
+                self.assertEqual(nudge.intent(p), "draft")
+        self.assertIsNone(nudge.intent("<system-reminder>"))
+        self.assertIsNone(nudge.intent("</agent-message>"))
+        # A complete outer block is dropped whole, whatever it holds.
+        self.assertIsNone(nudge.intent("<system-reminder><agent-message>" + ask + "</system-reminder>"))
+
+    def test_tags_are_named_exactly(self):
+        # A writer's own markup, or a tag that only starts with a wrapper's name, is left alone.
+        self.assertEqual(nudge.intent("<note>write a LinkedIn post about the new booking page</note>"), "draft")
+        self.assertEqual(nudge.intent("<system-reminders>x</system-reminders> write a LinkedIn post about it"),
+                         "draft")
+
+
 class Text(unittest.TestCase):
     def test_claude_code_text_names_the_commands(self):
         t = nudge.nudge_text("draft", "claude-code", "/p/root", "default")
@@ -173,6 +221,10 @@ class Hook(unittest.TestCase):
     def test_quiet_prompt_prints_nothing_even_when_on(self):
         r = self.run_hook(QUIET[0], {"CLAUDE_PLUGIN_OPTION_NUDGE": "true"})
         self.assertEqual(r.stdout, "")
+
+    def test_subagent_hand_back_prints_nothing_even_when_on(self):  # #55
+        r = self.run_hook(HANDBACK, {"CLAUDE_PLUGIN_OPTION_NUDGE": "true"})
+        self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
 
     def test_bad_config_or_stdin_never_blocks(self):
         (self.project / ".plainspoken").mkdir()

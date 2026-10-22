@@ -1,7 +1,8 @@
 """CLI: python3 -m plainspoken {check|profile|config|paths|merge|status|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
 register-checklist|claims|reader-value|kaizen|eval} …
 Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
-invalid justifications or nothing to review (justify), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
+invalid justifications or nothing to review (justify), a lint BLOCK or WARN left
+without --keep (judge-input), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
 (checker-input, record), reader-value or action-module findings, a delivery record or status other than a
 current PASS (every self-check), a stale delivery reply or a contract that doesn't validate (deliver-input,
 deliver, status), or a kaizen refusal (no current check or snapshot, no finding, a bad hunk number, capture off, a
@@ -56,7 +57,7 @@ def _record_all(args: argparse.Namespace, text: str, root: Path) -> int:
     """`judge-record --all`: J1-J4 from one input in one call (#28). Prints each recorded path; names each group it
     didn't record on stderr, so only those judges run again. Exit 0 = all four recorded, 1 = any not, 2 = I/O."""
     try:
-        rows = judges.record_all(args.path, text, args.reports or report.reports_dir_default(root), root)
+        rows = judges.record_all(args.path, text, args.reports or report.reports_dir_default(root), root, args.profile)
     except ValueError as e:
         print(f"plainspoken: judge replies not recorded: {_first_line(e)}", file=sys.stderr)
         capture.for_rejected_reply(_first_line(e), root)
@@ -250,6 +251,9 @@ def _main(argv: list[str] | None) -> int:
     ji.add_argument("--reports", type=Path)
     ji.add_argument("--profile")
     ji.add_argument("--plugin-profile")
+    ji.add_argument("--keep", action="append", default=[], metavar="RULE",
+                    help="a rule whose open lint BLOCK or WARN you leave (repeat, or comma-separate); without it, "
+                         "judge-input exits 1 while the lint has one")
     ag = sub.add_parser("agent-prompt", help="print an agent's self-contained prompt with stdin as its input, for "
                                              "hosts without plugin agents (Codex, Hermes)")
     ag.add_argument("name", choices=list(hosts.AGENTS))
@@ -264,6 +268,7 @@ def _main(argv: list[str] | None) -> int:
     which.add_argument("--all", action="store_true",
                        help="record J1-J4 from one input: their replies one after another, or one JSON list")
     jr.add_argument("--reports", type=Path)
+    jr.add_argument("--profile", help="the profile the check used, when it can't be found from the lint (a path)")
     jr.add_argument("--from", dest="reply_file", type=Path,
                     help="read the reply from this file; the `reply` path from `paths` is deleted afterwards, "
                          "any other file is kept")
@@ -404,11 +409,21 @@ def _main(argv: list[str] | None) -> int:
     if args.cmd == "status":
         return _draft_status(args, root)
     if args.cmd == "judge-input":
+        reports_dir = args.reports or report.reports_dir_default(root)
         try:
-            items = judges.judge_input(args.path, _profile(args, root),
-                                       args.reports or report.reports_dir_default(root), root)
+            items = judges.judge_input(args.path, _profile(args, root), reports_dir, root)
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "prepare judge input for")
+        keep = {k.strip() for arg in args.keep for k in arg.split(",") if k.strip()}
+        held = judges.open_lint(args.path, reports_dir, root, keep)
+        if held:
+            print("plainspoken: the lint still has lines the judges can't clear (merge fails them whatever the "
+                  "judges say):", file=sys.stderr)
+            for f in held:
+                print(f"  {f['severity']:5} r{f['rule']:<4} L{f.get('line', '?')}", file=sys.stderr)
+            print("Fix them and run `check` again, or rerun with --keep <rule> for each one you leave (a WARN you'll "
+                  "justify after merge).", file=sys.stderr)
+            return 1
         for item in items:
             print(json.dumps(item, ensure_ascii=False))
         return 0
@@ -449,7 +464,7 @@ def _main(argv: list[str] | None) -> int:
             return _record_all(args, text, root)
         try:
             written = judges.record_reply(args.path, args.group, text,
-                                          args.reports or report.reports_dir_default(root), root)
+                                          args.reports or report.reports_dir_default(root), root, args.profile)
         except ValueError as e:
             print(f"plainspoken: judge reply not recorded: {_first_line(e)}", file=sys.stderr)
             capture.for_rejected_reply(_first_line(e), root)
@@ -865,8 +880,9 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
         owner_lines = ["needs the owner: unknown (no readable ledger)"]
     contract = reader_value.default_contract(args.path, root)
     shown = claims_tools.display_path(contract, root)
+    counted = f"words: {words} (body text; headings, tables, code and numbers not counted)"  # #63: say what it counts
     print("\n".join([f"check: {check_lines[0]}", *check_lines[1:], f"claims: {rep['status']}",
-                     *(f"  {r}" for r in rep["reasons"]), *owner_lines, f"words: {words}",
+                     *(f"  {r}" for r in rep["reasons"]), *owner_lines, counted,
                      f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
     return 0 if check_status == rep["status"] == "PASS" else 1
 

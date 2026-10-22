@@ -1,0 +1,906 @@
+schema = 1
+group = "CL"
+
+# The claims checker's golden set (agents/claims-checker.md, data/rubrics/claims.md). Each case is a short article
+# (`text`) and its ledger claims (`[[case.claim]]`). On each claim, `expect` is the verdict the checker should reach:
+# `fail` means at least one `blocking` finding with that claim_id, `pass` means none (a warning is still a pass).
+# `why` says why, in one line you can check by reading the case. `expect` and `why` never reach the checker:
+# `golden.claims_ledger` drops them when it builds the ledger. Format: evals/golden/README.md.
+
+# ---------------------------------------------------------------- #45: a fact labelled as opinion or hypothetical
+
+[[case]]
+id = "CL-opinion_label-001"
+rule = "opinion_label"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #45 pair. A length-of-service fact ledgered as opinion, next to a real recommendation."
+text = """## Getting your books ready for June
+
+I've kept the books for local tradies for fifteen years, and June is when the shoebox of receipts comes out.
+
+If you only do one thing this month, I'd start with the bank feeds. Once every transaction comes in on its own, the rest of the end-of-year work is sorting, not hunting.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "Fifteen years doing the books is a checkable fact about the writer; the ledger calls it opinion and pins no passage."
+text = "I've kept the books for local tradies for fifteen years"
+claim_type = "duration"
+prominence = "medium"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Getting your books ready for June"}]
+notes = "The owner's own background, in their voice."
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "A recommendation the writer frames as their own ('I'd start with'); there's no fact in it to source."
+text = "If you only do one thing this month, I'd start with the bank feeds."
+claim_type = "premise"
+prominence = "medium"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Getting your books ready for June"}]
+
+[[case]]
+id = "CL-opinion_label-002"
+rule = "opinion_label"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #45 hard negative. Two real opinions from a junior netball coach, both ledgered as opinion."
+text = """## A note from the coach
+
+In my view, the under-11s should rotate positions every quarter, so nobody spends a whole season stuck at goal defence.
+
+I also think a shared lift roster is fairer than leaving it to whoever happens to be free. If you can drive one week a term, put your name on the sheet at training.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "A coaching view marked 'In my view'; it states what should happen, not a fact anyone could check."
+text = "In my view, the under-11s should rotate positions every quarter"
+claim_type = "premise"
+prominence = "medium"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "A note from the coach"}]
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "A preference marked 'I also think'; fairer is a value judgement, not a checkable fact."
+text = "I also think a shared lift roster is fairer than leaving it to whoever happens to be free."
+claim_type = "premise"
+prominence = "low"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "A note from the coach"}]
+
+[[case]]
+id = "CL-opinion_label-003"
+rule = "opinion_label"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #45 with the hypothetical label. A dated business fact in an 'if' frame, next to a real conditional."
+text = """## Winter at the counter
+
+If you came in last winter, you'll know I started roasting my own beans in June 2025.
+
+If I opened on Sundays as well, I'd need a second barista.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "When the café started roasting is a checkable fact about the business; the 'if' frame doesn't make it hypothetical, and no passage holds it."
+text = "If you came in last winter, you'll know I started roasting my own beans in June 2025."
+claim_type = "historical"
+prominence = "medium"
+status = "hypothetical"
+locations = [{kind = "body", anchor = "Winter at the counter"}]
+notes = "Framed as a hypothetical ('If you came in')."
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "A real conditional about something the writer hasn't done; it says what they'd need, which only they can judge."
+text = "If I opened on Sundays as well, I'd need a second barista."
+claim_type = "premise"
+prominence = "low"
+status = "hypothetical"
+locations = [{kind = "body", anchor = "Winter at the counter"}]
+
+[[case]]
+id = "CL-opinion_label-004"
+rule = "opinion_label"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #45 invented career history as opinion, with a hard negative: an opinion-labelled fact the brief does hold."
+text = """## Why I work with small practices
+
+Before I went out on my own, I spent eight years at a large accounting firm in Melbourne. I've run my own practice from Ballarat since 2019.
+
+To me, a small practice suits people who want to ring the person who actually did their return.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "Eight years at a Melbourne firm is a checkable fact about the writer's history; it's labelled opinion and nothing is pinned for it."
+text = "Before I went out on my own, I spent eight years at a large accounting firm in Melbourne."
+claim_type = "historical"
+prominence = "medium"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Why I work with small practices"}]
+notes = "Background colour: the owner's story."
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "Also labelled opinion, but the owner's brief, pinned word for word, says it, and a brief can speak for the owner's own practice."
+text = "I've run my own practice from Ballarat since 2019."
+claim_type = "historical"
+prominence = "medium"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Why I work with small practices"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 2 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "I've run my own practice from Ballarat since 2019."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C003"
+expect = "pass"
+why = "A view marked 'To me' about who a small practice suits; there's no fact in it to source."
+text = "To me, a small practice suits people who want to ring the person who actually did their return."
+claim_type = "premise"
+prominence = "low"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Why I work with small practices"}]
+
+[[case]]
+id = "CL-opinion_label-005"
+rule = "opinion_label"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #45 hard negative. A labelled guess and a conditional plan from a tutor, nothing checkable stated as fact."
+text = """## Before the exam
+
+My guess is that most Year 12 students would get more from two past papers under exam conditions than from another week of notes.
+
+If the library approves the booking, I'll run a free practice exam there on 8 November.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "Framed as the writer's guess ('My guess is'), which the rubric allows for judgement."
+text = "My guess is that most Year 12 students would get more from two past papers under exam conditions than from another week of notes."
+claim_type = "estimate"
+prominence = "medium"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Before the exam"}]
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "A plan, and conditional on the booking; the writer can speak for their own plans."
+text = "If the library approves the booking, I'll run a free practice exam there on 8 November."
+claim_type = "forecast"
+prominence = "medium"
+status = "hypothetical"
+locations = [{kind = "body", anchor = "Before the exam"}]
+
+[[case]]
+id = "CL-opinion_label-006"
+rule = "opinion_label"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #45 pair. A club's results ledgered as opinion, next to a real 'I reckon'."
+text = """## Season wrap
+
+Our club has won the regional pennant three years running, and I reckon this year's under-13s are the best side we've had.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "Three pennants in a row is a checkable fact about the club; it's ledgered as opinion with no passage."
+text = "Our club has won the regional pennant three years running"
+claim_type = "historical"
+prominence = "high"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Season wrap"}]
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "Marked 'I reckon'; 'the best side' is the writer's judgement, not a record anyone keeps."
+text = "I reckon this year's under-13s are the best side we've had."
+claim_type = "premise"
+prominence = "low"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "Season wrap"}]
+
+# ---------------------------------------------------------------- derivations
+
+[[case]]
+id = "CL-derivation-001"
+rule = "derivation"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #45 round-5 pattern. A career history derived from a client count and a pricing model."
+text = """## About the practice
+
+I work with more than 40 trades businesses around Geelong, and every client is on a fixed monthly fee.
+
+Before I went out on my own, I ran the trades desk at a larger practice.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The owner's brief, pinned word for word, says just over 40 trades clients, all around Geelong; 'more than 40' says no more."
+text = "I work with more than 40 trades businesses around Geelong"
+claim_type = "count"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "About the practice"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 30 September 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "I've got just over 40 trades clients, all of them around Geelong."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The brief says everyone pays a fixed monthly fee; the owner can speak for their own pricing."
+text = "every client is on a fixed monthly fee"
+claim_type = "price"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "About the practice"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 30 September 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Everyone pays a fixed monthly fee; I don't bill by the hour."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C003"
+expect = "fail"
+why = "Neither input says anything about the writer's earlier jobs; a client count and a fee model can't produce a work history."
+text = "Before I went out on my own, I ran the trades desk at a larger practice."
+claim_type = "historical"
+prominence = "medium"
+status = "derived"
+locations = [{kind = "body", anchor = "About the practice"}]
+
+[case.claim.derivation]
+method = "Follows from the size of the client base (C001) and the fixed-fee model (C002), which point to experience at a larger practice."
+inputs = ["C001", "C002"]
+
+[[case]]
+id = "CL-derivation-002"
+rule = "derivation"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a sound derivation. A yearly total worked out from two pinned figures, every input stated."
+text = """## Where the plot fees go
+
+The garden has 38 plots, all of them let for the 2025–26 season, and the plot fee is $60 a year. That's $2,280 a year in plot fees, which covers the water bill and the public liability insurance, with what's left buying seedlings for the shared beds.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The annual report's passage gives 38 plots, all let for 2025–26, the same as the article."
+text = "The garden has 38 plots, all of them let for the 2025–26 season"
+claim_type = "count"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Where the plot fees go"}]
+
+[case.claim.source]
+url = "https://example.org/northside-garden/annual-report-2025-26"
+title = "Northside Community Garden: Annual Report 2025–26"
+publisher = "Northside Community Garden"
+source_tier = "primary"
+locator = "Plots"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "The garden has 38 plots, and all of them were let for the 2025–26 season."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The passage says the annual plot fee is $60, which is what the article says."
+text = "the plot fee is $60 a year"
+claim_type = "price"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Where the plot fees go"}]
+
+[case.claim.source]
+url = "https://example.org/northside-garden/annual-report-2025-26"
+title = "Northside Community Garden: Annual Report 2025–26"
+publisher = "Northside Community Garden"
+source_tier = "primary"
+locator = "Fees"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "The annual plot fee is $60."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C003"
+expect = "pass"
+why = "38 × $60 is $2,280, and C001's passage says every plot was let, so the total follows from its inputs."
+text = "That's $2,280 a year in plot fees"
+claim_type = "derived_metric"
+prominence = "medium"
+status = "derived"
+locations = [{kind = "body", anchor = "Where the plot fees go"}]
+
+[case.claim.derivation]
+method = "38 plots (C001) at $60 a year each (C002) is $2,280. C001's passage says every plot was let, so every plot paid the fee."
+inputs = ["C001", "C002"]
+
+[[case.claim]]
+claim_id = "C004"
+expect = "pass"
+why = "The passage says plot fees pay for water and public liability insurance, with the rest spent on seedlings."
+text = "which covers the water bill and the public liability insurance, with what's left buying seedlings for the shared beds"
+claim_type = "causal"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Where the plot fees go"}]
+
+[case.claim.source]
+url = "https://example.org/northside-garden/annual-report-2025-26"
+title = "Northside Community Garden: Annual Report 2025–26"
+publisher = "Northside Community Garden"
+source_tier = "primary"
+locator = "Treasurer's report"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "Plot fees pay for our water and our public liability insurance. Whatever is left over buys seedlings for the shared beds."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case]]
+id = "CL-derivation-003"
+rule = "derivation"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a derivation whose arithmetic doesn't hold. A fee total rounded well past the product of its inputs."
+text = """## Paying the bills
+
+At 30 June 2026 the shed had 62 members, and membership is $40 a year. Between them, membership fees bring in about $3,000 a year.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The treasurer's report says 62 financial members at 30 June 2026, the same count and date as the article."
+text = "At 30 June 2026 the shed had 62 members"
+claim_type = "count"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Paying the bills"}]
+
+[case.claim.source]
+url = "https://example.org/eastbrook-shed/treasurers-report-2026"
+title = "Eastbrook Community Shed: Treasurer's Report 2025–26"
+publisher = "Eastbrook Community Shed"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "At 30 June 2026 the shed had 62 financial members."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The passage says annual membership is $40, as the article does."
+text = "membership is $40 a year"
+claim_type = "price"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Paying the bills"}]
+
+[case.claim.source]
+url = "https://example.org/eastbrook-shed/treasurers-report-2026"
+title = "Eastbrook Community Shed: Treasurer's Report 2025–26"
+publisher = "Eastbrook Community Shed"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "Annual membership is $40."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C003"
+expect = "fail"
+why = "62 × $40 is $2,480, so 'about $3,000' overstates what the inputs give by more than a fifth."
+text = "Between them, membership fees bring in about $3,000 a year."
+claim_type = "derived_metric"
+prominence = "medium"
+status = "derived"
+locations = [{kind = "body", anchor = "Paying the bills"}]
+
+[case.claim.derivation]
+method = "62 members (C001) at $40 a year (C002), rounded."
+inputs = ["C001", "C002"]
+
+# ---------------------------------------------------------------- entailment against the pinned passage
+
+[[case]]
+id = "CL-entailment-001"
+rule = "entailment"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a state survey figure widened to the whole country and rounded up, next to a figure that matches."
+text = """## Are customers still paying cash?
+
+Nearly half of Australian small businesses no longer take cash, according to the state small business survey. In the same survey, 72% said card fees were their biggest banking cost.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "The passage is about 1,200 Victorian businesses surveyed and says 41%; the article makes it Australian businesses and 'nearly half'."
+text = "Nearly half of Australian small businesses no longer take cash"
+claim_type = "statistic"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Are customers still paying cash?"}]
+
+[case.claim.source]
+url = "https://example.gov.au/small-business/survey-2025"
+title = "State Small Business Survey 2025"
+publisher = "Office of Small Business"
+source_tier = "primary"
+locator = "Payments"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "Of the 1,200 Victorian small businesses surveyed in 2025, 41% said they no longer accept cash."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The passage says 72% named card fees as their biggest banking cost, and the article keeps it to the same survey."
+text = "In the same survey, 72% said card fees were their biggest banking cost."
+claim_type = "statistic"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Are customers still paying cash?"}]
+
+[case.claim.source]
+url = "https://example.gov.au/small-business/survey-2025"
+title = "State Small Business Survey 2025"
+publisher = "Office of Small Business"
+source_tier = "primary"
+locator = "Banking costs"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "72% named card fees as their biggest banking cost."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case]]
+id = "CL-entailment-002"
+rule = "entailment"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: a survey figure with fair rounding and the exact figure beside it, and a dated fact, both as pinned."
+text = """## What the council found
+
+The council's 2025 survey of local traders found that about a third (34%) had received a scam email in the past year. Since March 2024, the council has run free cyber-safety sessions at the library.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The passage gives 34% of 310 traders in 2025 over the past 12 months; 'about a third (34%)' keeps the figure, population and period."
+text = "The council's 2025 survey of local traders found that about a third (34%) had received a scam email in the past year."
+claim_type = "statistic"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "What the council found"}]
+
+[case.claim.source]
+url = "https://example.gov.au/eastvale-council/trader-survey-2025"
+title = "Eastvale Council: Local Trader Survey 2025"
+publisher = "Eastvale Council"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "In our 2025 survey of 310 local traders, 34% said they had received a scam email in the past 12 months."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The council's own page says it has run free cyber-safety sessions at the library since March 2024."
+text = "Since March 2024, the council has run free cyber-safety sessions at the library."
+claim_type = "date"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "What the council found"}]
+
+[case.claim.source]
+url = "https://example.gov.au/eastvale-council/cyber-safety"
+title = "Eastvale Council: Cyber-safety sessions"
+publisher = "Eastvale Council"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "Since March 2024, the council has run free cyber-safety sessions at the library."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+# ---------------------------------------------------------------- first-hand scope
+
+[[case]]
+id = "CL-first_hand_scope-001"
+rule = "first_hand_scope"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: one salon's booking count stretched to small salons in general, next to the same count within scope."
+text = """## When people book
+
+Small salons get most of their bookings after 8 pm. In my own booking export for March to May 2026, 61 of 140 bookings came in after 8 pm.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "The scope is one salon's 140 bookings over three months, and 61 of 140 isn't most; it can't speak for small salons in general."
+text = "Small salons get most of their bookings after 8 pm."
+claim_type = "first_hand"
+prominence = "high"
+status = "first_hand"
+locations = [{kind = "body", anchor = "When people book"}]
+
+[case.claim.first_hand_scope]
+owner = "the writer's salon"
+scope = "Online bookings made at the writer's own salon from March to May 2026: 140 bookings."
+method = "Booking-system export, counted by the time each booking was made."
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "Says exactly what the scope records: the writer's own export, March to May 2026, 61 of 140 bookings."
+text = "In my own booking export for March to May 2026, 61 of 140 bookings came in after 8 pm."
+claim_type = "first_hand"
+prominence = "medium"
+status = "first_hand"
+locations = [{kind = "body", anchor = "When people book"}]
+
+[case.claim.first_hand_scope]
+owner = "the writer's salon"
+scope = "Online bookings made at the writer's own salon from March to May 2026: 140 bookings, 61 of them made after 8 pm."
+method = "Booking-system export, counted by the time each booking was made."
+
+[[case]]
+id = "CL-first_hand_scope-002"
+rule = "first_hand_scope"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed hard negative: a teacher's count kept to their own students, and a labelled guess."
+text = """## What I've seen in lessons
+
+Of the 22 students I taught in 2025, 9 practised less than three times a week, going by their practice diaries. My guess is that a shorter daily practice would suit most of them better than one long Sunday session.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The count stays inside its scope: the writer's own 22 students in 2025, read from their diaries."
+text = "Of the 22 students I taught in 2025, 9 practised less than three times a week, going by their practice diaries."
+claim_type = "first_hand"
+prominence = "medium"
+status = "first_hand"
+locations = [{kind = "body", anchor = "What I've seen in lessons"}]
+
+[case.claim.first_hand_scope]
+owner = "the writer"
+scope = "The practice diaries of the 22 piano students the writer taught in 2025; 9 recorded fewer than three practice days a week."
+method = "Read each student's practice diary at the end of the year."
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "Framed as the writer's guess ('My guess is'); it's judgement, not a measured result."
+text = "My guess is that a shorter daily practice would suit most of them better than one long Sunday session."
+claim_type = "estimate"
+prominence = "low"
+status = "opinion_or_inference"
+locations = [{kind = "body", anchor = "What I've seen in lessons"}]
+
+# ---------------------------------------------------------------- quotes
+
+[[case]]
+id = "CL-quote-001"
+rule = "quote"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a quote reworded inside quotation marks, next to a count that matches its passage."
+text = """## Fix it first
+
+The co-op's coordinator put it this way in the newsletter: "We would always rather fix a bike than sell you a new one."
+
+In 2025 volunteers repaired 412 bikes, according to the same newsletter.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "The newsletter says \"We'd rather fix a bike than sell a new one\"; the article adds 'always' and 'you' inside the quotation marks."
+text = "The co-op's coordinator put it this way in the newsletter: \"We would always rather fix a bike than sell you a new one.\""
+claim_type = "quotation"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Fix it first"}]
+
+[case.claim.source]
+url = "https://example.org/spoke-and-chain/newsletter-2026-01"
+title = "Spoke and Chain Bike Co-op newsletter, January 2026"
+publisher = "Spoke and Chain Bike Co-op"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "\"We'd rather fix a bike than sell a new one,\" said the co-op's coordinator."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The newsletter says volunteers repaired 412 bikes in 2025, which is what the article says."
+text = "In 2025 volunteers repaired 412 bikes"
+claim_type = "count"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Fix it first"}]
+
+[case.claim.source]
+url = "https://example.org/spoke-and-chain/newsletter-2026-01"
+title = "Spoke and Chain Bike Co-op newsletter, January 2026"
+publisher = "Spoke and Chain Bike Co-op"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "Volunteers repaired 412 bikes in 2025."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+# ---------------------------------------------------------------- what a brief can speak for
+
+[[case]]
+id = "CL-brief-001"
+rule = "brief"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: an electrician's brief used for how a platform ranks listings, next to two facts about their own business."
+text = """## Reviews and your listing
+
+Google ranks local businesses with more reviews higher in Maps. I ask every customer for a review when I send the invoice, and my call-out fee is $95.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "The only source is the owner's brief, which speaks for their own business, not for how Google ranks listings."
+text = "Google ranks local businesses with more reviews higher in Maps."
+claim_type = "platform_behaviour"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Reviews and your listing"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 1 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Google ranks you higher in Maps if you've got more reviews, so I always ask."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The brief says it word for word, and how the owner asks for reviews is theirs to speak for."
+text = "I ask every customer for a review when I send the invoice"
+claim_type = "first_hand"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Reviews and your listing"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 1 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "I ask every customer for a review when I send the invoice."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C003"
+expect = "pass"
+why = "The owner's own price, pinned from their brief: 'My call-out fee is $95.'"
+text = "my call-out fee is $95"
+claim_type = "price"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Reviews and your listing"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 1 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "My call-out fee is $95."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+# ---------------------------------------------------------------- aggregators
+
+[[case]]
+id = "CL-aggregator-001"
+rule = "aggregator"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: a statistic sourced to a roundup post that cites another report, next to a scoped first-hand fact."
+text = """## Do customers read reviews?
+
+73% of customers read online reviews before choosing a tradie. I reply to every review on my listing within a week, good or bad.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "The source is a statistics roundup (source_tier aggregator) whose passage cites another report, so it can't support the figure."
+text = "73% of customers read online reviews before choosing a tradie."
+claim_type = "statistic"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Do customers read reviews?"}]
+
+[case.claim.source]
+url = "https://example.com/blog/review-statistics-2026"
+title = "52 online review statistics for 2026"
+publisher = "a marketing software blog"
+source_tier = "aggregator"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "73% of customers read online reviews before choosing a tradie (Consumer Trust Report)."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "A first-hand fact inside its scope: the writer checked their own listing and every review has a reply within a week."
+text = "I reply to every review on my listing within a week, good or bad."
+claim_type = "first_hand"
+prominence = "medium"
+status = "first_hand"
+locations = [{kind = "body", anchor = "Do customers read reviews?"}]
+
+[case.claim.first_hand_scope]
+owner = "the writer"
+scope = "The writer's replies to reviews on their own business listing, checked on 1 October 2026: all 37 reviews have a reply, each posted within seven days."
+method = "Read every review and reply on the listing."

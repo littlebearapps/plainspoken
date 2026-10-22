@@ -3,7 +3,8 @@
 The judges are read-only, so the CLI writes their replies. A reply is recorded only when it is one JSON object for
 the right group and the article's current hash (and, for JR, the justification file's current hash), and only
 while the article has a current lint, whose profile_sha256 and ruleset_version the recorded file carries. A J1–J4
-reply must also echo its input's `input_digest`, so a reply to a hand-built or stale input is refused (#43)."""
+reply must also echo its input's `input_digest`, a digest of the whole line `judge-input` printed, so a reply to a
+hand-built or stale input is refused (#43, #61)."""
 from __future__ import annotations
 
 import hashlib
@@ -11,7 +12,7 @@ import json
 import re
 from pathlib import Path
 
-from plainspoken import report
+from plainspoken import config, report
 from plainspoken.justify import file_sha, read_json
 from plainspoken.profile import Profile
 from plainspoken.registry import load_config
@@ -22,12 +23,12 @@ GROUPS = report.GROUPS
 _FENCE = re.compile(r"^\s*```(?:json)?\s*\n(.*)\n\s*```\s*$", re.S | re.I)
 
 
-def input_digest(lint: dict, group: str) -> str:
-    """A digest of what `judge_input` builds `group`'s input from: the lint's article hash, profile, ruleset, content
-    type and findings (so its candidates and human markers). `record_reply` recomputes it from the current lint, so
-    a reply whose input wasn't the one `judge-input` printed for this draft never records."""
-    keys = ("article_sha256", "profile_sha256", "ruleset_version", "content_type", "findings")
-    canon = json.dumps({"group": group, **{k: lint.get(k) for k in keys}}, sort_keys=True, ensure_ascii=False,
+def input_digest(line: dict) -> str:
+    """A digest of one judge-input line as printed: the canonical JSON of every field but `input_digest` (#61).
+    `record_reply` rebuilds the line `judge_input` would print now and compares, so a reply never records when that
+    line differs from the one the judge was given. The judge only echoes the field, so it can't show that the line
+    reached the judge unedited: an edit that keeps the genuine digest still records."""
+    canon = json.dumps({k: v for k, v in line.items() if k != "input_digest"}, sort_keys=True, ensure_ascii=False,
                        separators=(",", ":"))
     return hashlib.sha256(canon.encode("utf-8")).hexdigest()
 
@@ -57,11 +58,29 @@ def judge_input(article: Path, profile: Profile, reports_dir: Path, cwd: Path) -
             "calibration_notes": profile.calibration_notes or None,
             "visible_frontmatter_keys": list(profile.visible_frontmatter_keys),
             "faq_frontmatter_key": profile.faq_frontmatter_key,
-            "input_digest": input_digest(lint, g),
         }
         if g == "J4":
             item["human_markers"] = [f for f in lint["findings"] if f["rule"] in ("HM", "15")]
+        item["input_digest"] = input_digest(item)
         out.append(item)
+    return out
+
+
+def open_lint(article: Path, reports_dir: Path, cwd: Path, keep: set[str] = frozenset()) -> list[dict]:
+    """The current lint's findings that fail at merge whatever the judges say (#74): every BLOCK, and every WARN of
+    a rule the lint owns (a `lint+judge` rule's WARN is the judge's call). Judges on a draft with one of these can't
+    pass it, and fixing it after them reruns all four, so `judge-input` holds them back. A rule in `keep` (with or
+    without the lint's `r` prefix) is one the writer leaves on purpose, such as a WARN they'll justify."""
+    lint = read_json(report.report_paths(article, reports_dir, cwd)["lint"]) or {}
+    rules = load_config().rules
+    out = []
+    for f in lint.get("findings", []):
+        rid = f.get("rule")
+        rule = rules.get(rid)
+        if rid in keep or f"r{rid}" in keep or rule is None:
+            continue
+        if f.get("severity") == "BLOCK" or (f.get("severity") == "WARN" and rule.method == "lint"):
+            out.append(f)
     return out
 
 
@@ -77,7 +96,11 @@ def _parse(text: str) -> dict:
     return data
 
 
-def record_reply(article: Path, group: str, text: str, reports_dir: Path, cwd: Path) -> Path:
+def record_reply(article: Path, group: str, text: str, reports_dir: Path, cwd: Path,
+                 profile: str | Profile | None = None) -> Path:
+    """Validate one reply and write its judge file. `profile` is the profile the check used (a Profile, or a name or
+    path as `--profile` takes it); None finds it from the lint. J1–J4 need it to rebuild the line judge-input
+    prints now."""
     if group not in (*GROUPS, "JR"):
         raise ValueError(f"unknown group {group!r}")
     data = _parse(text)
@@ -95,9 +118,17 @@ def record_reply(article: Path, group: str, text: str, reports_dir: Path, cwd: P
     if group == "JR":
         if not paths["justify"].is_file() or data.get("justify_sha256") != file_sha(paths["justify"]):
             raise ValueError("stale: the JR reply reviewed a different justify file")
-    elif data.get("input_digest") != input_digest(lint, group):
-        raise ValueError(f"the {group} reply's input_digest doesn't match this draft's judge input (hand-built or "
-                         f"stale input): rerun `judge-input` and give the judge its {group} line unchanged")
+    else:
+        prof = profile if isinstance(profile, Profile) else config.profile_for_lint(lint, cwd, profile)
+        if prof is None or prof.sha256 != lint["profile_sha256"]:
+            raise ValueError(f"can't find the profile the check used ({lint.get('profile')}): pass it with --profile")
+        try:
+            line = next(x for x in judge_input(article, prof, reports_dir, cwd) if x["group"] == group)
+        except (KeyError, TypeError):  # a hash-current lint can still be hand-damaged
+            raise ValueError(f"no current lint for {Path(article).name}: run `check` first") from None
+        if data.get("input_digest") != line["input_digest"]:
+            raise ValueError(f"the {group} reply's input_digest doesn't match this draft's judge input (hand-built "
+                             f"or stale input): rerun `judge-input` and give the judge its {group} line unchanged")
     # Bound to the profile and ruleset the lint used: merge treats a judge file from another one as stale.
     data["profile_sha256"], data["ruleset_version"] = lint["profile_sha256"], lint["ruleset_version"]
     paths[group].parent.mkdir(parents=True, exist_ok=True)
@@ -130,7 +161,8 @@ def parse_replies(text: str) -> list:
     return out
 
 
-def record_all(article: Path, text: str, reports_dir: Path, cwd: Path) -> list[tuple[str, Path | None, str | None]]:
+def record_all(article: Path, text: str, reports_dir: Path, cwd: Path,
+               profile: str | Profile | None = None) -> list[tuple[str, Path | None, str | None]]:
     """Record J1–J4 from one file of replies, each validated as `record_reply` does, each by its own `group`.
     Returns `(group, written path or None, reason or None)` per group, J1 to J4, then one row per reply that isn't
     for J1–J4 (JR is recorded on its own). A bad reply never stops the others. Raises ValueError when the file
@@ -143,7 +175,7 @@ def record_all(article: Path, text: str, reports_dir: Path, cwd: Path) -> list[t
             out.append((g, None, f"{len(mine)} replies for {g} in the file" if mine else "no reply for it in the file"))
             continue
         try:
-            out.append((g, record_reply(article, g, json.dumps(mine[0]), reports_dir, cwd), None))
+            out.append((g, record_reply(article, g, json.dumps(mine[0]), reports_dir, cwd, profile), None))
         except ValueError as e:
             out.append((g, None, str(e)))
     for r in replies:

@@ -14,9 +14,10 @@ Core rules (these hold for the whole run):
 - The engine decides. You run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py <subcommand>` and act on its exit codes;
   you never score, merge or name report files yourself (`run.py paths <file>` prints every path).
 - Judges are `plainspoken:tells-judge` subagents. They are read-only; you record their replies with `judge-record`.
-- A fix cuts, joins or splits sentences, or restates plainly, using only what the text already says. You never edit
-  an article to add a fact, number, name, quote, example, opinion or detail that isn't already in the text or given
-  by the user. You never edit or add `anti-ai-allow` markers.
+- A fix cuts, joins or splits sentences, or restates plainly, using only what the text already says. A join uses
+  "and" or "but", or merges two sentences; it never adds a clause, detail or reason (such as "because …"). You never
+  edit an article to add a fact, number, name, quote, example, opinion or detail that isn't already in the text or
+  given by the user. You never edit or add `anti-ai-allow` markers.
 - At most two fix passes, and fix passes come before justify: justify only what you keep after the last fix pass.
   Before the judges start, step 1 fixes lint findings the same way in at most two lint-only passes; no judge has
   read that text, so they aren't fix passes. Once the judges start, every edit to FILE is a fix pass (after justify
@@ -47,8 +48,10 @@ run.py status.
 1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed),
    on its own: read it before step 2. Exit 2 → stop with its message. Before the first judges, fix its BLOCK and
    WARN lines under the fix rule and run step 1 again (at most two lint-only passes), so the judges read a
-   lint-clean draft. A WARN you have a real reason to keep, or one still there after two, goes on to step 2 as it is.
-2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 2 → rerun step 1 once.
+   lint-clean draft. A line you leave (a WARN you have a real reason to keep, one still there after two, or any once
+   the judges have started) goes to step 2 as `--keep <rule>`. Justify a kept WARN in step 7 rather than fix it:
+   a fix after the judges means all four again.
+2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 1 → it names lint lines still open: fix them (step 1) or keep them. Exit 2 → rerun step 1 once.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
    this. Your input:" followed by that line verbatim. Nothing else: no file contents, no opinion, no hint about who
    wrote it.

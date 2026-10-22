@@ -36,6 +36,22 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([json.loads(x)["group"] for x in r.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
+    def test_judge_input_holds_open_lint_lines(self):  # #74: a lint-owned WARN at the judges cost a second round
+        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks.\n",
+                            encoding="utf-8")
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        held = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual((held.returncode, held.stdout), (1, ""), held.stderr)
+        for line in ("WARN  r4b", "WARN  r7d", "WARN  rHM", "--keep"):
+            self.assertIn(line, held.stderr)
+        partial = cli("judge-input", "post.md", "--profile", "default", "--keep", "r4b,7d", cwd=self.cwd)
+        self.assertEqual(partial.returncode, 1)
+        self.assertIn("rHM", partial.stderr)
+        self.assertNotIn("r4b", partial.stderr)
+        kept = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,r7d", "--keep", "HM", cwd=self.cwd)
+        self.assertEqual(kept.returncode, 0, kept.stderr)
+        self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
+
     def test_judge_record_valid_and_invalid(self):
         import hashlib
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)

@@ -21,7 +21,8 @@ from plainspoken import evalmetrics as em
 from plainspoken import evalprompts
 from plainspoken.adapters.llm_panel import (PanelModel, Reply, is_anthropic, sampling, sampling_line,
                                             transport_for, usd)
-from plainspoken.golden import GROUPS, LABELS, GoldenCase
+from plainspoken.golden import JUDGE_GROUPS as GROUPS
+from plainspoken.golden import LABELS, GoldenCase
 
 SCHEMA = 1
 SPLITS = ("all", "human")

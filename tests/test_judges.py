@@ -1,11 +1,15 @@
+import hashlib
 import json
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from plainspoken import judges, report
-from tests._profiles import PRODUCT
+from tests._profiles import _FIX, PRODUCT
+
+PRODUCT_PATH = (_FIX / "product_like.toml").resolve()
 
 
 class JudgeInput(unittest.TestCase):
@@ -29,7 +33,7 @@ class JudgeInput(unittest.TestCase):
         for o in out:
             self.assertEqual(set(o) - {"human_markers"}, keys)  # no `profile` key for the judge
             self.assertEqual(o["article_sha256"], self.lint["article_sha256"])
-            self.assertEqual(o["input_digest"], judges.input_digest(self.lint, o["group"]))
+            self.assertEqual(o["input_digest"], judges.input_digest(o))
             self.assertTrue(Path(o["rubric"]).is_absolute())
         self.assertIn("human_markers", out[3])
         self.assertNotIn("human_markers", out[0])
@@ -53,6 +57,27 @@ class JudgeInput(unittest.TestCase):
             judges.judge_input(self.art, PRODUCT, self.reports, self.cwd)
 
 
+    def test_open_lint_is_what_merge_fails_whatever_the_judges_say(self):  # #74
+        lint_path = report.report_paths(self.art, self.reports, self.cwd)["lint"]
+        f = lambda rid, sev: {"rule": rid, "severity": sev, "line": 1, "message": "m"}
+        lint_path.write_text(json.dumps({**self.lint, "findings": [
+            f("2", "BLOCK"),       # a lint BLOCK stands, even on a lint+judge rule
+            f("5e", "WARN"),       # lint+judge: the judge owns a WARN
+            f("6", "CANDIDATE"),   # the judge decides
+            f("7d", "WARN"),       # lint-owned
+            f("4b", "INFO"),       # a shadow rule's finding
+            f("zz", "WARN"),       # not in the ruleset
+        ]}), encoding="utf-8")
+        held = lambda keep=frozenset(): [x["rule"] for x in judges.open_lint(self.art, self.reports, self.cwd, keep)]
+        self.assertEqual(held(), ["2", "7d"])
+        self.assertEqual(held({"r2"}), ["7d"])
+        self.assertEqual(held({"2", "7d"}), [])
+
+    def test_open_lint_without_a_lint_is_empty(self):  # judge-input has already refused a missing lint
+        report.report_paths(self.art, self.reports, self.cwd)["lint"].unlink()
+        self.assertEqual(judges.open_lint(self.art, self.reports, self.cwd), [])
+
+
 class Record(unittest.TestCase):
     def setUp(self):
         self.cwd = Path(tempfile.mkdtemp())
@@ -60,6 +85,10 @@ class Record(unittest.TestCase):
         self.art = self.cwd / "post.md"
         self.art.write_text("Text.\n", encoding="utf-8")
         self.reports = self.cwd / ".plainspoken" / "reports"
+        self.reports.mkdir(parents=True)
+        # judge-record finds the check's profile from the lint: here, through the project config's path
+        (self.cwd / ".plainspoken" / "config.toml").write_text(
+            f'[engine]\nprofile = "{PRODUCT_PATH.as_posix()}"\n', encoding="utf-8")
         self.sha = report.sha256(self.art)
         self.write_lint()
 
@@ -71,10 +100,18 @@ class Record(unittest.TestCase):
         self.lint = lint
         return lint
 
+    def line(self, group: str = "J2") -> dict:
+        """The line `judge-input` prints for `group` now."""
+        return next(x for x in judges.judge_input(self.art, PRODUCT, self.reports, self.cwd) if x["group"] == group)
+
     def reply(self, **over) -> str:
         group = over.get("group", "J2")
+        try:
+            digest = self.line(group)["input_digest"] if group != "JR" else None
+        except ValueError:  # no current lint
+            digest = None
         body = {"group": "J2", "article_sha256": self.sha, "judged_at": "2026-10-10T00:00:00Z", "verdicts": [],
-                "input_digest": judges.input_digest(self.lint, group)}
+                "input_digest": digest}
         body.update(over)
         return json.dumps(body)
 
@@ -106,7 +143,7 @@ class Record(unittest.TestCase):
 
     def test_another_groups_digest_refused(self):
         with self.assertRaisesRegex(ValueError, "input_digest"):
-            judges.record_reply(self.art, "J2", self.reply(input_digest=judges.input_digest(self.lint, "J1")),
+            judges.record_reply(self.art, "J2", self.reply(input_digest=self.line("J1")["input_digest"]),
                                 self.reports, self.cwd)
 
     def test_record_all_refuses_the_one_with_a_bad_digest(self):
@@ -116,6 +153,59 @@ class Record(unittest.TestCase):
         self.assertEqual([(g, w is not None) for g, w, _ in rows],
                          [("J1", True), ("J2", True), ("J3", False), ("J4", True)])
         self.assertIn("rerun `judge-input`", rows[2][2])
+
+    # ---- #61: the digest covers the whole line, rebuilt as judge-input would print it now ---------------------
+
+    def test_reply_to_an_edited_line_refused(self):
+        """A J2 line with its candidate dropped, or a severity changed, and a digest that matches the edited line."""
+        self.art.write_text("It is not just fast, it's reliable.\n", encoding="utf-8")
+        self.sha = report.sha256(self.art)
+        self.write_lint()
+        line = self.line("J2")
+        self.assertTrue(line["candidates"])
+        for field, value in (("candidates", line["candidates"][1:]),
+                             ("severities", {r: "WARN" for r in line["severities"]})):
+            edited = {**line, field: value}
+            with self.subTest(field=field):
+                self.assertNotEqual(judges.input_digest(edited), line["input_digest"])
+                with self.assertRaisesRegex(ValueError, "J2 reply's input_digest doesn't match"):
+                    judges.record_reply(self.art, "J2", self.reply(input_digest=judges.input_digest(edited)),
+                                        self.reports, self.cwd)
+        judges.record_reply(self.art, "J2", self.reply(input_digest=line["input_digest"]), self.reports, self.cwd)
+
+    def test_line_printed_differently_now_refused(self):
+        """Same lint, but judge-input would print another line now (here the rubric moved): the old digest no
+        longer records, though the lint-only digest before #61 did."""
+        digest = self.line("J2")["input_digest"]
+        with mock.patch.object(judges, "RUBRIC", self.cwd / "moved" / "judges.md"):
+            with self.assertRaisesRegex(ValueError, "input_digest doesn't match"):
+                judges.record_reply(self.art, "J2", self.reply(input_digest=digest), self.reports, self.cwd)
+
+    def test_profile_not_found_from_the_lint(self):
+        (self.cwd / ".plainspoken" / "config.toml").unlink()
+        with self.assertRaisesRegex(ValueError, "can't find the profile the check used.*--profile"):
+            judges.record_reply(self.art, "J2", self.reply(), self.reports, self.cwd)
+        judges.record_reply(self.art, "J2", self.reply(), self.reports, self.cwd, profile=str(PRODUCT_PATH))
+        rows = judges.record_all(self.art, self.reply(), self.reports, self.cwd, profile=PRODUCT)
+        self.assertEqual(rows[1][0], "J2")
+        self.assertIsNotNone(rows[1][1], rows[1][2])
+
+    def test_judge_files_with_the_old_digest_still_merge(self):
+        """merge never reads input_digest (judge-record checks it once), so files recorded before #61 merge."""
+        lint_keys = ("article_sha256", "profile_sha256", "ruleset_version", "content_type", "findings")
+        for line in judges.judge_input(self.art, PRODUCT, self.reports, self.cwd):
+            g = line["group"]
+            old = json.dumps({"group": g, **{k: self.lint.get(k) for k in lint_keys}}, sort_keys=True,
+                             ensure_ascii=False, separators=(",", ":"))
+            data = {"group": g, "article_sha256": self.sha, "judged_at": "2026-10-10T00:00:00Z",
+                    "input_digest": hashlib.sha256(old.encode("utf-8")).hexdigest(),
+                    "profile_sha256": self.lint["profile_sha256"], "ruleset_version": self.lint["ruleset_version"],
+                    "verdicts": [{"rule": r, "verdict": "pass", "severity": line["severities"][r], "evidence": []}
+                                 for r in line["rules"]]}
+            report.report_paths(self.art, self.reports, self.cwd)[g].write_text(json.dumps(data), encoding="utf-8")
+        merged = report.merge(self.art, self.reports, PRODUCT, self.cwd)
+        self.assertEqual(merged["problems"], [])
+        self.assertEqual(merged["coverage"]["missing"], [])
 
     def test_valid_reply_written(self):
         p = judges.record_reply(self.art, "J2", self.reply(), self.reports, self.cwd)
