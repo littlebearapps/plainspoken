@@ -7,25 +7,33 @@ after reading its pinned passage, not in a loop. Claude Code's own shell check s
 `printf '…' > reply` or a script that writes the ledger (#44).
 
 Refused, when the command names one of those files: a write redirection to it (a variable assigned its path is
-followed), `tee`, `truncate`, a `cp`/`mv`/`install`/`ln`/`rsync` destination, `dd of=`, `sed -i`/`perl -i`, an
-interpreter (`python3 -c`, `bash -c`, `node`, …) that isn't plainspoken's own CLI (`run.py`, `-m plainspoken`), a
-heredoc or here-string that holds the path (a script that writes it), and a command the lexer can't parse.
-Reading, `git`, `rm` and the CLI's `--from` stay allowed. A guardrail against a habit, not a security boundary: a
-script written earlier and run by name isn't seen.
+followed), `tee`, `truncate`, a `cp`/`mv`/`install`/`ln`/`rsync` destination, `dd of=`, `sed -i`/`perl -i`, a
+heredoc that holds a script that writes it, and a command the lexer can't parse. An interpreter that isn't
+plainspoken's own CLI (`run.py`, `-m plainspoken`) is refused when its program names one (or the command does) and
+writes files: inline code (`python3 -c`, `bash -c`, `node -e`), a heredoc or here-string on stdin, or a script run
+by name (`python3 build.py`, `bash x.sh`, `./x.py`), whose file is read from the event's cwd (#57). A shell program
+is followed command by command; other code counts as writing when it calls `open(…, 'w')`, `write_text`,
+`json.dump(…, open(…, 'w'))`, `writeFile`, `subprocess`, `os.system` and the like. A program the guard can't see (a
+missing script, `-m module`) is refused only when the command itself names a protected file.
 
-Always on and cheap: a command without `reply.json` or `.claims.` exits before anything beyond sys/json is imported.
-Any error of its own is silent (exit 0), so it never blocks an unrelated Bash call."""
+Reading (`cat`, `python3 -c` that only loads the ledger), `git`, `rm` and the CLI's `--from` stay allowed. A
+guardrail against a habit, not a security boundary: code that builds the path from parts, or a script piped in, isn't
+seen.
+
+Always on and cheap: a command without `reply.json`, `.claims.` or a script name exits before anything beyond
+sys/json is imported. Any error of its own is silent (exit 0), so it never blocks an unrelated Bash call."""
 import json
 import os
 import sys
 
-_MARKERS = ("reply.json", ".claims.")
+_MARKERS = ("reply.json", ".claims.", ".py", ".sh", ".bash", ".js", ".rb", ".pl", ".php")  # a script may name one
 
 
 def _deny(path: str, why: str) -> None:
     reason = (f"plainspoken: {path} is written with the Write or Edit tool, never through the shell ({why}). A reply: "
               "Write its JSON object to that path, then run the record command with --from. The claims ledger: Edit "
-              "one claim at a time, setting its five binding judgements after reading its pinned passage.")
+              "one claim at a time, setting its five binding judgements after reading its pinned passage. To read "
+              "one, use cat, or code that only reads it.")
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                              "permissionDecisionReason": reason}}))
 
@@ -44,7 +52,8 @@ def main() -> int:
         if hooks not in sys.path:
             sys.path.insert(0, hooks)
         import _writeguard
-        found = _writeguard.problem(command)
+        cwd = event.get("cwd")
+        found = _writeguard.problem(command, cwd if isinstance(cwd, str) else None)
     except Exception:  # noqa: BLE001 - never block an unrelated Bash call on a bug here
         return 0
     if found is not None:
