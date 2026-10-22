@@ -100,21 +100,24 @@ When the piece recommends or reports findings, say how strong each one's evidenc
 
 ### 6. Claims
 
-Claims runs before the check, so its edits land before the four judges read the draft. Run `/plainspoken:claims` on
-the saved draft. It's manual-only, so follow `${CLAUDE_PLUGIN_ROOT}/skills/claims/SKILL.md` yourself: it builds the
-claim ledger, pins every verified claim to a passage in a saved source, closes the gaps and has the isolated claims
-checker review the result. The figures and premises from step 2's `Claims to ledger` go in the ledger too. Its fixes
-soften, attribute, qualify or cut; they never add a fact. A claim that needs the owner stays open: list it, never
-settle it yourself. Never skip this step; if it can't run, the report keeps `claims: INCOMPLETE` and says which step
-stopped and why.
+First make the check's lint-only passes here, so a lint fix lands before the ledger is built: its step 1 on the
+saved draft (`RUN check '<draft>' --plugin-profile '${user_config.profile}'`), fixing BLOCK and WARN lines by cutting,
+joining, splitting or restating, at most twice. Claims runs before the check, so its edits land before the four
+judges read the draft. Run `/plainspoken:claims` on the saved draft. It's manual-only, so follow
+`${CLAUDE_PLUGIN_ROOT}/skills/claims/SKILL.md` yourself: it builds the claim ledger, pins every verified claim to a
+passage in a saved source, closes the gaps and has the isolated claims checker review the result. The figures and
+premises from step 2's `Claims to ledger` go in the ledger too. Its fixes soften, attribute, qualify or cut; they
+never add a fact. A claim that needs the owner stays open: list it, never settle it yourself. Never skip this step;
+if it can't run, the report keeps `claims: INCOMPLETE` and says which step stopped and why.
 
 ### 7. Check
 
 Run `/plainspoken:check` on the saved draft with the mapped content type: add `--content-type social` only for
 `--type social`. Where one skill can't start another (or the project denies check), follow
 `${CLAUDE_PLUGIN_ROOT}/skills/check/SKILL.md` yourself. Its fix passes cut, join, split or restate; they never add a
-fact. Step 7 ends where the check's own report step does: an UNRESOLVED merge goes through its fix-or-justify loop
-first (fix the WARN, or `justify` it). A WARN you keep without an accepted justification leaves the check UNRESOLVED.
+fact. Its two lint-only passes include step 6's. Step 7 ends where the check's own report step does: an UNRESOLVED
+merge goes through its fix-or-justify loop first (fix the WARN, or `justify` it). A WARN you keep without an accepted
+justification leaves the check UNRESOLVED.
 
 If the check changed the draft, the ledger no longer matches it: rerun the claims skill's steps 4 to 6 once (back
 to step 2 for any claim a fix touched), then `RUN claims status '<draft>'`. That's one claims checker, not four
