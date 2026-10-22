@@ -90,8 +90,8 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("`RUN status '<draft>' --plugin-profile '${user_config.profile}'`", step)
         block = [line.strip() for line in step.splitlines() if line.startswith("    ")]
         self.assertEqual([line.split(":", 1)[0] for line in block],
-                         ["Draft", "<every line `status` printed", "Reader value", "Needs the owner", "Anchors",
-                          "For kaizen"])
+                         ["Draft", "<every line `status` printed", "Reader value", "Anchors", "For kaizen"])
+        self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
         self.assertIn("Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)", block)
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
@@ -100,6 +100,8 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
         self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
+        self.assertIn("Ask the owner to check nothing that the `needs the owner` lines don't list", flat)
+        self.assertIn("hold it `blocking` or cut it, never only ask in the report", " ".join(self.step(6).split()))
 
     def test_report_starts_with_the_block(self):  # #41: no prose before the block, and the shortfall comes after it
         flat = " ".join(self.text.split("### 8. Report", 1)[1].split())

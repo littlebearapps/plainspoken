@@ -268,6 +268,22 @@ class BlockingAndRemoved(unittest.TestCase):
         self.assertIn("an aggregator never supports a claim: trace to the origin or cut", findings[0]["message"])
 
 
+class NeedsOwner(unittest.TestCase):  # #45: what a write report's "Needs the owner" line lists
+    def test_lists_blocking_unapproved_sensitive_and_regulated_but_not_removed(self):
+        base = {"claim_id": "X", "text": "t", "status": "verified"}
+        ledger = {"claims": [
+            {**base, "claim_id": "C1", "text": "I went out\non my own", "status": "blocking", "resolution": "ask"},
+            {**base, "claim_id": "C2", "status": "first_hand", "first_hand_scope": {"sensitive": True}},
+            {**base, "claim_id": "C3", "status": "first_hand",
+             "first_hand_scope": {"sensitive": True, "approved_by_owner": True}},
+            {**base, "claim_id": "C4", "regulated_class": "health_claim"},
+            {**base, "claim_id": "C5", "status": "removed", "resolution": "cut", "regulated_class": "health_claim"},
+            {**base, "claim_id": "C6", "status": "opinion_or_inference"}]}
+        self.assertEqual(claims.needs_owner(ledger), [
+            "C1: I went out on my own (blocking)", "C2: t (owner approval)", "C4: t (regulated: health_claim)"])
+        self.assertEqual(claims.needs_owner({"claims": [ledger["claims"][5]]}), [])
+
+
 class SignOff(unittest.TestCase):
     def _signed(self, wording):
         tmp, path, ledger = _valid_ledger(self, "Intro.\n\nBody with a 49%\n   statistic from the survey.\n")

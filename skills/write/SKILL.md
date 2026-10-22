@@ -107,8 +107,10 @@ judges read the draft. Run `/plainspoken:claims` on the saved draft. It's manual
 `${CLAUDE_PLUGIN_ROOT}/skills/claims/SKILL.md` yourself: it builds the claim ledger, pins every verified claim to a
 passage in a saved source, closes the gaps and has the isolated claims checker review the result. The figures and
 premises from step 2's `Claims to ledger` go in the ledger too. Its fixes soften, attribute, qualify or cut; they
-never add a fact. A claim that needs the owner stays open: list it, never settle it yourself. Never skip this step;
-if it can't run, the report keeps `claims: INCOMPLETE` and says which step stopped and why.
+never add a fact. A claim that needs the owner stays open: leave it `blocking` with a `resolution` naming what they
+must confirm, never settle it yourself. So does any phrase you'd ask them to check: hold it `blocking` or cut it,
+never only ask in the report. Never skip this step; if it can't run, the report keeps `claims: INCOMPLETE` and says
+which step stopped and why.
 
 ### 7. Check
 
@@ -133,15 +135,15 @@ no words before it; a report without it is incomplete. Fill it in, with the `sta
 printed, never from memory or in other words:
 
     Draft: <draft path>
-    <every line `status` printed: check, claims and its reasons, words, the reader-value contract>
+    <every line `status` printed: check, claims and its reasons, needs the owner, words, the reader-value contract>
     Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)
-    Needs the owner: <the claims skill's list, or none>
     Anchors: <ids used>; no anchors: <tags, or none>; <every (skipped anchor …) line>
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 
 Then give any length shortfall (step 1) and whatever else the user needs, in plain words. Any length you give is
-the `words:` line's, never an estimate. A check or claims result that isn't PASS is never described as passed. The
-person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
+the `words:` line's, never an estimate. Ask the owner to check nothing that the `needs the owner` lines don't list.
+A check or claims result that isn't PASS is never described as passed. The person records a `For kaizen` item with
+`/plainspoken:kaizen dismiss` if they agree.
 
 A piece step 2 parked, or left INCOMPLETE, gets only the `Reader value` line and the reason. Before a drafted piece
 ships, the user runs `/plainspoken:reader-value deliver <draft>` to check the draft keeps the contract's promise.

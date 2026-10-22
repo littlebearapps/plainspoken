@@ -48,6 +48,9 @@ What the ledger already says:
 - **A claim the ledger already marks `blocking` needs no finding** unless you disagree with the ledger: its
   `resolution` already holds it for the owner. File one only when you think the ledger has it wrong (the claim is
   fine as worded, or the problem is a different one from the one the resolution names).
+- **A status is a label, not support.** A claim marked `opinion_or_inference` or `hypothetical` that states a
+  checkable fact about the writer, their history or the business (who, what, when, where, how long, what they did)
+  and that no pinned passage holds is `unsupported_claim`. A real opinion, value or plan ("I'd start with…") is fine.
 - **A `human_signoff` covers only the locations whose text matches its `wording`.** It records that a person
   accepted the listed findings for that exact wording, so don't re-file those findings where the article says
   those words. A location of the same claim that says something else gets checked as usual.
@@ -85,7 +88,8 @@ What counts as support, and what doesn't:
 - **`blocking`**: the article can't stand behind the claim as worded. A ledgered claim with no support at all; an
   entailment failure on number, period, geography, audience, scope or causation, at any of the claim's locations;
   a location that says more than the claim's ledger `text` (`scope_stretch`), even when the claim itself is
-  supported; a fabricated quote or figure; an unledgered material statistic, price or quotation; a first-hand claim
+  supported; a fact about the writer or the business labelled as opinion or inference with no pinned passage; a
+  fabricated quote or figure; an unledgered material statistic, price or quotation; a first-hand claim
   stretched past its scope; a claim resting on an aggregator; a quote that isn't verbatim at its source; a
   regulated-matrix class the matrix marks as blocking.
 - **`warning`**: worth fixing, but the claim isn't wrong as worded. A missing hedge on a contested first, an undated
