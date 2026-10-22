@@ -256,7 +256,7 @@ Before I went out on my own, I ran the trades desk at a larger practice.
 [[case.claim]]
 claim_id = "C001"
 expect = "pass"
-why = "The owner's brief, pinned word for word, says just over 40 trades clients around Geelong; 'more than 40' says no more."
+why = "The owner's brief, pinned word for word, says just over 40 trades clients, all around Geelong; 'more than 40' says no more."
 text = "I work with more than 40 trades businesses around Geelong"
 claim_type = "count"
 prominence = "medium"
@@ -269,7 +269,7 @@ title = "Owner's brief, 30 September 2026"
 source_tier = "primary"
 
 [case.claim.binding]
-passage = "I've got just over 40 trades clients, mostly around Geelong."
+passage = "I've got just over 40 trades clients, all of them around Geelong."
 same_subject = true
 same_geography = true
 same_period = true
