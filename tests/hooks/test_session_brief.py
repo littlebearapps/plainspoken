@@ -238,6 +238,7 @@ class DraftingRule(unittest.TestCase):
 
     def test_rule_fits_whole_under_a_long_plugin_root(self):  # a cut would drop the fabrication guard at the end
         root = "/home/someone-with-a-long-name/.claude/plugins/cache/a-long-marketplace-name/plainspoken/9.99.99"
-        text = session_brief.rule_text(REPO, "default")
+        with mock.patch.object(session_brief, "fit", lambda t, _limit: t):  # measure the rule before any cut
+            text = session_brief.rule_text(REPO, "default")
         self.assertTrue(text.endswith("ask instead."))
         self.assertLessEqual(len(text) - len(str(REPO)) + len(root), session_brief.RULE_LIMIT)
