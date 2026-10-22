@@ -392,6 +392,23 @@ class EvalCases(unittest.TestCase):
                             self.assertIsNone(rx.search(passage(prompt).replace("> - ", "")),
                                               "the brief's own numbers are allowed")
 
+    def test_drafting_fact_graders_take_numbers_in_words(self):
+        """A piece that spells a kept number out ("Forty stalls") keeps the fact, so the grader passes it (#47)."""
+        words = {"10": "ten", "15": "fifteen", "22": "twenty-two", "40": "forty"}
+        checked = 0
+        for folder in DRAFTING:
+            for d in sorted(p for p in folder.iterdir() if p.is_dir()):
+                _, _, prompt, graders = _case(d)
+                kept = compiled(next(g for n, g, _ in graders if n == "kept-the-facts.md"))
+                source = facts_source(d, prompt)
+                for digits, word in words.items():
+                    if re.search(rf"\b{digits}\b", source) and rf"\b(?:{digits}|" in kept.pattern:
+                        with self.subTest(case=d.name, number=digits):
+                            spelt = re.sub(rf"\b{digits}\b", word.capitalize(), source)
+                            self.assertTrue(kept.search(marked(spelt)))
+                        checked += 1
+        self.assertEqual(checked, 8)
+
     def test_longform_and_fix_cases(self):
         """evals/longform (long pieces from notes) and evals/fix (a stiff draft saved by the scaffold, fixed in place):
         both with the nudge and the rule on, both asking for the piece between markers."""

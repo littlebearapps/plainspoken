@@ -23,7 +23,7 @@ _CONTENT = (r"e-?mails?|texts?|sms|messages?|repl(?:y|ies)|posts?|tweets?|thread
             r"instagram|facebook|tiktok|youtube|mastodon|newsletters?|blog(?: posts?)?|articles?|pages?|copy|bios?|"
             r"scripts?|podcasts?|videos?|voice-?overs?|pamphlets?|flyers?|brochures?|press releases?|speech(?:es)?|"
             r"letters?|announcements?|ads?|adverts?|intros?|outros?|descriptions?|summar(?:y|ies) for|updates?|"
-            r"release notes|newsletter items?")
+            r"release notes|newsletter items?|essays?|reports?|guides?|case stud(?:y|ies)|white ?papers?")
 _NOUN = re.compile(rf"\b(?:{_CONTENT})\b", re.I)
 _DRAFT_VERB = re.compile(r"\b(?:draft|write|compose|put together|prepare|come up with|help me (?:word|write|phrase|"
                          r"say|reply|respond))\b", re.I)
@@ -35,10 +35,18 @@ _STRONG_REWRITE = re.compile(
     r"machine|llm)\b"
     r"|\bless (?:like )?(?:chatgpt|gpt|ai|an ai|a bot|robotic|stiff|formal|corporate|salesy|wooden)\b"
     r"|\b(?:sound|read)s? (?:more )?(?:natural|human)\b", re.I)
-# Long-form cues: the kind of piece, or a word count of 250 or more. These go to the write skill (draft, check, fix).
-_LONG = re.compile(r"\b(?:blog(?: posts?)?|articles?|features?|essays?|(?:web |landing |service |about )?pages?|"
-                   r"newsletters?|press releases?|reports?|guides?)\b|\b(?:[2-9][0-9]{2}|[1-9][0-9]{3,})\s*(?:-\s*)?words?\b",
-                   re.I)
+# Long-form cues go to the write skill (draft, check, fix): a stated size of about 250 words or more (or a few
+# paragraphs, or two pages), a kind that's long by nature, or sources to research. The size of the piece decides, never
+# its type alone: a newsletter note, press release, pamphlet or page from a handful of facts is short (#37).
+_LONG = re.compile(
+    r"\b(?:2[5-9][0-9]|[3-9][0-9]{2}|[1-9],?[0-9]{3,})\s*(?:-\s*)?words?\b"
+    r"|\b(?:a few|several|many|multiple|[3-9]|three|four|five|six|seven|eight|nine|ten) paragraphs\b"
+    r"|\b(?:[2-9]|two|three|four|five|multi)[- ]pages?\b|\blong-?form\b|\bin-depth\b"
+    r"|\b(?:blog posts?|articles?|essays?|reports?|guides?|case stud(?:y|ies)|white ?papers?)\b"
+    r"|\bfeatures? (?:on|about|stor(?:y|ies)|articles?)\b"
+    r"|\bresearch(?:ing)?\b(?! (?:team|grants?|group|centre|center|projects?|papers?|lab|assistants?))"
+    r"|\b(?:sources|cite|citations|references|fact-check)\b", re.I)
+_URL = re.compile(r"https?://", re.I)
 _CODE = re.compile(r"\b(?:python|javascript|typescript|bash|shell|sql|regex|function|bug|unit tests?|"
                    r"code|commit message|docstring|json|yaml|stack ?trace)\b|\w\.(?:py|js|ts|sh|rb|go)\b", re.I)
 
@@ -57,7 +65,7 @@ def intent(prompt: str) -> str | None:
     if _REWRITE_VERB.search(text):
         return "rewrite"
     if _DRAFT_VERB.search(text):
-        return "draft-long" if _LONG.search(text) else "draft"
+        return "draft-long" if _LONG.search(text) or len(_URL.findall(text)) > 1 else "draft"
     return None
 
 
@@ -77,9 +85,10 @@ def nudge_text(kind: str, host: str, root: str | Path, profile: str) -> str:
                 f"notes, runs the full check and fixes what it finds. Never add a fact the notes don't give; say "
                 f"what's missing instead.")
     else:
-        text = (f"plainspoken: this asks for writing people will read. Short piece: draft it, pipe it to {lint} and "
-                f"cut what it flags (remove, never add facts). Long or going out: use {_skill(host, 'write')}; inside "
-                f"it, this lint never replaces its check and claims steps.")
+        text = (f"plainspoken: this asks for writing people will read. Short piece (under about 250 words, whatever "
+                f"its type): draft it, pipe it to {lint} and cut what it flags (remove, never add facts). Longer, or "
+                f"sources to research: use {_skill(host, 'write')}; inside it, this lint never replaces its check and "
+                f"claims steps.")
     return text[:LIMIT]
 
 

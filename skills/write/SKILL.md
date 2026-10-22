@@ -48,8 +48,8 @@ it. What counts as a source, and what to do when two of them disagree: `referenc
 
 If the user asked for a length, estimate whether the sources can carry it. If they can't, say so before you draft and
 ask for more material; when you can't ask (a run with no one to answer, or the user said not to), write it shorter
-and say why at the top of the report. Never pad. A definition or background line the sources don't give is a new
-fact, so it needs a source too.
+and say why in the report, straight after step 8's block. Never pad. A definition or background line the sources
+don't give is a new fact, so it needs a source too.
 
 ### 2. Reader value
 
@@ -100,21 +100,26 @@ When the piece recommends or reports findings, say how strong each one's evidenc
 
 ### 6. Claims
 
-Claims runs before the check, so its edits land before the four judges read the draft. Run `/plainspoken:claims` on
-the saved draft. It's manual-only, so follow `${CLAUDE_PLUGIN_ROOT}/skills/claims/SKILL.md` yourself: it builds the
-claim ledger, pins every verified claim to a passage in a saved source, closes the gaps and has the isolated claims
-checker review the result. The figures and premises from step 2's `Claims to ledger` go in the ledger too. Its fixes
-soften, attribute, qualify or cut; they never add a fact. A claim that needs the owner stays open: list it, never
-settle it yourself. Never skip this step; if it can't run, the report keeps `claims: INCOMPLETE` and says which step
-stopped and why.
+First make the check's lint-only passes here, so a lint fix lands before the ledger is built: its step 1 on the
+saved draft (`RUN check '<draft>' --plugin-profile '${user_config.profile}'`), fixing BLOCK and WARN lines by cutting,
+joining, splitting or restating, at most twice. Claims runs before the check, so its edits land before the four
+judges read the draft. Run `/plainspoken:claims` on the saved draft. It's manual-only, so follow
+`${CLAUDE_PLUGIN_ROOT}/skills/claims/SKILL.md` yourself: it builds the claim ledger, pins every verified claim to a
+passage in a saved source, closes the gaps and has the isolated claims checker review the result. The figures and
+premises from step 2's `Claims to ledger` go in the ledger too. Its fixes soften, attribute, qualify or cut; they
+never add a fact. A claim that needs the owner stays open: leave it `blocking` with a `resolution` naming what they
+must confirm, never settle it yourself. So does any phrase you'd ask them to check: hold it `blocking` or cut it,
+never only ask in the report. Never skip this step; if it can't run, the report keeps `claims: INCOMPLETE` and says
+which step stopped and why.
 
 ### 7. Check
 
 Run `/plainspoken:check` on the saved draft with the mapped content type: add `--content-type social` only for
 `--type social`. Where one skill can't start another (or the project denies check), follow
 `${CLAUDE_PLUGIN_ROOT}/skills/check/SKILL.md` yourself. Its fix passes cut, join, split or restate; they never add a
-fact. Step 7 ends where the check's own report step does: an UNRESOLVED merge goes through its fix-or-justify loop
-first (fix the WARN, or `justify` it). A WARN you keep without an accepted justification leaves the check UNRESOLVED.
+fact. Its two lint-only passes include step 6's. Step 7 ends where the check's own report step does: an UNRESOLVED
+merge goes through its fix-or-justify loop first (fix the WARN, or `justify` it). A WARN you keep without an accepted
+justification leaves the check UNRESOLVED.
 
 If the check changed the draft, the ledger no longer matches it: rerun the claims skill's steps 4 to 6 once (back
 to step 2 for any claim a fix touched), then `RUN claims status '<draft>'`. That's one claims checker, not four
@@ -125,19 +130,20 @@ runs, whatever they say.
 ### 8. Report
 
 Run `RUN status '<draft>' --plugin-profile '${user_config.profile}'` (plus step 2's `--profile`, if any). It reads
-the last saved check and claims results back; it runs and writes nothing. Start the report with this block, filled
-in, with the `status` lines copied exactly as printed, never from memory or in other words:
+the last saved check and claims results back; it runs and writes nothing. Start the report with this block, with
+no words before it; a report without it is incomplete. Fill it in, with the `status` lines copied exactly as
+printed, never from memory or in other words:
 
     Draft: <draft path>
-    <every line `status` printed: check, claims and its reasons, words, the reader-value contract>
+    <every line `status` printed: check, claims and its reasons, needs the owner, words, the reader-value contract>
     Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)
-    Needs the owner: <the claims skill's list, or none>
     Anchors: <ids used>; no anchors: <tags, or none>; <every (skipped anchor …) line>
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 
-Then say whatever else the user needs, in plain words. Any length you give is the `words:` line's, never an
-estimate. A check or claims result that isn't PASS is never described as passed. The person records a `For kaizen`
-item with `/plainspoken:kaizen dismiss` if they agree.
+Then give any length shortfall (step 1) and whatever else the user needs, in plain words. Any length you give is
+the `words:` line's, never an estimate. Ask the owner to check nothing that the `needs the owner` lines don't list.
+A check or claims result that isn't PASS is never described as passed. The person records a `For kaizen` item with
+`/plainspoken:kaizen dismiss` if they agree.
 
 A piece step 2 parked, or left INCOMPLETE, gets only the `Reader value` line and the reason. Before a drafted piece
 ships, the user runs `/plainspoken:reader-value deliver <draft>` to check the draft keeps the contract's promise.

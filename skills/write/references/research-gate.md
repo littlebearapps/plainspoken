@@ -27,7 +27,8 @@ source gives the number of days. Ask for the number; don't pick one.
 
 Before drafting, weigh what the sources say against the length asked for. If they run out well short of it, tell the
 user how far they go and what would fill the rest (more detail on a service, an example, a customer question), and
-ask for it. Where no one can answer, write the shorter piece and say why at the top of the report.
+ask for it. Where no one can answer, write the shorter piece and say why in the report, straight after its status
+block.
 
 Don't fill the gap with background from memory. A line explaining a term (what a tax form is, what a piece of
 software does) is a new fact like any other: it needs a source, or it stays out.

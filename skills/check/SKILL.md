@@ -18,9 +18,9 @@ Core rules (these hold for the whole run):
   an article to add a fact, number, name, quote, example, opinion or detail that isn't already in the text or given
   by the user. You never edit or add `anti-ai-allow` markers.
 - At most two fix passes, and fix passes come before justify: justify only what you keep after the last fix pass.
-  Before the judges start you may fix lint findings once, the same way, then rerun step 1; no judge has read that
-  text, so it isn't a fix pass. Once the judges start, every edit to FILE is a fix pass (after justify or JR too),
-  and step 1 follows it. INCOMPLETE means an input is missing or stale: rerun what merge names, without editing the article; that rerun is
+  Before the judges start, step 1 fixes lint findings the same way in at most two lint-only passes; no judge has
+  read that text, so they aren't fix passes. Once the judges start, every edit to FILE is a fix pass (after justify
+  or JR too), and step 1 follows it. INCOMPLETE means an input is missing or stale: rerun what merge names, without editing the article; that rerun is
   not a fix pass. Still INCOMPLETE after one rerun → stop and report merge's problem lines.
 - Exit codes: `check` 0 = no BLOCK, 1 = BLOCKs found (carry on), 2 = bad input (stop and report the message).
   `merge` 0 = PASS, 1 = read the status line (INCOMPLETE, FAIL or UNRESOLVED). For `merge`, `justify` and
@@ -44,8 +44,11 @@ run.py status.
 
 ## Steps
 
-1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed). Exit 2 → stop with its message.
-2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4. Exit 2 → rerun step 1 once.
+1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed),
+   on its own: read it before step 2. Exit 2 → stop with its message. Before the first judges, fix its BLOCK and
+   WARN lines under the fix rule and run step 1 again (at most two lint-only passes), so the judges read a
+   lint-clean draft. A WARN you have a real reason to keep, or one still there after two, goes on to step 2 as it is.
+2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 2 → rerun step 1 once.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
    this. Your input:" followed by that line verbatim. Nothing else: no file contents, no opinion, no hint about who
    wrote it.
@@ -55,8 +58,9 @@ run.py status.
    `RUN judge-record FILE --all --from <reply path> && RUN merge FILE --plugin-profile '${user_config.profile}'`
    (step 5); it records each reply and deletes the file. The JSON never goes in a shell command (no heredoc, no
    echo): the shell check refuses it there. Exit 1 names each judge it didn't record (invalid or stale): start just
-   that judge again once ("no current lint" → rerun step 1 first), Write its reply alone to the same path and run
-   `RUN judge-record FILE --group Jn --from <reply path>`, then merge; a second failure → stop and report the reason.
+   that judge again once ("no current lint" → rerun step 1 first; "input_digest" → rerun step 2 for its line),
+   Write its reply alone to the same path and run `RUN judge-record FILE --group Jn --from <reply path>`, then
+   merge; a second failure → stop and report the reason.
 5. **Merge.** `RUN merge FILE --plugin-profile '${user_config.profile}'` (step 4 runs it once all four are
    recorded). PASS → step 8. INCOMPLETE → rerun exactly what its `problem:` and `missing verdicts:` lines name, then
    merge again (once). FAIL → step 6. UNRESOLVED → step 6 for WARNs you'll fix, step 7 for WARNs you'll keep.

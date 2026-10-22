@@ -38,7 +38,8 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         step = " ".join(self.step(1).split())
         self.assertIn("estimate whether the sources can carry it", step)
         self.assertIn("say so before you draft and ask for more material", step)
-        self.assertIn("write it shorter and say why at the top of the report", step)
+        self.assertIn("write it shorter and say why in the report, straight after step 8's block", step)
+        self.assertNotIn("top of the report", step)  # #41: the shortfall never comes before the status block
         self.assertIn("Never pad", step)
         self.assertIn("A definition or background line the sources don't give is a new fact", step)
         gate = (REFS / "research-gate.md").read_text(encoding="utf-8")
@@ -89,8 +90,8 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("`RUN status '<draft>' --plugin-profile '${user_config.profile}'`", step)
         block = [line.strip() for line in step.splitlines() if line.startswith("    ")]
         self.assertEqual([line.split(":", 1)[0] for line in block],
-                         ["Draft", "<every line `status` printed", "Reader value", "Needs the owner", "Anchors",
-                          "For kaizen"])
+                         ["Draft", "<every line `status` printed", "Reader value", "Anchors", "For kaizen"])
+        self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
         self.assertIn("Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)", block)
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
@@ -99,6 +100,17 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
         self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
+        self.assertIn("Ask the owner to check nothing that the `needs the owner` lines don't list", flat)
+        self.assertIn("hold it `blocking` or cut it, never only ask in the report", " ".join(self.step(6).split()))
+
+    def test_report_starts_with_the_block(self):  # #41: no prose before the block, and the shortfall comes after it
+        flat = " ".join(self.text.split("### 8. Report", 1)[1].split())
+        self.assertIn("Start the report with this block, with no words before it", flat)
+        self.assertIn("a report without it is incomplete", flat)
+        self.assertIn("Then give any length shortfall (step 1)", flat)
+        gate = " ".join((REFS / "research-gate.md").read_text(encoding="utf-8").split())
+        self.assertIn("say why in the report, straight after its status block", gate)
+        self.assertNotIn("top of the report", self.text + gate)
 
     def test_unresolved_check_and_skipped_claims_are_never_silent(self):  # #24
         claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
@@ -115,6 +127,14 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("rerun the claims skill's steps 4 to 6 once", check)
         self.assertIn("tell the user to run `/plainspoken:claims <draft>` again", check)
         self.assertIn("list for step 6", " ".join(self.step(2).split()))
+
+    def test_lint_only_passes_before_claims(self):  # #42: a lint fix after claims would stale the ledger
+        claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
+        self.assertIn("First make the check's lint-only passes here, so a lint fix lands before the ledger is built",
+                      claims)
+        self.assertLess(claims.index("lint-only passes"), claims.index("Run `/plainspoken:claims`"))
+        self.assertIn("by cutting, joining, splitting or restating, at most twice", claims)
+        self.assertIn("Its two lint-only passes include step 6's", check)
 
     def test_other_skills_named_from_the_plugin_folder(self):
         notes = (REFS / "claude-code.md").read_text(encoding="utf-8")

@@ -107,6 +107,10 @@ class ClaimsSkill(SkillBasics, unittest.TestCase):
         self.assertIn("back to steps 2 to 5", step6)
         self.assertIn("re-pin", step6)
 
+    def test_a_fact_about_the_writer_is_never_opinion(self):  # #45: a made-up history labelled as inference
+        self.assertIn("A fact about the writer or the business (who, what, when, where, how long, what they did) is "
+                      "never `opinion_or_inference`", " ".join(self.text.split("## Steps", 1)[1].split()))
+
     def test_an_edit_after_the_checker_goes_back_to_step_2(self):
         self.assertIn("go back to steps 2 to 6 for the claims you edited", self.step(7))
 
@@ -202,6 +206,14 @@ class ClaimsReferences(unittest.TestCase):
         self.assertIn("claims stamp ARTICLE", text)  # the hash and the clock come from the CLI
         self.assertIn("never a heredoc", text)
         self.assertIn("`; echo`", text)
+        self.assertIn("refuses a shell command that writes the ledger or a reply file",
+                      " ".join(text.split()))  # #44: hooks/write_guard.py
+
+    def test_binding_judgements_are_set_per_claim(self):  # #44: three runs set all five to true in a loop
+        step = " ".join((SKILL / "SKILL.md").read_text(encoding="utf-8").split("3. **Pin every verified claim.**")[1].split("4. **Close the gaps.**")[0].split())
+        self.assertIn("one claim at a time", step)
+        self.assertIn("`false` wherever it doesn't match", step)
+        self.assertIn("by a script, aren't judgements", step)
 
 
 if __name__ == "__main__":

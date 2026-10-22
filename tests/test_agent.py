@@ -119,6 +119,14 @@ class ClaimsChecker(unittest.TestCase):
         blocking = severity.split("**`warning`**", 1)[0]
         self.assertIn("`scope_stretch`", blocking)
 
+    def test_a_fact_labelled_opinion_is_blocking(self):  # #45: the label doesn't make a fact about the writer safe
+        rubric = " ".join((REPO / "data" / "rubrics" / "claims.md").read_text(encoding="utf-8").split())
+        self.assertIn("A status is a label, not support.", rubric)
+        self.assertIn("(who, what, when, where, how long, what they did)", rubric)
+        self.assertIn("is `unsupported_claim`. A real opinion, value or plan", rubric)
+        blocking = rubric.split("## Severity", 1)[1].split("**`warning`**", 1)[0]
+        self.assertIn("a fact about the writer or the business labelled as opinion or inference", blocking)
+
     def test_rubric_ledger_blocking_locations_and_signoff(self):
         rubric = " ".join((REPO / "data" / "rubrics" / "claims.md").read_text(encoding="utf-8").split())
         self.assertIn("already marks `blocking` needs no finding", rubric)
