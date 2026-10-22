@@ -82,10 +82,11 @@ rating applies without asking, so `plugins.auto_apply: true` can apply it unatte
 `install --force --ref <new-sha>` moves it.
 
 Hooks outside Claude Code: lint and the claims integrity check after each edit, and the optional writing nudge, run
-in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Still missing: the publish gate and
-the kaizen nudges, so run the check yourself before anything goes out; the install-time settings (pick a profile
-with `[engine] profile` in `.plainspoken/config.toml`, and turn the optional pieces on with `/plainspoken:setup`);
-and an enforced read-only sandbox for the agents in Hermes, where it's an instruction they follow.
+in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Still missing: the publish gate, the
+shell write guard and the kaizen nudges, so run the check yourself before anything goes out; the install-time
+settings (pick a profile with `[engine] profile` in `.plainspoken/config.toml`, and turn the optional pieces on with
+`/plainspoken:setup`); and an enforced read-only sandbox for the agents in Hermes, where it's an instruction they
+follow.
 
 Check a draft:
 
@@ -167,6 +168,8 @@ to a source. Your own data takes an `<!-- integrity:allow -->` comment inside or
 TL;DR (a marker inside a chart covers that chart, never the TL;DR), or `# integrity: allow` in the frontmatter, and a
 `first_hand` claim in the ledger. When the file has a claim ledger, the hook lists the ledger's gaps instead.
 It says nothing when there's nothing to flag; in warn mode it repeats itself only when a file's result changes.
+A Bash hook refuses a shell command that writes a judge or checker reply, or a claim ledger: those go through the
+Write and Edit tools.
 
 Settings for all three go in `.plainspoken/config.toml`:
 

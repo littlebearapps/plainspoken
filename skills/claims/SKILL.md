@@ -66,11 +66,12 @@ says) · 2 = bad input or a refused pin (stop that call and act on its one-line 
 3. **Pin every verified claim.** Fetch the source page, save its text under the `sources_dir` (one file per page),
    then `RUN claims pin --source <saved file> --passage '<passage copied from that file>' --article ARTICLE`, the
    passage in single quotes so the shell leaves `$` alone (pinning.md shows how to quote an apostrophe). It refuses a
-   source outside the `sources_dir` or one that is the article. Paste the printed fragment under the claim,
-   fill `source` (`url`, `title`, `source_tier`), and set the five `binding` judgements after reading the passage
-   against the claim as worded. A refusal means re-cut the passage verbatim from the saved file (at most
-   80 words) or change the claim's status; never hand-write a hash. The loop and its options are in
-   [pinning.md](references/pinning.md).
+   source outside the `sources_dir` or one that is the article. Then, one claim at a time, paste the printed
+   fragment under the claim, fill `source` (`url`, `title`, `source_tier`), and set its five `binding` judgements
+   after reading that passage against the claim as worded: `false` wherever it doesn't match. Judgements set for
+   several claims at once, or by a script, aren't judgements. A refusal means re-cut the passage verbatim from the
+   saved file (at most 80 words) or change the claim's status; never hand-write a hash. The loop and its options
+   are in [pinning.md](references/pinning.md).
 4. **Close the gaps.** `RUN claims gaps ARTICLE` lists every value or quote the ledger doesn't hold. Give each one a
    disposition: a claim (back to step 2), or an `exclusions` entry with the text and a reason, for example copy that
    is illustrative, a made-up scenario or a rhetorical string. An exclusion without a real reason is a bypass. Repeat

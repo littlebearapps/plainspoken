@@ -12,7 +12,8 @@
   claims, no `for` over sources, and nothing chained onto a CLI call (no `; echo`, `; ls` or `; cat`). Each call's
   exit code is what the step acts on.
 - Edit the ledger with the Edit tool only, one claim at a time: never a heredoc, a helper script or a `python3 -`
-  call, even to move several anchors at once (the shell check refuses them, and the ledger is yours to read back).
+  call, even to move several anchors at once (the ledger is yours to read back). plainspoken's Bash hook refuses a
+  shell command that writes the ledger or a reply file.
 - The hash and the clock come from the CLI: `RUN claims stamp ARTICLE` writes `source_content_hash`, `checked_at`
   and `checked_by` into the ledger. Don't run `date` or write a script for them.
 - Fetch sources with the host's fetch tool (or a fetch MCP server you have), then save the text with the Write tool

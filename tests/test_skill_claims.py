@@ -202,6 +202,14 @@ class ClaimsReferences(unittest.TestCase):
         self.assertIn("claims stamp ARTICLE", text)  # the hash and the clock come from the CLI
         self.assertIn("never a heredoc", text)
         self.assertIn("`; echo`", text)
+        self.assertIn("refuses a shell command that writes the ledger or a reply file",
+                      " ".join(text.split()))  # #44: hooks/write_guard.py
+
+    def test_binding_judgements_are_set_per_claim(self):  # #44: three runs set all five to true in a loop
+        step = " ".join((SKILL / "SKILL.md").read_text(encoding="utf-8").split("3. **Pin every verified claim.**")[1].split("4. **Close the gaps.**")[0].split())
+        self.assertIn("one claim at a time", step)
+        self.assertIn("`false` wherever it doesn't match", step)
+        self.assertIn("by a script, aren't judgements", step)
 
 
 if __name__ == "__main__":
