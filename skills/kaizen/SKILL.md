@@ -43,8 +43,8 @@ Also:
 - If the host asks permission for `kaizen apply` or `kaizen calibrate`, or refuses it, never suggest broadening the
   grant (no `kaizen *`, no `run.py *`, no standing allow rule): the person approves each of those calls.
 
-Proposals waiting now (injected when this skill loads):
-!`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py kaizen review || true`
+**First, before any other step:** run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py kaizen review` and read what it
+prints: the proposals waiting now. If the call fails, carry on without it.
 
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. No `kaizen` subcommand takes `--plugin-profile`
 (argparse rejects it with exit 2); `dismiss`, `uphold` and `published` find the profile from the saved lint.
@@ -79,7 +79,7 @@ it does, then stop and let the person pick.
 ### dismiss
 
 1. The person says a finding in the current check is wrong. Ask which rule, which line if several fired, why in a
-   few words, and which kind: `false_positive`, `voice`, `unfixable` (it can't be fixed by removing words), `quote`,
+   few words, and which kind: `false_positive`, `voice`, `unfixable` (no cut, join or restatement clears it), `quote`,
    `format` or `other`.
 2. `RUN kaizen dismiss FILE --rule <id> --kind <kind> --reason '<their words>'` (add `--line <n>` for one finding).
    When the finding is gone from FILE because a fix pass removed it (even after the check that followed), add
@@ -123,8 +123,8 @@ it does, then stop and let the person pick.
 
 1. `RUN kaizen decisions`, then `RUN kaizen review`: the proposal must show as approved by a person.
 2. `RUN kaizen apply <id> --dry-run`, and show the diff to the person. Use `--target profile` when the proposal is
-   threshold-only and the person wants it in their project profile, and `--rules <path>` for a ruleset checkout that
-   isn't the plugin's own.
+   threshold-only and the person wants it in the profile it was made for, and `--rules <path>` for a ruleset
+   checkout that isn't the plugin's own.
 3. When they say go, `RUN kaizen apply <id>` with the same options.
 4. Exit 1 is a refusal (no approval, a stale proposal, a hand-edited proposal, already applied, an installed
    plugin's ruleset): quote it and stop. A stale proposal needs no decision: with the person's OK, run

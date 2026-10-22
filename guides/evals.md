@@ -110,12 +110,15 @@ claude plugin eval . --tag smoke --ablation none -j 2 \
 The rewrite cases' regex graders only pass or fail, and a strong model passes most of them without the plugin, so
 `eval rewrite-delta` reads each run's final reply from its kept trace and counts the lint's BLOCK and WARN findings per
 arm. The delta is without minus with: positive favours the plugin. `--keep-temp` is what keeps the traces; without it
-every run is listed as missing. The smoke cases run each skill once through its slash command on a draft the case
+every run is listed as missing. It also counts new numbers, in digits or in words, that the source (the pasted
+passage, or a drafting case's brief) doesn't have. A number worked out from the source's own (150 for 151, a sum, or
+"seven in every ten" for 151 of 212) is listed as derived and not counted; the rules are in `rewrite.py`. The smoke cases run each skill once through its slash command on a draft the case
 saves first, including the full check with its four judges, so they cost more than the trigger suite (about
-US$5 for all twelve on 2026-10-21). On Claude Code 2.1.306 the eval sandbox can't run a skill's `` !`…` `` load lines
-(see `docs/acceptance/v0.7-drafting-hooks.md`), so the slash and smoke suites ran on 2.1.303 there:
-`npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI version at a time: two at once on one login
-revoked a token mid-run.
+US$5 for all twelve on 2026-10-21). On Claude Code 2.1.306 the eval sandbox couldn't run the skills' old load-time
+commands (see `docs/acceptance/v0.7-drafting-hooks.md`), so the slash and smoke suites ran on 2.1.303 there.
+Since #12 each skill runs that call as its first step instead, which should lift the pin; until a slash and smoke
+run on the current CLI confirms it, keep using `npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI
+version at a time: two at once on one login revoked a token mid-run.
 
 The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm. The
 rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The

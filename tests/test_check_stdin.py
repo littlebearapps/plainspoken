@@ -30,6 +30,12 @@ class CheckStdin(unittest.TestCase):
         self.assertEqual(b["content_type"], "social")
         self.assertEqual(list(clean.iterdir()), [], "stdin lint must not write reports or kaizen events")
 
+    def test_stdin_takes_no_record(self):  # #1: stdin records nothing anyway, so the flag changes nothing
+        r = cli("check", "-", "--profile", "default", "--json", "--no-record", cwd=self.cwd, input=DRAFT)
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["article"], "<stdin>")
+        self.assertEqual(list(self.cwd.iterdir()), [])
+
     def test_stdin_long_text_defaults_to_article(self):
         long = " ".join(["Plain words here, said once and then said again."] * 40) + "\n"
         r = cli("check", "-", "--profile", "default", "--json", cwd=self.cwd, input=long)

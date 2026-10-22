@@ -87,6 +87,90 @@ class Hash(Project):
         self.assert_bad_input(run("hash", "nope.md", cwd=self.root), "nope.md")
 
 
+class Stamp(Project):
+    """`claims stamp` writes the article's hash, the time and checked_by into the ledger: no hash copied by hand."""
+
+    def edit_article(self, extra="\nThe shop now opens on Sundays too.\n"):
+        self.art.write_text(self.art.read_text(encoding="utf-8") + extra, encoding="utf-8")
+
+    def test_writes_the_hash_time_and_checked_by_in_place(self):
+        before_text = self.ledger.read_text(encoding="utf-8")
+        before = tomllib.loads(before_text)
+        self.edit_article()
+        self.assertEqual(run("validate", str(self.ledger), cwd=self.root).returncode, 1)  # stale before stamping
+        r = run("stamp", "article.md", cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn(sha(self.art), r.stdout)
+        text = self.ledger.read_text(encoding="utf-8")
+        after = tomllib.loads(text)
+        self.assertEqual(after["source_content_hash"], sha(self.art))
+        self.assertRegex(after["checked_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$")
+        self.assertEqual(after["checked_by"], "claims skill")
+        for key in ("source_content_hash", "checked_at", "checked_by"):
+            del before[key], after[key]
+        self.assertEqual(after, before)  # nothing else changed
+        self.assertEqual(text.splitlines()[0], before_text.splitlines()[0])  # comments kept: edited in place
+        self.assertEqual(len(text.splitlines()), len(before_text.splitlines()))
+        self.assertEqual(run("validate", str(self.ledger), cwd=self.root).returncode, 0)
+
+    def test_by_option_and_missing_keys_are_added(self):
+        lines = [ln for ln in self.ledger.read_text(encoding="utf-8").splitlines(keepends=True)
+                 if not ln.startswith(("checked_by", "checked_at"))]
+        self.ledger.write_text("".join(lines), encoding="utf-8")
+        r = run("stamp", "article.md", "--by", "Sam (editor)", cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        after = tomllib.loads(self.ledger.read_text(encoding="utf-8"))
+        self.assertEqual((after["checked_by"], after["source_content_hash"]), ("Sam (editor)", sha(self.art)))
+        self.assertIn("checked_at", after)
+        self.assertEqual(run("validate", str(self.ledger), cwd=self.root).returncode, 0)
+
+    def test_json_ledger_via_ledger_option(self):
+        json_ledger = self.ledger_dir / "other.claims.json"
+        shutil.copy(FIX / "article.claims.json", json_ledger)
+        self.edit_article()
+        r = run("stamp", "article.md", "--ledger", str(json_ledger), cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        data = json.loads(json_ledger.read_text(encoding="utf-8"))
+        self.assertEqual(data["source_content_hash"], sha(self.art))
+        self.assertEqual(list(data)[:3], ["schema_version", "article_id", "article_slug"])  # key order kept
+        self.assertEqual(run("validate", str(json_ledger), cwd=self.root).returncode, 0)
+
+    def test_refuses_until_coverage_is_complete(self):
+        self.ledger.write_text(self.ledger.read_text(encoding="utf-8").replace(
+            'coverage_status = "complete"', 'coverage_status = "partial"'), encoding="utf-8")
+        before = self.ledger.read_bytes()
+        self.edit_article()
+        r = run("stamp", "article.md", cwd=self.root)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("coverage_status", r.stderr)
+        self.assertEqual(self.ledger.read_bytes(), before)
+
+    def test_refuses_while_a_gap_is_open(self):  # an edit that added a figure needs a claim before the stamp
+        before = self.ledger.read_bytes()
+        self.edit_article("\nA call-out costs A$300 on weekends.\n")
+        r = run("stamp", "article.md", cwd=self.root)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("A$300", r.stderr)
+        self.assertEqual(self.ledger.read_bytes(), before)
+
+    def test_ledger_for_another_article_is_bad_input(self):
+        (self.root / "other.md").write_text("# Other\n", encoding="utf-8")
+        r = run("stamp", "other.md", "--ledger", str(self.ledger), cwd=self.root)
+        self.assert_bad_input(r, "article.md")
+
+    def test_value_it_cant_replace_in_place_is_bad_input(self):
+        text = self.ledger.read_text(encoding="utf-8").replace('checked_by = "test-fixture"',
+                                                                'checked_by = """test\nfixture"""')
+        self.ledger.write_text(text, encoding="utf-8")
+        self.assert_bad_input(run("stamp", "article.md", cwd=self.root), "one line")
+        self.assertEqual(self.ledger.read_text(encoding="utf-8"), text)
+
+    def test_missing_article_or_ledger(self):
+        self.assert_bad_input(run("stamp", "nope.md", cwd=self.root), "nope.md")
+        self.assert_bad_input(run("stamp", "article.md", "--ledger", "none.claims.toml", cwd=self.root),
+                              "none.claims.toml")
+
+
 class Validate(Project):
     def test_valid_fresh_ledger_exits_0(self):
         r = run("validate", str(self.ledger), cwd=self.root)
@@ -587,6 +671,42 @@ class EndToEndFixture(unittest.TestCase):
         r = run("status", "posts/tool-library-first-year.md", cwd=self.root)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(r.stdout.strip().splitlines(), ["claims: PASS", "  checker: PASS (0 warnings)"])
+
+    def test_draft_status_passes_only_with_both_passes(self):  # issue #24: `status` quotes both engines
+        from plainspoken.registry import load_config
+        from tests._profiles import PRODUCT
+        from tests.test_anti_ai_report import PRODUCT_ARGS, _judges
+        art = self.root / "posts" / "tool-library-first-year.md"
+        ledger = self.root / ".plainspoken" / "claims" / "tool-library-first-year.claims.toml"
+        paths = json.loads(subprocess.run([sys.executable, str(RUN), "paths", "posts/tool-library-first-year.md"],
+                                          cwd=self.root, capture_output=True, text=True).stdout)
+        write_check(Path(paths["claims-check"]), art, ledger)
+        engine = [sys.executable, str(RUN)]
+        draft = ["posts/tool-library-first-year.md", *PRODUCT_ARGS]
+        subprocess.run([*engine, "check", *draft], cwd=self.root, capture_output=True)
+        digest, cfg, reports = sha(art).removeprefix("sha256:"), load_config(), Path(paths["report"]).parent
+        _judges(reports, paths["key"], digest, cfg, PRODUCT)
+
+        def status() -> tuple[subprocess.CompletedProcess, subprocess.CompletedProcess]:
+            merged = subprocess.run([*engine, "merge", *draft], cwd=self.root, capture_output=True, text=True)
+            r = subprocess.run([*engine, "status", *draft], cwd=self.root, capture_output=True, text=True)
+            self.assertEqual(r.stdout.splitlines()[:3], ["check: " + merged.stdout.splitlines()[0], "claims: PASS",
+                                                         "  checker: PASS (0 warnings)"])
+            return merged, r
+
+        merged, r = status()  # the lint's WARNs (7d today) are unresolved: a claims PASS alone isn't enough
+        kept = json.loads(Path(paths["report"]).read_text())["unresolved"]
+        self.assertEqual((r.returncode, merged.stdout.split()[0], bool(kept)), (1, "UNRESOLVED", True), r.stdout)
+        jp = reports / f"{paths['key']}.justify.json"
+        jp.write_text(json.dumps({"article_sha256": digest, "items": [
+            {"rule": rid, "kind": "voice", "reason": "the short lines are the annual report's own figures"}
+            for rid in kept]}))
+        (reports / f"{paths['key']}.JR.judge.json").write_text(json.dumps({
+            "group": "JR", "article_sha256": digest, "justify_sha256": hashlib.sha256(jp.read_bytes()).hexdigest(),
+            "judged_at": "2026-10-21T00:00:00Z", "profile_sha256": PRODUCT.sha256, "ruleset_version": cfg.version,
+            "verdicts": [{"rule": rid, "verdict": "accept", "reason": "checked against the evidence"} for rid in kept]}))
+        merged, r = status()
+        self.assertEqual((merged.returncode, r.returncode), (0, 0), r.stdout + r.stderr)
 
 
 class ScaffoldAnchors(unittest.TestCase):  # section anchors, not line numbers

@@ -8,15 +8,15 @@ the current project; `--reports DIR` changes it). File names start with the arti
 Each file, what writes it, and what it's bound to:
 
 - `<key>.lint.json`: written by `check`; bound to article_sha256, profile_sha256, ruleset_version, content_type.
-- `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn`; bound to article_sha256,
-  profile_sha256, ruleset_version (stamped from the current lint).
+- `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn` (or `--all` for all four);
+  bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint).
 - `<key>.justify.json`: written by `justify --template --write` (then filled in by the check skill); bound to
   article_sha256.
 - `<key>.JR.judge.json`: written by `judge-record --group JR`; bound to article_sha256 + justify_sha256,
   profile_sha256, ruleset_version.
 - `<key>.report.json`: written by `merge`; bound to everything above.
-- `<key>.reply.json`: written by the check skill (one judge reply at a time), deleted by `judge-record --from`; bound
-  to nothing (scratch).
+- `<key>.reply.json`: written by the check skill (all four judge replies one after another, or one reply on a
+  retry or for JR), deleted by `judge-record --from`; bound to nothing (scratch).
 - `<key>.claims.json`: written by `claims status`; bound to article_sha256, ledger_sha256 (the status, its reasons,
   the gaps and the checker record it read).
 - `<key>.claims-check.json`: written by `claims record` (the isolated claims checker's verified reply); bound to
@@ -31,8 +31,8 @@ Each file, what writes it, and what it's bound to:
   read by `reader-value deliver --from`; bound to its own article_sha256 + contract_sha256, copied from
   `reader-value deliver-input` (scratch; overwritten each round).
 - `<key>.checked.md`: written by `check`, only when kaizen capture is on for `check` and it saves `<key>.lint.json`
-  (not with `--no-save` or `--out`); bound to the article's exact bytes as checked, so its sha256 is the lint's
-  article_sha256 (the snapshot `kaizen diff` reads).
+  (not with `--no-save`, `--no-record` or `--out`); bound to the article's exact bytes as checked, so its sha256 is
+  the lint's article_sha256 (the snapshot `kaizen diff` reads).
 
 Hash formats differ by file type. The lint, judge, justify and report files carry `article_sha256` as bare hex
 (`3f2a…`); the claims files (`claims`, `claims-check`, `claims-reply`), the delivery files (`delivery`,
@@ -85,12 +85,13 @@ exit 0.
 `check` also records what it found in the kaizen ledger (`[kaizen] ledger_dir`, default `.plainspoken/ledger`): one
 `fired` event per BLOCK or WARN finding, and when it saves `<key>.lint.json`, one `fixed` event per BLOCK or WARN span
 that the previous `<key>.lint.json` had and this check doesn't (same profile and ruleset, a different article hash).
-`--no-save` still records `fired`. The lint-watch hook records `fired` when a file's result changes. An event holds
-hashes, ruleset words and section kinds, never article text unless `[kaizen] excerpts = true`. Capture never changes
-a command's output or exit code: a capture error is one `plainspoken: kaizen capture skipped: …` line on stderr, and
-`[kaizen] capture = false` turns it off. `[kaizen] capture_sources` keeps some sources (`check`, `merge`, `judge`,
-`lint-watch`; default all four): a source left out writes no events and no friction (`check` then writes no snapshot
-either, and `judge` drops `judge-record`'s friction and the backstop's count).
+`--no-save` still records `fired`; `--no-record` records nothing, saves no report (it refuses an `--out` that is
+`<key>.lint.json`) and leaves the snapshots alone. The lint-watch hook records `fired` when a file's result changes.
+An event holds hashes, ruleset words and section kinds, never article text unless `[kaizen] excerpts = true`. Capture
+never changes a command's output or exit code: a capture error is one `plainspoken: kaizen capture skipped: …` line on
+stderr, and `[kaizen] capture = false` turns it off. `[kaizen] capture_sources` keeps some sources (`check`, `merge`,
+`judge`, `lint-watch`; default all four): a source left out writes no events and no friction (`check` then writes no
+snapshot either, and `judge` drops `judge-record`'s friction and the backstop's count).
 
 `merge` records what the judges decided once the report is written: each judge rule entry's own verdict (`fired`
 for the judge's `fail`, `passed` for its `pass`), with facet `agree` on rules both the lint and a judge look at, and

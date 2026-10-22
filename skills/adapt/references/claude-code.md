@@ -7,7 +7,7 @@
   lint step as skipped.
 - `${user_config.profile}` may stay as the literal text when the plugin loads with `--plugin-dir`. The CLI treats the
   literal as the shipped default profile, so the checks still run. See `docs/claude-code-facts.md`, section 3.
-- Plugin options may not reach the shell the injection line or the commands run in, so pass the profile on the
-  command line (`--plugin-profile '${user_config.profile}'`). See `docs/claude-code-facts.md`, section 4.
+- Plugin options may not reach the shell the commands run in, so pass the profile on the command line
+  (`--plugin-profile '${user_config.profile}'`). See `docs/claude-code-facts.md`, section 4.
 - The skill never posts, so there is nothing to approve beyond the two permissions above. A request to publish a
   draft is outside it.

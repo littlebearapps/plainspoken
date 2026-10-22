@@ -74,6 +74,8 @@ Same command as Q3.
   text substitution, not env, as the way to reach the plugin root from a skill.
 - Bash tool: `env | grep CLAUDE_PLUGIN_OPTION || echo none` printed `none`. No `CLAUDE_PLUGIN_OPTION_*` in the Bash
   tool environment (consistent with Q2: nothing is populated under `--plugin-dir`).
+- The skills no longer use injection (#12, 2026-10-21). Hermes' install scan rates any load-time command under
+  `skills/` high, so each skill now runs the same `run.py` call, with the same flags, as its explicit first step.
 
 ## 5. With `omitClaudeMd: true`, does a plugin agent see the project CLAUDE.md?
 
@@ -158,8 +160,8 @@ denies anything it can't interpret; it must not deny ordinary push commands.
   autocrlf, clean filters or LFS), the working-tree bytes the check read; otherwise the committed blob. A path absent
   from the pushed tree is a deletion and skipped; a path that's there but unreadable is unverifiable.
 - **Not modelled (known gaps):** `cd` earlier in the same command (the gate checks the project directory; `-C` is resolved
-  from the Bash tool's cwd); `GIT_DIR`, `GIT_CONFIG_*` and similar environment assignments; commands piped into a shell's stdin
-  (`echo "git push" | sh`); `xargs git` reading the subcommand from stdin; scripts and Makefiles that push; remote-
+  from the Bash tool's cwd); `GIT_DIR`, `GIT_CONFIG_*` and similar environment assignments; commands written to a shell's standard
+  input (`git push` echoed into `sh`); `xargs git` reading the subcommand from stdin; scripts and Makefiles that push; remote-
   tracking refs mapped by a non-default `remote.<name>.fetch`; MCP publishing (out of scope for v0.1).
 
 ## 7. Skill listing and manual-only skills

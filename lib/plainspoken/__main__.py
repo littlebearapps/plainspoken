@@ -1,7 +1,7 @@
-"""CLI: python3 -m plainspoken {check|profile|config|paths|merge|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
+"""CLI: python3 -m plainspoken {check|profile|config|paths|merge|status|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
 register-checklist|claims|reader-value|kaizen|eval} …
-Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), invalid justifications or nothing to review
-(justify), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
+Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
+invalid justifications or nothing to review (justify), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
 (checker-input, record), reader-value or action-module findings, a delivery record or status other than a
 current PASS (every self-check), a stale delivery reply or a contract that doesn't validate (deliver-input,
 deliver, status), or a kaizen refusal (no current check or snapshot, no finding, a bad hunk number, capture off, a
@@ -50,6 +50,26 @@ def _first_line(e: BaseException) -> str:
 def _input_error(path: Path, e: Exception, verb: str = "check") -> int:
     print(f"plainspoken: can't {verb} {path}: {type(e).__name__}: {_first_line(e)}", file=sys.stderr)
     return 2
+
+
+def _record_all(args: argparse.Namespace, text: str, root: Path) -> int:
+    """`judge-record --all`: J1-J4 from one input in one call (#28). Prints each recorded path; names each group it
+    didn't record on stderr, so only those judges run again. Exit 0 = all four recorded, 1 = any not, 2 = I/O."""
+    try:
+        rows = judges.record_all(args.path, text, args.reports or report.reports_dir_default(root), root)
+    except ValueError as e:
+        print(f"plainspoken: judge replies not recorded: {_first_line(e)}", file=sys.stderr)
+        capture.for_rejected_reply(_first_line(e), root)
+        return 1
+    except OSError as e:
+        return _input_error(args.path, e, "record judge replies for")
+    for group, written, reason in rows:
+        if written is not None:
+            print(written)
+        else:
+            print(f"plainspoken: {group} reply not recorded: {reason}", file=sys.stderr)
+            capture.for_rejected_reply(f"{group}: {reason}", root)
+    return 0 if all(written is not None for _, written, _ in rows) else 1
 
 
 def _same_file(a: Path, b: Path) -> bool:
@@ -165,6 +185,8 @@ def _main(argv: list[str] | None) -> int:
     c.add_argument("--out", type=Path)
     c.add_argument("--reports", type=Path)
     c.add_argument("--no-save", action="store_true")
+    c.add_argument("--no-record", action="store_true",
+                   help="a read-only look: print the lint, save no report and record no kaizen event or snapshot")
     pr = sub.add_parser("profile", help="print the resolved profile summary, or its stamps with --json")
     pr.add_argument("path", nargs="?", type=Path, help="the article the profile is for (its [engine] profiles entry)")
     pr.add_argument("--profile")
@@ -203,6 +225,14 @@ def _main(argv: list[str] | None) -> int:
     m.add_argument("--reports", type=Path)
     m.add_argument("--profile")
     m.add_argument("--plugin-profile")
+    st = sub.add_parser("status", help="the last saved check and claims status lines for a draft, its word "
+                                       "count and its reader-value contract path, for a report to quote (runs and "
+                                       "writes nothing)")
+    st.add_argument("path", type=Path)
+    st.add_argument("--reports", type=Path)
+    st.add_argument("--ledger", type=Path)
+    st.add_argument("--profile")
+    st.add_argument("--plugin-profile")
     j = sub.add_parser("justify", help="fix or justify: a justification template, or the JR judge's input")
     j.add_argument("path", type=Path)
     j.add_argument("--reports", type=Path)
@@ -226,9 +256,13 @@ def _main(argv: list[str] | None) -> int:
     ag.add_argument("--line", type=int, help="use only the Nth non-blank input line (1 = J1 from judge-input)")
     sub.add_parser("agent-reply", help="cut the JSON object out of an agent's output on stdin (host CLIs add a "
                                        "session line or a fence); the record step still validates it")
-    jr = sub.add_parser("judge-record", help="record a judge's JSON reply (from --from FILE, else stdin)")
+    jr = sub.add_parser("judge-record", help="record a judge's JSON reply, or J1-J4 at once with --all (from --from "
+                                             "FILE, else stdin)")
     jr.add_argument("path", type=Path)
-    jr.add_argument("--group", required=True, choices=[*judges.GROUPS, "JR"])
+    which = jr.add_mutually_exclusive_group(required=True)
+    which.add_argument("--group", choices=[*judges.GROUPS, "JR"])
+    which.add_argument("--all", action="store_true",
+                       help="record J1-J4 from one input: their replies one after another, or one JSON list")
     jr.add_argument("--reports", type=Path)
     jr.add_argument("--from", dest="reply_file", type=Path,
                     help="read the reply from this file; the `reply` path from `paths` is deleted afterwards, "
@@ -266,10 +300,14 @@ def _main(argv: list[str] | None) -> int:
         payload = json.dumps(lint, indent=2, ensure_ascii=False)
         paths = report.report_paths(args.path, args.reports or report.reports_dir_default(root), root)
         target = args.out
-        if target is None and not args.no_save:
+        if target is None and not (args.no_save or args.no_record):
             target = paths["lint"]
         # The snapshot and the fixed diff pair with <key>.lint.json, so they run only when that's what was saved.
         keyed = target is not None and _same_file(target, paths["lint"])
+        if keyed and args.no_record:  # <key>.lint.json pairs with the snapshot, which --no-record leaves alone
+            print(f"plainspoken: --no-record saves no report: --out {target} is this article's lint report; drop "
+                  f"--out or name another file", file=sys.stderr)
+            return 2
         previous = report.read_json(paths["lint"]) if keyed else None  # before it's overwritten
         if target:
             try:
@@ -280,8 +318,9 @@ def _main(argv: list[str] | None) -> int:
                     target.write_text(payload + "\n", encoding="utf-8")
             except OSError as e:
                 return _input_error(target, e, "write")
-        capture.for_check(lint, args.path, prof, cfg, root, previous=previous,
-                          snapshot=paths["checked"] if keyed else None, reports=paths["checked"].parent)
+        if not args.no_record:
+            capture.for_check(lint, args.path, prof, cfg, root, previous=previous,
+                              snapshot=paths["checked"] if keyed else None, reports=paths["checked"].parent)
         print(payload if args.json else report.summarise(lint))
         return 1 if report.lint_status(lint) == "BLOCK" else 0
     if args.cmd == "profile":
@@ -360,15 +399,10 @@ def _main(argv: list[str] | None) -> int:
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e)
         capture.for_merge(merged, args.path, prof, root)
-        cov = merged["coverage"]
-        print(f"{merged['status']} · coverage {cov['covered']}/{cov['expected']}"
-              f" · BLOCK {', '.join(merged['blocks']) or '-'} · WARN {', '.join(merged['warns']) or '-'}"
-              f" · unresolved {', '.join(merged['unresolved']) or '-'}")
-        if cov["missing"]:
-            print(f"  missing verdicts: {', '.join(cov['missing'])}")
-        for p in merged["problems"]:
-            print(f"  problem: {p}")
+        print("\n".join(report.merge_lines(merged)))
         return 0 if merged["status"] == "PASS" else 1
+    if args.cmd == "status":
+        return _draft_status(args, root)
     if args.cmd == "judge-input":
         try:
             items = judges.judge_input(args.path, _profile(args, root),
@@ -411,6 +445,8 @@ def _main(argv: list[str] | None) -> int:
                     pass
         else:
             text = sys.stdin.read()
+        if args.all:
+            return _record_all(args, text, root)
         try:
             written = judges.record_reply(args.path, args.group, text,
                                           args.reports or report.reports_dir_default(root), root)
@@ -484,13 +520,18 @@ def _main(argv: list[str] | None) -> int:
 
 
 def _claims_parser(sub) -> None:
-    cl = sub.add_parser("claims", help="claim ledgers: hash, validate, candidates, gaps, pin, recheck, scaffold, "
-                                       "status, checker-input, record")
+    cl = sub.add_parser("claims", help="claim ledgers: hash, stamp, validate, candidates, gaps, pin, recheck, "
+                                       "scaffold, status, checker-input, record")
     cs = cl.add_subparsers(dest="claims_cmd", required=True)
     h = cs.add_parser("hash", help="print the article's sha256:<hex> (the ledger's source_content_hash)")
     h.add_argument("path", type=Path)
     h.add_argument("--stamp", action="store_true",
-                   help='also print checked_at = "<now, ISO 8601 with offset>", ready to paste into the ledger')
+                   help='also print checked_at = "<now, ISO 8601 with offset>" (`claims stamp` writes both for you)')
+    sp = cs.add_parser("stamp", help="write the article's hash, checked_at and checked_by into its ledger "
+                                     "(refuses until coverage is complete and no gap is open)")
+    sp.add_argument("path", type=Path)
+    sp.add_argument("--ledger", type=Path)
+    sp.add_argument("--by", default="claims skill", help='checked_by (default: "claims skill")')
     v = cs.add_parser("validate", help="validate a ledger; one finding per line")
     v.add_argument("ledger", type=Path)
     v.add_argument("--root", type=Path, help="the project root its source_file is relative to (default: found)")
@@ -701,6 +742,8 @@ def _claims(args: argparse.Namespace, root: Path) -> int:
         if args.stamp:
             print(f'checked_at = "{_util.now_iso()}"')
         return 0
+    if cmd == "stamp":
+        return _stamp(args, root)
     if cmd == "validate":
         try:
             findings = claims.validate_ledger(args.ledger, args.root or root)
@@ -793,6 +836,33 @@ def _status(args: argparse.Namespace, root: Path) -> int:
     return 0 if rep["status"] == "PASS" else 1
 
 
+def _draft_status(args: argparse.Namespace, root: Path) -> int:
+    """`status`: what a report quotes, read back from saved files. Neither result can come from memory, and a step
+    that never ran shows as INCOMPLETE. Exit 0 only when both say PASS."""
+    reports_dir = args.reports or report.reports_dir_default(root)
+    try:
+        if not args.path.is_file():
+            raise FileNotFoundError(f"no such file: {args.path}")
+        prof = _profile(args, root)
+        check_status, check_lines = report.saved_check(args.path, reports_dir, prof, root)
+        words = report.word_count(args.path, prof)
+    except _INPUT_ERRORS as e:
+        return _input_error(args.path, e, "report the status of")
+    try:
+        ledger = args.ledger or claims.ledger_path_for(args.path, root)
+        rep = claims_tools.status_report(args.path, ledger, root,
+                                         report.report_paths(args.path, reports_dir, root)["claims-check"],
+                                         extraction.platform_names(root))
+    except _INPUT_ERRORS as e:
+        rep = {"status": "INCOMPLETE", "reasons": [f"can't report: {type(e).__name__}: {_first_line(e)}"]}
+    contract = reader_value.default_contract(args.path, root)
+    shown = claims_tools.display_path(contract, root)
+    print("\n".join([f"check: {check_lines[0]}", *check_lines[1:], f"claims: {rep['status']}",
+                     *(f"  {r}" for r in rep["reasons"]), f"words: {words}",
+                     f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
+    return 0 if check_status == rep["status"] == "PASS" else 1
+
+
 def _record(args: argparse.Namespace, root: Path) -> int:
     try:
         text = args.reply_file.read_text(encoding="utf-8")
@@ -882,6 +952,24 @@ def _pin(args: argparse.Namespace, root: Path) -> int:
                                         source_url=args.source_url, locator=args.locator), end="")
     except ValueError as e:
         return _usage(f"pin refused: {_first_line(e)}")
+    return 0
+
+
+def _stamp(args: argparse.Namespace, root: Path) -> int:
+    try:
+        args.path.read_bytes()  # an unreadable article is named before any ledger lookup
+        ledger = args.ledger or claims.ledger_path_for(args.path, root)
+        text, values = claims_tools.stamp(args.path, ledger, root, extraction.platform_names(root), args.by)
+    except claims_tools.NotReady as e:
+        print(f"plainspoken: not stamped: {e}", file=sys.stderr)
+        return 1
+    except _INPUT_ERRORS as e:
+        return _input_error(args.path, e, "stamp the ledger for")
+    try:
+        report.write_atomic(ledger, text)
+    except OSError as e:
+        return _input_error(ledger, e, "write")
+    print(f"stamped {ledger}: " + ", ".join(f"{k} = {v}" for k, v in values.items()))
     return 0
 
 
@@ -1018,7 +1106,7 @@ def _kaizen_parser(sub) -> None:
                                     "(never sends anything)")
     rv = ks.add_parser("review", help="the proposals waiting for a decision or for `kaizen apply`")
     rv.add_argument("--json", action="store_true")
-    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the project profile")
+    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the profile it was made for")
     ap_.add_argument("id")
     ap_.add_argument("--rules", type=Path, help="the rules.toml to edit (default: the plugin's own, if it's a "
                                                 "git checkout)")

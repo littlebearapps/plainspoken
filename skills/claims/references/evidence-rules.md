@@ -57,6 +57,16 @@ Each first-hand claim gets its own ledger entry and its own `first_hand_scope`: 
 experienced, and how. The article may say no more than that scope: one business's booking records don't support
 "small businesses find", and one month doesn't support "every year".
 
+### A brief speaks only for the person who gave it
+
+A brief pasted into the chat is a source, like a page. Save it under the `sources_dir` exactly as given, one file
+per brief (`brief-<slug>.md`), and pin each claim to it. The claim is `verified` against the brief, not
+`first_hand`: the pinned passage shows the checker what the brief says, and a first-hand scope can't. Its `source`
+has `kind = "brief"`, a `title` naming who gave it and when, and no `url`. It supports what that person can speak for
+(their own organisation, work, prices and plans: `source_tier = "primary"`). A figure about a platform, a law or
+anyone else still needs that source. A sensitive fact from a brief (a named client, a result, someone's personal
+details) stays `first_hand` with `sensitive = true`, so the owner approves it.
+
 ### Citation proximity isn't support
 
 A link next to a sentence supports only what that link's pinned passage says. If the sentence says more than the

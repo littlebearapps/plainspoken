@@ -113,6 +113,27 @@ class SchemaViolations(unittest.TestCase):
         self.assertEqual(_messages(claims.validate_ledger(path, tmp)),
                          [("error", None, "schema: claims.0: missing required key 'source'")])
 
+    def test_brief_source_needs_no_url(self):  # a brief given in chat has no address; it's pinned like a page
+        tmp, path, ledger = _valid_ledger(self)
+        ledger["claims"][0]["source"] = {"kind": "brief", "title": "Brief from the owner, given in chat",
+                                         "source_tier": "primary"}
+        _write(path, ledger)
+        self.assertEqual(claims.validate_ledger(path, tmp), [])
+
+    def test_a_page_still_needs_its_url(self):
+        tmp, path, ledger = _valid_ledger(self)
+        for kind in (None, "page"):
+            src = {"title": "Example survey", "source_tier": "primary"}
+            if kind:
+                src["kind"] = kind
+            ledger["claims"][0]["source"] = src
+            _write(path, ledger)
+            self.assertEqual(_messages(claims.validate_ledger(path, tmp)),
+                             [("error", None, "schema: claims.0.source: missing required key 'url'")], kind)
+        ledger["claims"][0]["source"] = {"kind": "chat", "title": "x", "source_tier": "primary"}
+        _write(path, ledger)
+        self.assertTrue(any("source.kind" in f["message"] for f in claims.validate_ledger(path, tmp)))
+
     def test_first_hand_requires_scope(self):
         tmp, path, ledger = _valid_ledger(self)
         c = ledger["claims"][0]

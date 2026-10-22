@@ -19,7 +19,7 @@ end of each line, as two do below; the value is still one line. Paste a pinned `
 | `article_id` | A short id for the article (`ACME-HW`). Claim ids usually start with it. |
 | `article_slug` | The article's slug or file stem. |
 | `source_file` | The article's path from the project root, with no leading `/` and no `..` (file types below). |
-| `source_content_hash` | `RUN claims hash ARTICLE`, copied in once complete. A mismatch makes every check stale. |
+| `source_content_hash` | Written by `RUN claims stamp ARTICLE` once complete. A mismatch makes every check stale. |
 | `checked_at` | When the ledger was last brought up to date, ISO 8601 with an offset. |
 | `checked_by` | Who or what did it (a name, or "claims skill"). |
 | `coverage_status` | `complete`, `partial`, `stale` or `unstarted`. Anything but `complete` reports INCOMPLETE. |
@@ -45,7 +45,8 @@ Every claim needs `claim_id`, `text`, `locations`, `claim_type`, `prominence` an
 - Optional context: `subject`, `metric`, `geography`, `period`, `risk` (`critical`, `high`, `medium`, `low`),
   `refresh_after` (a date to re-check it), `notes`, `regulated_class` (see `regulated-claims.md`).
 - `source`: `url`, `title` and `source_tier` (`primary`, `near_primary`, `reputable_secondary`, `aggregator`,
-  `unknown`), plus optional `publisher`, `published_at`, `updated_at`, `locator`, `accessed_at`.
+  `unknown`), plus optional `publisher`, `published_at`, `updated_at`, `locator`, `accessed_at`. `kind` is `page`
+  (the default) or `brief`: a brief saved from the chat, which has no `url` (evidence-rules.md).
 - `binding`: the pinned passage and its hashes, pasted from `RUN claims pin`. Its `source_snapshot` is the saved
   source, project-relative and under the `sources_dir` (default `.plainspoken/sources/`); it is never the article
   (`source_file`), and a snapshot outside the `sources_dir` makes `claims status` INCOMPLETE. Then the five judgements
@@ -122,7 +123,7 @@ schema_version = 1
 article_id = "ACME-HW"
 article_slug = "hot-water-replacement"
 source_file = "posts/hot-water-replacement.md"
-# From `RUN claims hash posts/hot-water-replacement.md`, copied in at step 5.
+# Written by `RUN claims stamp posts/hot-water-replacement.md` at step 5, with checked_at and checked_by.
 source_content_hash = "sha256:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
 checked_at = "2026-10-14T09:45:00+11:00"
 checked_by = "claims skill"

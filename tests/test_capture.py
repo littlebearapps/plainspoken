@@ -99,7 +99,7 @@ class Facets(unittest.TestCase):
     def test_7d_no_long_under_faq(self):
         doc = self.doc(ARTICLE)
         line = next(ln for ln, _, t in doc.headings if t == "FAQ")
-        f = _finding("7d", line, "FAQ", "No sentence over 25 words in this section — let one thought run long")
+        f = _finding("7d", line, "FAQ", "No sentence over 25 words in this section — join two short sentences that share a thought")
         facets = capture.facets(f, doc, CFG)
         self.assertEqual((facets["section"], facets["form"]), ("faq", "no-long"))
 
@@ -136,7 +136,7 @@ class Facets(unittest.TestCase):
         for excerpt, message, want in (("mattr 0.61", "MATTR-50 0.61 < 0.7 — vary", "mattr"),
                                        ("burstiness 0.2", "Burstiness 0.2 < 0.3", "burstiness"),
                                        ("ttr 0.3", "Raw TTR 0.3", "ttr"),
-                                       ("{'words': 400}", "2 slop metrics tripped (opening repetition…)", "slop")):
+                                       ("{'words': 400}", "2 slop metrics tripped: opening repetition 0.27 > 0.25; MATTR 0.4 < 0.46", "slop")):
             self.assertEqual(capture.facets(_finding("12f", 0, excerpt, message), doc, CFG)["metric"], want)
         self.assertNotIn("metric", capture.facets(_finding("4b", 3, "mattr 0.5", "x"), doc, CFG))
 
@@ -181,8 +181,8 @@ class Aggregates(unittest.TestCase):
         ("25", "WARN", 0, ("various ×3", "Vague quantifiers: 3 (limit 2)"), ("numerous ×3", "Vague quantifiers: 3")),
         ("24", "WARN", 0, ("12 bold spans / 400 words", "Mechanical mid-prose bold (3.0 per 100 words)"),
          ("14 bold spans / 410 words", "Mechanical mid-prose bold (3.4 per 100 words)")),
-        ("12f", "WARN", 0, ("{'words': 400, 'mattr': 0.6}", "2 slop metrics tripped (opening repetition, …)"),
-         ("{'words': 420, 'mattr': 0.62}", "3 slop metrics tripped (opening repetition, …)")),
+        ("12f", "WARN", 0, ("{'words': 400, 'mattr': 0.6}", "2 slop metrics tripped: opening repetition 0.27 > 0.25; …"),
+         ("{'words': 420, 'mattr': 0.62}", "3 slop metrics tripped: paragraph SD 22 < 25; …")),
         ("15", "WARN", 0, ("3 expanded vs 5 contracted", "Contraction avoidance"), ("4 expanded vs 5 contracted", "x")),
         ("HM", "WARN", 0, ("no human markers", "No contractions"), ("no human markers ", "No contractions, …")),
         ("NR-5", "WARN", 0, ("shortest 22w, longest 70w", "A narrative piece needs…"),
@@ -412,6 +412,52 @@ class CheckCli(unittest.TestCase):
         self.assertFalse(any(e["outcome"] == "fixed" for e in self.events()))
         paths = json.loads(cli("paths", "post.md", cwd=self.root).stdout)
         self.assertEqual(Path(paths["checked"]).read_bytes(), ARTICLE.encode("utf-8"))  # the keyed snapshot stays
+
+    def tree(self, folder: Path) -> dict:
+        return {p.relative_to(folder): p.read_bytes() for p in sorted(folder.rglob("*")) if p.is_file()}
+
+    def test_no_record_prints_the_lint_and_writes_nothing(self):  # #1
+        r = self.check("--no-record", "--json")
+        self.assertEqual(r.returncode, 1, r.stderr)  # same exit as a recorded check: the delve BLOCK
+        self.assertTrue(json.loads(r.stdout)["findings"])
+        self.assertEqual(r.stderr, "")
+        self.assertFalse((self.root / ".plainspoken").exists())  # no ledger, no friction, no reports, no snapshot
+
+    def test_no_record_leaves_ledger_lint_and_snapshots_alone(self):
+        self.check()
+        self.art.write_text(EDITED, encoding="utf-8")
+        self.check()  # now there's a previous pair as well as the current lint and snapshot
+        reports = self.root / ".plainspoken" / "reports"
+        ledger_before, reports_before = self.lines(), self.tree(reports)
+        self.art.write_text(ARTICLE, encoding="utf-8")
+        r = self.check("--no-record")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(self.lines(), ledger_before)
+        self.assertEqual(self.tree(reports), reports_before)
+
+    def test_no_record_keeps_snapshots_when_capture_is_off(self):
+        self.check()
+        reports = self.root / ".plainspoken" / "reports"
+        before = self.tree(reports)
+        (self.root / ".plainspoken" / "config.toml").write_text("[kaizen]\ncapture = false\n", encoding="utf-8")
+        self.check("--no-record")
+        self.assertEqual(self.tree(reports), before)  # a plain check here would delete the snapshot
+
+    def test_no_record_out_elsewhere_writes_only_that_file(self):
+        r = self.check("--no-record", "--out", "elsewhere/lint.json")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertTrue((self.root / "elsewhere" / "lint.json").exists())
+        self.assertFalse((self.root / ".plainspoken").exists())
+
+    def test_no_record_refuses_out_at_the_report_key(self):
+        self.check()
+        reports = self.root / ".plainspoken" / "reports"
+        ledger_before, reports_before = self.lines(), self.tree(reports)
+        lint = json.loads(cli("paths", "post.md", cwd=self.root).stdout)["lint"]
+        r = self.check("--no-record", "--out", lint)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--no-record", r.stderr)
+        self.assertEqual((self.lines(), self.tree(reports)), (ledger_before, reports_before))
 
     def test_missing_previous_snapshot_still_gives_fixed_without_section(self):
         self.check()

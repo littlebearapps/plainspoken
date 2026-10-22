@@ -205,11 +205,29 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "url",
             "title",
             "source_tier"
           ],
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "page"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "url"
+            ]
+          },
           "properties": {
+            "kind": {
+              "enum": [
+                "page",
+                "brief"
+              ],
+              "description": "page (the default) needs a url; brief is the person's brief, saved verbatim, with no url"
+            },
             "url": {
               "type": "string",
               "pattern": "^https?://"

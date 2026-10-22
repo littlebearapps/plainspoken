@@ -12,8 +12,9 @@ Each subcommand prints its own `--help`.
 Capture happens as you work, without a separate step:
 
 - `check` records one `fired` event per BLOCK or WARN finding, with `--no-save` and `--out` too. When it saves a new
-  lint for an edited article, it also records a `fixed` event for each finding the edit removed. There's no
-  read-only lint flag yet (planned: [#1](https://github.com/littlebearapps/plainspoken/issues/1)).
+  lint for an edited article, it also records a `fixed` event for each finding the edit removed. For a one-off look
+  that shouldn't count as evidence, `check --no-record` prints the lint and records nothing: no event, no report,
+  and the snapshots already there stay as they are. A draft linted on stdin (`check -`) records nothing either.
 - The lint-watch hook records `fired` when a file's result changes after an edit.
 - `merge` records each judge's own verdict, whether the judge agreed with the lint on rules both look at, and each
   justification the JR judge accepted or rejected. An INCOMPLETE merge, and a judge reply `judge-record` refuses,
@@ -67,8 +68,8 @@ fires. The report also shows unreadable ledger lines (skipped, never fatal) and 
 
 `kaizen calibrate` reads the ledger and looks for these, in this order (one candidate per rule):
 
-1. **Stuck**: a BLOCK a person dismissed as `unfixable`. Fixes only ever remove words, so if removing words can't
-   clear a BLOCK, the rule needs to change. The proposal demotes it.
+1. **Stuck**: a BLOCK a person dismissed as `unfixable`. Fixes never add content, so if cutting, joining or
+   restating can't clear a BLOCK, the rule needs to change. The proposal demotes it.
 2. **False positives**: 20 or more fires with an effective false-positive rate over 10%. The proposal loosens a
    threshold, or demotes or shadows the rule when there's no threshold to turn.
 3. **Missed**: the same rule or pattern recorded as missed in 2 or more documents. The proposal asks for a review.
@@ -146,13 +147,13 @@ bumps the ruleset version and adds an entry to `RULESET-CHANGELOG.md` beside the
   entry, and apply reports that as applied, naming the changelog it couldn't write.
 
 Where it writes: the ruleset of a plainspoken checkout (`--rules <path>`, or the plugin's own when it's a git
-checkout), or, for a threshold-only proposal, your project profile (`--target profile`; the profile must be a file
-in your project, such as `.plainspoken/profiles/<name>.toml`). It won't write into an installed plugin's own files.
-With `--target profile`, apply edits the profile the project resolves when you run it (`PLAINSPOKEN_PROFILE`, else
-`[engine] profile`), not the profile the proposal was made for, and per-folder `[engine] profiles` globs aren't
-consulted. In a project with several profiles, check the path `--dry-run` prints first, or set
-`PLAINSPOKEN_PROFILE` for the run. Editing the proposal's own profile is planned
-([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
+checkout), or, for a threshold-only proposal, a profile in your project (`--target profile`). It won't write into an
+installed plugin's own files. With `--target profile`, apply edits the profile the proposal was made for, by its
+`[profile] name`, not the one the project resolves when you run it (`PLAINSPOKEN_PROFILE`, `[engine] profile`), so in
+a project with per-folder `[engine] profiles` the edit lands in the profile whose evidence it rests on. That profile
+must be a file in your project: one your config names, or one in `.plainspoken/profiles/`. When it isn't (the
+plugin's own `default`, or a file since deleted or renamed), when two project files share its name, or when the
+proposal names no profile (calibrate had none to resolve), apply refuses, naming the profile, and writes nothing.
 If you use the installed plugin, send the evidence upstream instead (section 9). It never edits the rubrics: when it
 removes a judged rule, it names the rubric section left behind, for you to delete in the same change.
 

@@ -1,5 +1,5 @@
 ---
 type: regex
-pattern: '^(?=[\s\S]*Northside)(?=[\s\S]*85)(?=[\s\S]*June)'
+pattern: '(?:^|\n)<<<PIECE(?=(?:(?!PIECE>>>)[\s\S])*?Northside)(?=(?:(?!PIECE>>>)[\s\S])*?85)(?=(?:(?!PIECE>>>)[\s\S])*?June)(?:(?!PIECE>>>)[\s\S])*PIECE>>>'
 flags: i
 ---

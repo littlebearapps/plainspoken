@@ -73,6 +73,20 @@ class Structural(unittest.TestCase):
         self.assertEqual([f.severity for f in run("HM", body)], ["WARN"])
         self.assertEqual(run("HM", "I think it's fine. But not always."), [])
 
+    def test_rhythm_remedies_fit_the_fix_rule(self):  # #30: a fix cuts, joins, splits or restates; it never adds
+        staccato = run("7d", "## A\n\nShort one here. Another short one. And a third.")
+        uniform = run("7", "One two three four five. " * 5)
+        bursty = [f for f in run("12f", " ".join(["The cat sat on the mat."] * 60)) if f.excerpt.startswith("burstiness")]
+        markers = run("HM", "The system processes requests. The system returns responses. Latency remains consistently low.")
+        messages = [f.message for f in staccato + uniform + bursty + markers]
+        self.assertEqual(len(messages), 4)
+        self.assertTrue(staccato[0].message.endswith("join two short sentences that share a thought"))
+        self.assertTrue(uniform[0].message.endswith("join or split one"))
+        self.assertIn("join or split sentences", bursty[0].message)
+        self.assertIn("add nothing new", markers[0].message)
+        for m in messages:
+            self.assertNotRegex(m.lower(), r"run long|vary the rhythm|\badd (?!nothing)")
+
     def test_narrative_paragraph_variation(self):
         para = " ".join(["word"] * 50)
         body = "\n\n".join([para + "."] * 4)
@@ -259,6 +273,17 @@ def _low_vocab():
     return " ".join(sents)
 
 
+def _openers_piece(paragraphs, i_openers):
+    """Paragraphs of four sentences (6, 30, 10 and 22 words, so every paragraph is 68 words: paragraph SD 0).
+    `i_openers` sentences open with "I"; every other sentence opens with its own word, and no body word repeats."""
+    vocab = (a + b + c + d for a in "bcdfghjklm" for b in "aeiou" for c in "lmnprstvz" for d in "aeiou")
+    sents = []
+    for k in range(paragraphs * 4):
+        n = [6, 30, 10, 22][k % 4]
+        first = "I" if k < i_openers else next(vocab).capitalize()
+        sents.append(" ".join([first] + [next(vocab) for _ in range(n - 1)]) + ".")
+    return "\n\n".join(" ".join(sents[i:i + 4]) for i in range(0, len(sents), 4))
+
 class SlopGate(unittest.TestCase):
     LOW_VOCAB = _low_vocab()
 
@@ -290,6 +315,25 @@ class SlopGate(unittest.TestCase):
         self.assertNotIn("the", words)
         self.assertNotIn("was", words)
         self.assertNotIn("rare", words)  # 2 uses: under the minimum
+
+    def test_slop_warning_names_only_the_tripped_metrics(self):  # #26; the opening limit is 0 + 3/48 openers (#25)
+        cfg = with_thresholds(opening_top3_max=0.0, paragraph_sd_min=1000, capsule_transition_max=1.0, mattr_min=0.0)
+        (f,) = [x for x in run_cfg("12f", self.LOW_VOCAB, cfg) if "slop metrics tripped" in x.message]
+        self.assertEqual(f.severity, "WARN")
+        self.assertRegex(f.message, r"^2 slop metrics tripped: opening repetition [\d.]+ > 0\.062; paragraph SD [\d.]+ < 1000 — cut, join or split; never pad$")
+        self.assertNotIn("capsule", f.message)
+        self.assertNotIn("MATTR", f.message)
+
+    def test_short_piece_opening_limit_scales_with_length(self):  # #25
+        # 340 words, 20 sentences, 5 open with "I": share 7/20 = 0.35. Over the flat 0.25, but top-3 share can't
+        # fall below 3/20, so the limit is 0.25 + 0.15 = 0.40. Paragraph SD 0 alone is one trip: no WARN.
+        f = run("12f", _openers_piece(5, 5))
+        self.assertFalse(any("slop metrics tripped" in x.message for x in f), [x.message for x in f])
+
+    def test_long_piece_with_the_same_opening_habit_still_warns(self):  # #25
+        # 1,020 words, 60 sentences, 18 open with "I": share 20/60 = 0.33 > 0.25 + 3/60 = 0.30, plus paragraph SD 0.
+        (f,) = [x for x in run("12f", _openers_piece(15, 18)) if "slop metrics tripped" in x.message]
+        self.assertRegex(f.message, r"^2 slop metrics tripped: opening repetition 0\.333 > 0\.3; paragraph SD 0 < 25 — cut, join or split; never pad$")
 
     def test_varied_prose_has_no_burstiness_block(self):
         f = run("12f", self.LOW_VOCAB)

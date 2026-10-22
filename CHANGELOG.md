@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.10.0](https://github.com/littlebearapps/plainspoken/compare/v0.9.0...v0.10.0) (2026-10-22)
+
+
+### Features
+
+* **check:** add --no-record, a read-only lint that records no kaizen events ([a64ebc8](https://github.com/littlebearapps/plainspoken/commit/a64ebc8e81fd9e13958391a0dd181c2f7e5c74a9)), closes [#1](https://github.com/littlebearapps/plainspoken/issues/1)
+* **check:** record all four judge replies in one call with `judge-record --all` ([d30fb14](https://github.com/littlebearapps/plainspoken/commit/d30fb144a662896f8557c85914868e1e8910f292)), closes [#28](https://github.com/littlebearapps/plainspoken/issues/28)
+* **claims:** brief as a saved source, `claims stamp`, and a plain edit/record order ([9c02702](https://github.com/littlebearapps/plainspoken/commit/9c02702efed7a623a44db18f144379eb0146a6e6)), closes [#31](https://github.com/littlebearapps/plainspoken/issues/31)
+
+
+### Bug Fixes
+
+* **check:** name only the tripped 12f slop metrics, with values and limits ([1ae3365](https://github.com/littlebearapps/plainspoken/commit/1ae3365d844a2b3422291debec5301b6cebde225)), closes [#26](https://github.com/littlebearapps/plainspoken/issues/26)
+* **check:** one fix rule (cut, join, split or restate) that the 7d and 12f remedies fit ([36ecffd](https://github.com/littlebearapps/plainspoken/commit/36ecffdaa71fa61d917344024facab04e74eb3cd)), closes [#30](https://github.com/littlebearapps/plainspoken/issues/30)
+* **check:** say which edits are fix passes and report from run.py status ([ed25d24](https://github.com/littlebearapps/plainspoken/commit/ed25d2438dafd7193b3b45bc703dbe4f6005b73c)), closes [#29](https://github.com/littlebearapps/plainspoken/issues/29)
+* **check:** scale the 12f opening-repetition limit with length ([ba8bcbb](https://github.com/littlebearapps/plainspoken/commit/ba8bcbb7f7acaac8d7f32684a281e121701565f3)), closes [#25](https://github.com/littlebearapps/plainspoken/issues/25)
+* **eval:** count numbers in words, and list derived numbers apart from new ones ([14996f1](https://github.com/littlebearapps/plainspoken/commit/14996f13b8f99a43fb1abbb4e3acd0d3aecbe9ae)), closes [#33](https://github.com/littlebearapps/plainspoken/issues/33)
+* **evals:** grade only the piece between the markers, and drop the club name from the netball facts ([a003eea](https://github.com/littlebearapps/plainspoken/commit/a003eea9d48b2853f08bcf23ac18e5bbd23c360d)), closes [#34](https://github.com/littlebearapps/plainspoken/issues/34)
+* **kaizen:** apply --target profile edits the proposal's own profile ([e99a2a1](https://github.com/littlebearapps/plainspoken/commit/e99a2a1df6ab7cf8c033582b87f00e8f0b882ca2)), closes [#2](https://github.com/littlebearapps/plainspoken/issues/2)
+* **skills:** run the profile call as an explicit first step, not a load-time command ([d668820](https://github.com/littlebearapps/plainspoken/commit/d6688202f2acacb696ec5bb089dc8126b0659e5f)), closes [#12](https://github.com/littlebearapps/plainspoken/issues/12)
+* **write:** raise a length the sources can't carry before drafting, and report the real word count ([f405242](https://github.com/littlebearapps/plainspoken/commit/f405242070c7a24a11034b4e30c265405f4a02da)), closes [#32](https://github.com/littlebearapps/plainspoken/issues/32)
+* **write:** report the check and claims results from the engine, never from memory ([0e08d3f](https://github.com/littlebearapps/plainspoken/commit/0e08d3f7c0d47b40cb386a1eedcfca13525fea16)), closes [#24](https://github.com/littlebearapps/plainspoken/issues/24)
+* **write:** run claims before the check, so claims edits don't force a second round of judges ([36c9e4a](https://github.com/littlebearapps/plainspoken/commit/36c9e4a4258d7f1ce28eab88e26653ccb32821f8)), closes [#27](https://github.com/littlebearapps/plainspoken/issues/27)
+* **write:** the short-piece lint never stands in for write's check and claims steps ([d2c215b](https://github.com/littlebearapps/plainspoken/commit/d2c215b32bbf290540eef555168c7a133e5f3e81)), closes [#23](https://github.com/littlebearapps/plainspoken/issues/23)
+
 ## [0.9.0](https://github.com/littlebearapps/plainspoken/compare/v0.8.0...v0.9.0) (2026-10-21)
 
 

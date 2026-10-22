@@ -121,6 +121,15 @@ class TemplateAndReviewInput(unittest.TestCase):
         self.assertEqual(justify.template(self.REPORT, {"article_sha256": "a" * 64, "items": "7b"}),
                          justify.template(self.REPORT))  # a malformed file carries nothing
 
+    def test_review_input_carries_the_tripped_slop_metrics(self):  # #26: the JR judge sees which metrics and values
+        msg = "2 slop metrics tripped: opening repetition 0.27 > 0.25; paragraph SD 22 < 25"
+        report = {"article": "docs/blog/999-t.md", "article_sha256": "a" * 64, "warns": ["12f"],
+                  "rules": {"12f": {"findings": [{"rule": "12f", "severity": "WARN", "line": 0,
+                                                   "excerpt": "{'words': 400}", "message": msg}]}}}
+        data = {"article_sha256": "a" * 64, "items": [{"rule": "12f", "kind": "metric", "reason": REASON}]}
+        (item,) = justify.review_input(report, data, "b" * 64)["items"]
+        self.assertEqual([f["message"] for f in item["evidence"]], [msg])
+
     def test_review_input_carries_evidence_and_skips_non_failing_rules(self):
         data = {"article_sha256": "a" * 64, "items": [
             {"rule": "7b", "kind": "voice", "reason": REASON}, {"rule": "12d", "kind": "metric", "reason": REASON},

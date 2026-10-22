@@ -1,5 +1,5 @@
 ---
 type: regex
-pattern: '^(?=[\s\S]*Little\s+Lune)(?=[\s\S]*Ana)(?=[\s\S]*Ruth)(?=[\s\S]*custard)'
+pattern: '(?:^|\n)<<<PIECE(?=(?:(?!PIECE>>>)[\s\S])*?Little\s+Lune)(?=(?:(?!PIECE>>>)[\s\S])*?Ana)(?=(?:(?!PIECE>>>)[\s\S])*?Ruth)(?=(?:(?!PIECE>>>)[\s\S])*?custard)(?:(?!PIECE>>>)[\s\S])*PIECE>>>'
 flags: i
 ---

@@ -11,8 +11,6 @@ Codex; the skill still decides *what* to do.
   command. `RUN` in the skills is `python3 <root>/lib/run.py`.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
   literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
-- A line written as `` !`command` `` is something Claude Code runs when the skill loads. Run it yourself first, with
-  the root filled in, and read its output as the skill's injected context.
 - `allowed-tools`, `argument-hint` and `disable-model-invocation` in the frontmatter are Claude Code settings. Codex
   ignores them. The manual-only skills (`claims`, `reader-value`, `kaizen`) still start only when the user asks.
 - Another skill named as `/plainspoken:<name>` is `$plainspoken:<name>` here. If it doesn't load, read

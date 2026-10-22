@@ -85,6 +85,67 @@ class JudgeCli(unittest.TestCase):
                 self.assertIn(r.returncode, (0, 1), r.stderr)
                 self.assertTrue(keep.exists(), "a --from file that isn't the reply path must survive")
 
+    def _reply(self, group: str, sha: str | None = None) -> dict:
+        import hashlib
+        sha = sha or hashlib.sha256(self.art.read_bytes()).hexdigest()
+        return {"group": group, "article_sha256": sha, "judged_at": "t", "verdicts": []}
+
+    def _scratch(self, text: str) -> Path:
+        reply = Path(json.loads(cli("paths", "post.md", cwd=self.cwd).stdout)["reply"])
+        reply.parent.mkdir(parents=True, exist_ok=True)
+        reply.write_text(text, encoding="utf-8")
+        return reply
+
+    def test_judge_record_all_records_four_replies_from_one_file(self):
+        """#28: one Write and one record call per judge round, not one pair per judge."""
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        objs = [self._reply(g) for g in ("J1", "J2", "J3", "J4")]
+        layouts = {
+            "one after another": "\n".join(json.dumps(o) for o in objs),
+            "pretty, one fenced": "```json\n" + json.dumps(objs[0], indent=2) + "\n```\n"
+                                  + "\n\n".join(json.dumps(o, indent=2) for o in objs[1:]),
+            "a JSON list": json.dumps(objs),
+        }
+        for name, text in layouts.items():
+            with self.subTest(layout=name):
+                reply = self._scratch(text)
+                r = cli("judge-record", "post.md", "--all", "--from", str(reply), cwd=self.cwd)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                written = [Path(p) for p in r.stdout.split()]
+                self.assertEqual([json.loads(p.read_text(encoding="utf-8"))["group"] for p in written],
+                                 ["J1", "J2", "J3", "J4"])
+                self.assertFalse(reply.exists(), "the scratch reply is consumed, as with --group")
+
+    def test_judge_record_all_records_the_good_ones_and_names_the_rest(self):
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        paths = json.loads(cli("paths", "post.md", cwd=self.cwd).stdout)
+        text = "\n".join(json.dumps(o) for o in (self._reply("J1"), self._reply("J2", "0" * 64),
+                                                 self._reply("J3"), self._reply("J3"), self._reply("JR")))
+        r = cli("judge-record", "post.md", "--all", "--from", str(self._scratch(text)), cwd=self.cwd)
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(Path(paths["J1"]).is_file())
+        for g in ("J2", "J3", "J4"):
+            self.assertFalse(Path(paths[g]).exists(), g)
+        self.assertIn("J2 reply not recorded: stale", r.stderr)
+        self.assertIn("J3 reply not recorded: 2 replies", r.stderr)
+        self.assertIn("J4 reply not recorded: no reply", r.stderr)
+        self.assertIn("JR", r.stderr)  # JR is recorded on its own, never with --all
+        self.assertFalse(Path(paths["JR"]).exists())
+
+    def test_judge_record_all_unparseable_file(self):
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        reply = self._scratch('{"group": "J1"} and some prose')
+        r = cli("judge-record", "post.md", "--all", "--from", str(reply), cwd=self.cwd)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("judge replies not recorded", r.stderr)
+        self.assertFalse(reply.exists())
+
+    def test_judge_record_needs_exactly_one_of_group_and_all(self):
+        for args in ((), ("--group", "J1", "--all")):
+            with self.subTest(args=args):
+                r = cli("judge-record", "post.md", *args, cwd=self.cwd, input="{}")
+                self.assertEqual(r.returncode, 2, r.stderr)
+
     def test_judge_record_from_missing_file_exits_2(self):
         r = cli("judge-record", "post.md", "--group", "J1", "--from", "nope.json", cwd=self.cwd)
         self.assertEqual(r.returncode, 2, r.stderr)

@@ -24,9 +24,7 @@ Next:
   (`eval rewrite-delta`), so the re-run can show a difference if there is one. The tier-2 blind reader test runs
   after v1.0, once samples of the author's unassisted writing exist; tier 1, with human readers, comes later.
 - **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
-  ([#1](https://github.com/littlebearapps/plainspoken/issues/1)), and `kaizen apply --target profile` editing the
-  proposal's own profile rather than the one the project resolves now
-  ([#2](https://github.com/littlebearapps/plainspoken/issues/2)).
+  ([#1](https://github.com/littlebearapps/plainspoken/issues/1)).
 - **After v1.0:** an editor agent that can rewrite, not only cut. The publish gate and the kaizen nudges for Codex
   and Hermes Agent.
 
@@ -66,21 +64,22 @@ Hermes Agent:
 
     hermes plugins install littlebearapps/plainspoken --enable
 
-Hermes scans a plugin before it installs it. It rates plainspoken "caution", mostly because the skills carry
-Claude Code's load-time commands (`` !`python3 …` ``) and the engine runs Python, so it asks you to confirm. Over
-SSH or in a script, where it can't ask, it refuses: review the findings and add `--force`. Then start a new session
-(or `/reset`). Hermes loads `.hermes-plugin/`, which registers the skills as `plainspoken:<name>` and tells the
-model where the plugin lives. To add it to one Hermes profile only, name the
-profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`. The install also warns
-that the repo root has no `plugin.yaml`; that's expected, because the Hermes manifest sits in `.hermes-plugin/`.
+Hermes scans a plugin before it installs it. Hermes v0.22 rates plainspoken "safe": it lists medium and low findings
+(the engine runs Python, and the docs show commands) but no high ones, so the install doesn't stop to ask. If your
+Hermes rates it "caution", it asks you to confirm; over SSH or in a script, where it can't ask, review the findings
+and add `--force`. Then start a new session (or `/reset`). Hermes loads `.hermes-plugin/`, which registers the
+skills as `plainspoken:<name>` and tells the model where the plugin lives. To add it to one Hermes profile only,
+name the profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`. The install also
+warns that the repo root has no `plugin.yaml`; that's expected, because the Hermes manifest sits in
+`.hermes-plugin/`.
 
 Updates: this install follows the `stable` branch, which only moves when a release ships. Hermes checks for a new
-commit once a day (`plugins.auto_update_check_hours`), `hermes plugins check-updates` checks now, and Hermes
-Desktop shows an **Update** button. Apply it with `hermes plugins update plainspoken`. The update is scanned
-again and asks "Update anyway?" for the same caution rating; add `--force` where it can't ask, such as a cron job.
-For the same reason `plugins.auto_apply: true` doesn't update plainspoken yet: unattended updates don't accept a
-caution rating. To stay on one release instead, pin its full commit with `--ref <sha>` (Hermes takes no tags or
-branches there); `update` then leaves it alone, and `install --force --ref <new-sha>` moves it.
+commit once a day (`plugins.auto_update_check_hours`), `hermes plugins check-updates` checks now, and Hermes Desktop
+shows an **Update** button. Apply it with `hermes plugins update plainspoken`. The update is scanned again; a "safe"
+rating applies without asking, so `plugins.auto_apply: true` can apply it unattended (a "caution" rating asks
+"Update anyway?" and needs `--force` where it can't ask). To stay on one release instead, pin its full commit with
+`--ref <sha>` (Hermes takes no tags or branches there); `update` then leaves it alone, and
+`install --force --ref <new-sha>` moves it.
 
 Hooks outside Claude Code: lint and the claims integrity check after each edit, and the optional writing nudge, run
 in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Still missing: the publish gate and
@@ -94,8 +93,8 @@ Check a draft:
     /plainspoken:check thread.md --content-type social
 
 The check lints the file, sends it to four isolated judges, merges their verdicts and runs up to two fix passes
-that only remove patterns. It ends with PASS, FAIL, UNRESOLVED or INCOMPLETE, and writes its files to
-`.plainspoken/reports/` in the project you run it from.
+that cut, join or restate and never add a fact. It ends with PASS, FAIL, UNRESOLVED or INCOMPLETE, and writes its
+files to `.plainspoken/reports/` in the project you run it from.
 
 Run the CLI from anywhere in the project: it finds the project root (the nearest folder with
 `.plainspoken/config.toml` or `.git`).
@@ -150,13 +149,17 @@ draft, contract or rubric has changed, and PASS only for a current pass from the
 
 The skills call these CLI subcommands (`python3 lib/run.py <subcommand>`; each prints its own `--help`):
 
-- `claims hash | validate | candidates | gaps | pin | recheck | scaffold | status | checker-input | record`: hash
-  the article, validate a ledger, list the values and quotes in an article and the ones the ledger misses, pin a
-  passage in a saved source, recheck every pin offline, write a starter ledger, report the status, print the
-  checker's input, and record its reply.
+- `claims hash | stamp | validate | candidates | gaps | pin | recheck | scaffold | status | checker-input | record`:
+  hash the article, write its hash and the time into the ledger, validate a ledger, list the values and quotes in an
+  article and the ones the ledger misses, pin a passage in a saved source, recheck every pin offline, write a
+  starter ledger, report the status, print the checker's input, and record its reply.
 - `reader-value validate | modules | template | deliver-input | deliver | status`: validate a contract, check an
   article's `<!-- module:NAME -->` blocks, print a starter contract, print the delivery reviewer's input, record its
   reply, and read the delivery record back against the current files.
+- `status <draft>`: the last saved check and claims status lines, the draft's word count (as the check counts it) and
+  the reader-value contract path, read back without running or writing anything, so `write`'s report quotes them. A
+  check or claims step that never ran, or ran on an older version of the draft, shows as INCOMPLETE; it exits 0 only
+  when both say PASS.
 
 **The integrity hook.** After each Write or Edit of a target file, a PostToolUse hook flags prominent numbers that
 nothing sources: a statistic in a chart, in the `> **TL;DR:**` block or in the frontmatter description with no link

@@ -9,7 +9,7 @@ QUESTION = "Does this sound like the author, or like an AI explaining the author
 class WriteSkill(SkillBasics, unittest.TestCase):
     NAME = "write"
     REQUIRED = ("Core rules", "Steps", "1. Research gate", "2. Reader value", "3. Outline", "4. Anchors",
-                "5. Draft, one section at a time", "6. Check", "7. Claims", "8. Report")
+                "5. Draft, one section at a time", "6. Claims", "7. Check", "8. Report")
     DRAFTING = True
     REFERENCES = ("research-gate.md", "answer-first.md", "narrative.md", "claude-code.md", "try-this.md",
                   "confidence-labels.md")
@@ -27,8 +27,24 @@ class WriteSkill(SkillBasics, unittest.TestCase):
                        "list as many items as there really are", "anchors"):
             self.assertIn(needle, core)
 
+    def test_bare_lint_is_not_the_check_step(self):  # #23: the short-piece lint doesn't apply inside write
+        core = " ".join(self.text.split("## Steps", 1)[0].split())
+        self.assertRegex(core, r"The bare lint on its own \(`RUN check [^`]*`\) isn't step 7")
+
     def step(self, n: int) -> str:
         return self.text.split(f"### {n}. ", 1)[1].split(f"### {n + 1}. ", 1)[0]
+
+    def test_length_the_sources_cant_carry_is_raised_before_drafting(self):  # #32: say so; never pad
+        step = " ".join(self.step(1).split())
+        self.assertIn("estimate whether the sources can carry it", step)
+        self.assertIn("say so before you draft and ask for more material", step)
+        self.assertIn("write it shorter and say why at the top of the report", step)
+        self.assertIn("Never pad", step)
+        self.assertIn("A definition or background line the sources don't give is a new fact", step)
+        gate = (REFS / "research-gate.md").read_text(encoding="utf-8")
+        self.assertIn("## When the sources can't carry the length", gate)
+        report = " ".join(self.text.split("### 8. Report", 1)[1].split())
+        self.assertIn("Any length you give is the `words:` line's, never an estimate", report)
 
     def test_reader_value_outline_before_drafting(self):  # the stub is gone
         step = self.step(2)
@@ -55,32 +71,50 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn(QUESTION, self.text)
 
     def test_ends_with_check(self):
-        step = self.text.split("### 6. Check", 1)[1].split("### 7.", 1)[0]
+        step = self.step(7)
+        self.assertTrue(self.text.index("### 7. Check") > self.text.index("### 6. Claims"))
         self.assertIn("/plainspoken:check", step)
 
     def test_claims_skill_on_the_saved_draft(self):  # the hand-off stub is gone
-        step = self.step(7)
+        step = self.step(6)
         self.assertIn("/plainspoken:claims", step)
         self.assertIn("skills/claims/SKILL.md", step)
-        self.assertIn("claims status", step)
+        self.assertIn("claims status", self.step(7))  # read after the check, which may have changed the draft
         self.assertNotIn("later version", self.text.lower())
         self.assertNotIn("in this version", self.text.lower())
         self.assertNotIn("Claims to verify", self.text)
 
-    def test_report_lines(self):
+    def test_report_lines(self):  # #24: a fixed block, the engine's lines quoted from `status`, never from memory
         step = self.text.split("### 8. Report", 1)[1]
-        self.assertIn("`Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)`", step)
-        self.assertIn("`claims: <PASS|INCOMPLETE|BLOCKED>`", step)  # no "Claims: claims:"
-        self.assertNotIn("`Claims:", step)
+        self.assertIn("`RUN status '<draft>' --plugin-profile '${user_config.profile}'`", step)
+        block = [line.strip() for line in step.splitlines() if line.startswith("    ")]
+        self.assertEqual([line.split(":", 1)[0] for line in block],
+                         ["Draft", "<every line `status` printed", "Reader value", "Needs the owner", "Anchors",
+                          "For kaizen"])
+        self.assertIn("Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)", block)
+        self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
         flat = " ".join(step.split())
+        self.assertIn("copied exactly as printed, never from memory or in other words", flat)
+        self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
-        self.assertIn("every `(skipped anchor …)` line", flat)  # step 4's skipped anchors are reported
+        self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
 
-    def test_a_draft_changed_after_claims_goes_back_to_claims(self):
-        step = " ".join(self.step(7).split())
-        self.assertIn("rerun the claims skill's steps 4 to 6 once", step)
-        self.assertIn("tell the user to run `/plainspoken:claims <draft>` again", step)
+    def test_unresolved_check_and_skipped_claims_are_never_silent(self):  # #24
+        claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
+        self.assertIn("an UNRESOLVED merge goes through its fix-or-justify loop first", check)
+        self.assertIn("A WARN you keep without an accepted justification leaves the check UNRESOLVED", check)
+        self.assertIn("Never skip this step; if it can't run, the report keeps `claims: INCOMPLETE`", claims)
+
+    def test_claims_before_the_check(self):  # #27: claims edits land before the judges read the draft
+        claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
+        self.assertIn("Claims runs before the check", claims)
+        self.assertNotIn("run the check once more (step", claims)
+        # a check edit costs one claims checker rerun, not a second round of four judges
+        self.assertIn("If the check changed the draft, the ledger no longer matches it", check)
+        self.assertIn("rerun the claims skill's steps 4 to 6 once", check)
+        self.assertIn("tell the user to run `/plainspoken:claims <draft>` again", check)
+        self.assertIn("list for step 6", " ".join(self.step(2).split()))
 
     def test_other_skills_named_from_the_plugin_folder(self):
         notes = (REFS / "claude-code.md").read_text(encoding="utf-8")

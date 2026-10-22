@@ -13,7 +13,8 @@ the point: it catches a paraphrase passed off as a quote.
    nothing. The check is about where the file is, not where its text came from: a copy of the article saved under
    the `sources_dir` would pass it, so the checker and the owner are the backstop there. Save what the fetch
    returned; don't tidy, trim or reword it. Put the page's address in the claim's `source.url`. A page you couldn't
-   fetch or save supports nothing this session.
+   fetch or save supports nothing this session. A brief from the chat is saved the same way, word for word, and its
+   claims carry `source.kind = "brief"` with no `url` (evidence-rules.md).
 2. **Pin.** Copy the passage that supports the claim out of the saved file, then run
    `RUN claims pin --source .plainspoken/sources/<file> --passage '<the passage>' --article ARTICLE`. It refuses a
    source outside the `sources_dir` (a link out of it included) or one that is the article. It prints a TOML fragment:

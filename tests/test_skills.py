@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from scripts.dev.lint_frontmatter import parse_frontmatter
+from tests._skills import LOAD_LINE, PROFILE_CALL, assert_first_step
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -32,7 +33,7 @@ class CheckSkill(unittest.TestCase):
         self.assertIn("${CLAUDE_PLUGIN_ROOT}/lib/run.py", self.fm.get("allowed-tools", ""))
 
     def test_calls_the_cli_not_python_snippets(self):
-        for sub in ("check", "judge-input", "judge-record", "merge", "justify", "paths"):
+        for sub in ("check", "judge-input", "judge-record", "merge", "justify", "paths", "status"):
             self.assertRegex(self.text, rf"run\.py {sub}\b")
         self.assertNotIn("python3 - ", self.text)
         self.assertNotIn("import json", self.text)
@@ -42,16 +43,16 @@ class CheckSkill(unittest.TestCase):
         for needle in ("never edit", "two fix passes", "INCOMPLETE", "plainspoken:tells-judge"):
             self.assertIn(needle, head)
 
-    def test_profile_injected(self):
-        self.assertRegex(self.text, r"(?m)^!`python3 \$\{CLAUDE_PLUGIN_ROOT\}/lib/run\.py profile .*\|\| true`$")
+    def test_profile_read_first(self):  # #12: an explicit first step, not a load-time command
+        assert_first_step(self, self.text, PROFILE_CALL)
 
     def test_no_ban_list_words(self):  # lists live in the checker
         lists = __import__("plainspoken.registry", fromlist=["load_config"]).load_config().lists
         for word in lists["ban_literal"]:
             self.assertIsNone(re.search(rf"\b{re.escape(word)}\b", self.text, re.I), word)
 
-    def test_injection_line_survives_an_unsubstituted_placeholder(self):
-        line = re.search(r"(?m)^!`(.*)`$", self.text).group(1).replace("${CLAUDE_PLUGIN_ROOT}", str(REPO))
+    def test_first_step_survives_an_unsubstituted_placeholder(self):
+        line = PROFILE_CALL.strip("`").replace("${CLAUDE_PLUGIN_ROOT}", str(REPO))
         env = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_"))}
         with tempfile.TemporaryDirectory() as cwd:  # no project config, no profile from the caller's environment
             r = subprocess.run(["bash", "-c", line], capture_output=True, text=True, cwd=cwd, env=env)
@@ -67,6 +68,7 @@ class CheckSkill(unittest.TestCase):
     def test_profile_flag_scope_and_routing(self):
         self.assertIn("`paths` and `judge-record` don't take it", self.text)
         self.assertIn("judge-record FILE --group Jn --from", self.text)
+        self.assertIn("judge-record FILE --all --from", self.text)  # #28: one record call per judge round
         self.assertNotIn("<<'EOF'", self.text)  # E2E: Claude Code's shell check denies JSON in a heredoc
         self.assertIn("UNRESOLVED → step 6", self.text)
         self.assertIn("run every call from the same working directory", self.text.lower())
@@ -81,6 +83,19 @@ class CheckSkill(unittest.TestCase):
         tools = self.fm.get("allowed-tools", "")
         self.assertIn("Write(.plainspoken/reports/", tools)
         self.assertIn("Edit(.plainspoken/reports/", tools)
+
+    def test_which_edits_count_as_fix_passes(self):  # #29: uncounted pre-judge edits, edits after JR
+        head = " ".join(self.text[: self.text.index("## Steps")].split())
+        self.assertIn("Before the judges start you may fix lint findings once", head)
+        self.assertIn("isn't a fix pass", head)
+        self.assertIn("Once the judges start, every edit to FILE is a fix pass (after justify or JR too)", head)
+
+    def test_report_reads_status_and_reruns_when_stale(self):  # #29: no clean finish after an uncounted edit
+        step = " ".join(self.text[self.text.index("8. **Report.**"):].split())
+        self.assertIn("RUN status FILE --plugin-profile", step)
+        self.assertIn("`check:` lines exactly as printed", step)
+        self.assertIn("run steps 1 to 5 again without editing", step)
+        self.assertIn("how many fix passes ran", step)
 
 if __name__ == "__main__":
     unittest.main()
@@ -115,7 +130,8 @@ class HumanizeSkill(unittest.TestCase):
         self.assertIn("v3.1.0", notice)
 
 
-PROFILE_SUBCOMMANDS = {"check", "profile", "anchors", "register-checklist", "merge", "justify", "judge-input"}
+PROFILE_SUBCOMMANDS = {"check", "profile", "anchors", "register-checklist", "merge", "justify", "judge-input",
+                       "status"}
 CLI_SPAN = re.compile(r"`([^`\n]*\b(?:RUN|run\.py) ([a-z-]+)\b[^`\n]*)`")
 
 
@@ -156,3 +172,20 @@ class PerFileProfile(unittest.TestCase):
     def test_the_cli_has_profile_for(self):
         src = (REPO / "lib" / "plainspoken" / "__main__.py").read_text(encoding="utf-8")
         self.assertIn('add_parser("profile-for"', src)
+
+
+class NoLoadTimeCommands(unittest.TestCase):  # #12: Hermes rates any load-time command under skills/ high
+    def test_no_skill_file_has_a_load_time_command(self):
+        found = []
+        for f in sorted((REPO / "skills").rglob("*")):
+            if f.is_file():
+                for n, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                    if LOAD_LINE.search(line):
+                        found.append(f"{f.relative_to(REPO)}:{n}")
+        self.assertEqual(found, [])
+
+    def test_every_skill_with_a_profile_call_runs_it_first(self):
+        for f in sorted((REPO / "skills").glob("*/SKILL.md")):
+            text = f.read_text(encoding="utf-8")
+            if "First, before any other step" in text and f.parent.name != "kaizen":
+                assert_first_step(self, text, PROFILE_CALL)

@@ -302,6 +302,44 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     return merged
 
 
+def merge_lines(merged: dict) -> list[str]:
+    """What `merge` prints: its status line, then any `missing verdicts:` and `problem:` lines."""
+    cov = merged["coverage"]
+    lines = [f"{merged['status']} · coverage {cov['covered']}/{cov['expected']}"
+             f" · BLOCK {', '.join(merged['blocks']) or '-'} · WARN {', '.join(merged['warns']) or '-'}"
+             f" · unresolved {', '.join(merged['unresolved']) or '-'}"]
+    if cov["missing"]:
+        lines.append(f"  missing verdicts: {', '.join(cov['missing'])}")
+    return lines + [f"  problem: {p}" for p in merged["problems"]]
+
+
+def saved_check(article: Path, reports_dir: Path, profile: Profile, cwd: Path) -> tuple[str, list[str]]:
+    """(status, lines) of the last `merge` for this article as it is now, read from `<key>.report.json`.
+
+    Runs and writes nothing. No report, an unreadable one, or one for another version of the article, profile or
+    ruleset → INCOMPLETE with the reason, never an earlier result."""
+    merged = read_json(report_paths(article, reports_dir, cwd)["report"])
+    if merged is None:
+        return "INCOMPLETE", ["INCOMPLETE (not run: no merged report for this draft)"]
+    current = (merged.get("article_sha256") == sha256(article) and merged.get("profile_sha256") == profile.sha256
+               and merged.get("ruleset_version") == load_config().version)
+    if not current:
+        return "INCOMPLETE", ["INCOMPLETE (stale: the last merge checked another version of the draft, or ran "
+                              "under another profile or ruleset; run the check again)"]
+    try:
+        if merged["status"] in ("PASS", "FAIL", "UNRESOLVED", "INCOMPLETE"):
+            return merged["status"], merge_lines(merged)
+    except (KeyError, TypeError):
+        pass
+    return "INCOMPLETE", ["INCOMPLETE (the merged report can't be read; run the check again)"]
+
+
+def word_count(article: Path, profile: Profile) -> int:
+    """The draft's length as it is now, counted as the check's `words` metric counts it."""
+    doc = parse(article.read_text(encoding="utf-8"), path=str(article), profile=profile)
+    return metrics.compute(doc, load_config())["words"]
+
+
 def reports_dir_default(cwd: Path) -> Path:
     """Where reports go when the caller doesn't say: the project's .plainspoken/reports."""
     return cwd / ".plainspoken" / "reports"

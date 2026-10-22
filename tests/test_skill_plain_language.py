@@ -22,7 +22,7 @@ class PlainLanguageSkill(SkillBasics, unittest.TestCase):
             self.assertIn(needle, core)
 
     def test_reader_comes_from_the_profile(self):
-        self.assertIn("reader:", self.text)        # the injected summary line it reads
+        self.assertIn("reader:", self.text)        # the first step's summary line it reads
         self.assertIn("comprehension_floor", self.text)
         self.assertRegex(self.text, r"(?:run\.py|RUN) profile --voice")  # the glossary path
 
