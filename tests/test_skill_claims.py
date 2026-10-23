@@ -206,7 +206,10 @@ class ClaimsReferences(unittest.TestCase):
     def test_claude_code_specifics(self):
         text = self.read("claude-code.md")
         self.assertIn("/plainspoken:claims", text)
-        self.assertIn("one Bash call per command", text)
+        flat = " ".join(text.split())
+        self.assertNotIn("one Bash call per command", text)  # #78: one call per pin doubled the turns
+        self.assertIn("every `claims pin` in one chain", flat)
+        self.assertIn("stops at the first call that fails", flat)
         self.assertIn("no shell loops", text.lower())
         self.assertIn("claims stamp ARTICLE", text)  # the hash and the clock come from the CLI
         self.assertIn("never a heredoc", text)
