@@ -62,6 +62,7 @@ the skills' rule that you don't award your own pass holds here too.
   guardrail, not a complete boundary, so still run `$plainspoken:check` yourself before anything goes out.
 - The publish gate takes its strictness only from `[gate] strictness` in `.plainspoken/config.toml` (Codex has no
   plugin options): `block` denies the push, `warn` shows a message and lets it go, and with no file it does nothing.
+  `warn` and `block` need `[gate] paths`; with none set, the gate only shows a message that nothing is gated.
 - No kaizen backstop: Codex starts the agents with `spawn_agent` or `codex exec`, and a plugin can't add agent types,
   so no hook sees a plainspoken agent finish. `kaizen report` shows 0 judge replies returned here; the recorded
   count still holds.

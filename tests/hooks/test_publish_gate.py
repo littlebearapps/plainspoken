@@ -268,7 +268,34 @@ class Gate(unittest.TestCase):
 
     def test_gate_paths_unset_means_no_trick_denials(self):
         (self.project / ".plainspoken" / "config.toml").write_text('[engine]\nprofile = "default"\n', encoding="utf-8")
-        self.assertEqual(self.run_gate(command="$(echo git) push").stdout.strip(), "")
+        out = self.out(self.run_gate(command="$(echo git) push"))
+        self.assertNotIn("hookSpecificOutput", out)
+        self.assertIn("nothing is gated", out["systemMessage"])
+
+    NO_PATHS = ("plainspoken gate: strictness is {} but no [gate] paths are set in .plainspoken/config.toml, "
+                "so nothing is gated")
+
+    def test_no_gate_paths_says_nothing_is_gated_on_a_push(self):  # #94: block with no paths used to be silent
+        for strictness in ("warn", "block"):
+            with self.subTest(strictness=strictness):
+                (self.project / ".plainspoken" / "config.toml").write_text(
+                    f'[gate]\nstrictness = "{strictness}"\n', encoding="utf-8")
+                r = self.run_gate(None)
+                self.assertEqual((r.returncode, self.out(r)), (0, {"systemMessage": self.NO_PATHS.format(strictness)}))
+                self.assertEqual(self.out(self.run_gate(strictness)),
+                                 {"systemMessage": self.NO_PATHS.format(strictness)})
+                for command in ("git status", "ls docs", "echo git push"):
+                    self.assertEqual(self.run_gate(None, command=command).stdout.strip(), "", command)
+        (self.project / ".plainspoken" / "config.toml").write_text('[gate]\nstrictness = "watch"\n', encoding="utf-8")
+        self.assertEqual(self.run_gate(None).stdout.strip(), "")
+        (self.project / ".plainspoken" / "config.toml").unlink()  # the plugin option alone, no config file
+        self.assertEqual(self.out(self.run_gate("block")), {"systemMessage": self.NO_PATHS.format("block")})
+        self.assertEqual(self.run_gate("watch").stdout.strip(), "")
+
+    def test_empty_gate_paths_list_also_says_so(self):
+        (self.project / ".plainspoken" / "config.toml").write_text('[gate]\nstrictness = "block"\npaths = []\n',
+                                                                   encoding="utf-8")
+        self.assertEqual(self.out(self.run_gate(None)), {"systemMessage": self.NO_PATHS.format("block")})
 
 
     def test_non_ascii_gated_path_is_checked(self):

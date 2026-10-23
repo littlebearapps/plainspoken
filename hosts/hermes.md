@@ -59,8 +59,9 @@ here too.
   command, the publish gate checks a `git push` and the write guard stops a shell write to a reply file or the claims
   ledger (write those with `write_file` or `patch`). A block comes back as the command's result: do what it says,
   don't work around it. The gate's strictness comes only from `[gate] strictness` in `.plainspoken/config.toml`; a
-  warn goes to the person and the command runs. At the end of a turn, the kaizen nudge tells the person when
-  proposals wait or calibrate is due. Still run the check skill yourself before anything goes out: the gate covers
+  warn goes to the person and the command runs. Warn and block need `[gate] paths`; with none set, the gate only
+  tells the person that nothing is gated. At the end of a turn, the kaizen nudge tells the person when proposals wait
+  or calibrate is due. Still run the check skill yourself before anything goes out: the gate covers
   `terminal` only.
 - No kaizen backstop: the agents run as their own `hermes chat` processes, so no hook here sees one finish.
   `kaizen report` shows 0 judge replies returned; the recorded count still holds.

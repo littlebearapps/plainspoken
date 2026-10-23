@@ -238,6 +238,24 @@ class HermesGate(unittest.TestCase):
         self.assertIsNone(self.hook(tool_name="terminal", args=None))
         self.assertEqual(self.ctx.posted, [])
 
+    def test_no_gate_paths_posts_that_nothing_is_gated(self):  # #94: block with no [gate] paths used to be silent
+        (self.project / ".plainspoken").mkdir(exist_ok=True)
+        for strictness in ("warn", "block"):
+            with self.subTest(strictness=strictness):
+                self.ctx.posted.clear()
+                (self.project / ".plainspoken" / "config.toml").write_text(
+                    f'[gate]\nstrictness = "{strictness}"\n', encoding="utf-8")
+                self.assertIsNone(self.push())
+                self.assertEqual(self.ctx.posted, [f"plainspoken gate: strictness is {strictness} but no [gate] "
+                                                   "paths are set in .plainspoken/config.toml, so nothing is gated"])
+                self.assertIsNone(self.push("git status"))
+                self.assertIsNone(self.push("ls docs"))
+                self.assertEqual(len(self.ctx.posted), 1)
+        self.ctx.posted.clear()
+        (self.project / ".plainspoken" / "config.toml").write_text('[gate]\nstrictness = "watch"\n', encoding="utf-8")
+        self.assertIsNone(self.push())
+        self.assertEqual(self.ctx.posted, [])
+
     def test_workdir_wins_over_the_session_folder(self):
         self.config("block")
         ctx = FakeCtx(cwd=str(self.tmp))  # the session sits outside the project
