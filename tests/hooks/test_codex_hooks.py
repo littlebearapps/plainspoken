@@ -117,6 +117,21 @@ class Gate(unittest.TestCase):
         self.config("block")
         self.assertEqual(self.push("git status"), [{}, {}])
 
+    def test_no_gate_paths_is_a_message_only(self):  # #94: block with no [gate] paths used to be silent
+        for strictness in ("warn", "block"):
+            with self.subTest(strictness=strictness):
+                (self.project / ".plainspoken").mkdir(exist_ok=True)
+                (self.project / ".plainspoken" / "config.toml").write_text(
+                    f'[gate]\nstrictness = "{strictness}"\n', encoding="utf-8")
+                gate, guard = self.push()
+                self.assertEqual(set(gate), {"systemMessage"})
+                self.assertEqual(gate["systemMessage"], f"plainspoken gate: strictness is {strictness} but no "
+                                 "[gate] paths are set in .plainspoken/config.toml, so nothing is gated")
+                self.assertEqual(guard, {})
+                self.assertEqual(self.push("git status"), [{}, {}])
+        (self.project / ".plainspoken" / "config.toml").write_text('[gate]\nstrictness = "watch"\n', encoding="utf-8")
+        self.assertEqual(self.push(), [{}, {}])
+
 
 class WriteGuard(unittest.TestCase):
     def test_deny_names_apply_patch(self):

@@ -218,7 +218,8 @@ Plugin options (set when you install or enable the plugin):
 
 - `targets`: the globs the lint-watch hook checks after each Write or Edit. Default `**/*.md`.
 - `strictness`: what the publish gate does on `git push`. `watch` (the default) does nothing, `warn` warns, and
-  `block` refuses a push unless every gated file has a current PASS. The gate is a guardrail against accidental
+  `block` refuses a push unless every gated file has a current PASS. `warn` and `block` need `[gate] paths` (below);
+  with none set, the gate only warns on each push that nothing is gated. The gate is a guardrail against accidental
   pushes of unchecked writing, not a security boundary (limits: `docs/claude-code-facts.md` section 6).
 
 If you use the gate with a profile other than `default`, set `[engine] profile` in `.plainspoken/config.toml` as well.
@@ -231,7 +232,7 @@ Project settings go in `.plainspoken/config.toml`, which beats the plugin option
     profile = "default"          # a profile name, or a path to a profile TOML
 
     [gate]
-    paths = ["content/**/*.md"]  # the files the publish gate checks; unset means it checks nothing
+    paths = ["content/**/*.md"]  # the files the publish gate checks; unset, it only warns that nothing is gated
     strictness = "block"         # watch | warn | block; beats the plugin option; a value it can't read gives a warning and the push goes ahead, unless block is known
 
 ### Host setup

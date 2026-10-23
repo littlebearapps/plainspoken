@@ -1,8 +1,9 @@
 """PreToolUse publish gate (opt-in): `git push` needs a current PASS for every pushed file in [gate] paths.
 
-strictness: watch = off · warn = a warning message, push goes ahead · block = deny. It comes from `[gate] strictness`
-in .plainspoken/config.toml, else the plugin option, else watch (lib/plainspoken/config.py gate_strictness). A config
-it can't use gives a warning and the push goes ahead, unless block is known (the file's own readable strictness, else
+strictness: watch = off · warn = a warning message, push goes ahead · block = deny. With no `[gate] paths`, warn and
+block only say on each push that nothing is gated. Strictness comes from `[gate] strictness` in
+.plainspoken/config.toml, else the plugin option, else watch (lib/plainspoken/config.py gate_strictness). A config it
+can't use gives a warning and the push goes ahead, unless block is known (the file's own readable strictness, else
 the plugin option): someone who never opted in to block is never denied (config.gate_strictness_safe). Registered
 without onFailure (an opt-in gate must not block every Bash call if python3 is missing); once block is known every
 error here is a deny, never a traceback.
@@ -74,6 +75,11 @@ def main(argv: list[str] = ()) -> int:
             return 0
         if command is None:
             raise ValueError("hook input was not valid JSON")
+        if not config.gate_paths(project):  # nothing to gate: say so on a push, never deny
+            if _gate.involves_push(command, project):
+                _decide("warn", [f"strictness is {strictness} but no [gate] paths are set in "
+                                 ".plainspoken/config.toml, so nothing is gated"], host)
+            return 0
         _decide(strictness, _gate.check(command, project, Path(cwd) if cwd else None), host)
     except Exception as e:
         _decide(strictness, [f"gate error: {type(e).__name__}: {e}"], host)
