@@ -119,6 +119,15 @@ class WriteGuard(unittest.TestCase):
             self.assertDenied(f"python3 missing.py {LEDGER}", cwd=d)
             self.assertDenied(f"python3 -m some_tool {LEDGER}", cwd=d)
 
+    def test_a_chain_of_claims_calls_is_read_call_by_call(self):  # #78: claims/references/claude-code.md allows && chains
+        run = "python3 /p/lib/run.py"
+        pins = " && ".join(f"{run} claims pin --source .plainspoken/sources/brief.md --passage '{p}' --article a.md"
+                           for p in ("We print a sheet.", "It'\\''s $1,000 && more > x.claims.toml", "Run build.py."))
+        self.assertAllowed(pins)
+        self.assertAllowed(f"{run} claims stamp a.md && {run} claims validate {LEDGER} && {run} claims recheck {LEDGER}")
+        self.assertDenied(f"{pins} && printf x > {LEDGER}")
+        self.assertDenied(f"{run} claims gaps a.md && sed -i 's/false/true/' {LEDGER} && {run} claims stamp a.md")
+
     def test_an_unparseable_command_naming_a_reply_is_refused(self):
         self.assertDenied(f"printf '{{ > {CLAIMS_REPLY}")
 
