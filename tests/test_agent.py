@@ -127,6 +127,15 @@ class ClaimsChecker(unittest.TestCase):
         blocking = rubric.split("## Severity", 1)[1].split("**`warning`**", 1)[0]
         self.assertIn("a fact about the writer or the business labelled as opinion or inference", blocking)
 
+    def test_a_clients_result_from_a_brief_needs_the_owner(self):  # #76: verified-from-brief passed in 2 runs of 3
+        rubric = " ".join((REPO / "data" / "rubrics" / "claims.md").read_text(encoding="utf-8").split())
+        brief = rubric.split("**A brief speaks only for the person who gave it.**", 1)[1].split(" - **", 1)[0]
+        self.assertIn("Any result for a client, named or not, needs the owner's approval", brief)
+        self.assertIn("`first_hand` with `sensitive = true` (which needs no finding", brief)
+        self.assertIn("Ledgered `verified` instead, it's `other`, blocking.", brief)
+        blocking = rubric.split("## Severity", 1)[1].split("**`warning`**", 1)[0]
+        self.assertIn("a client's result ledgered `verified` rather than sensitive", blocking)
+
     def test_rubric_ledger_blocking_locations_and_signoff(self):
         rubric = " ".join((REPO / "data" / "rubrics" / "claims.md").read_text(encoding="utf-8").split())
         self.assertIn("already marks `blocking` needs no finding", rubric)

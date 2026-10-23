@@ -64,8 +64,11 @@ per brief (`brief-<slug>.md`), and pin each claim to it. The claim is `verified`
 `first_hand`: the pinned passage shows the checker what the brief says, and a first-hand scope can't. Its `source`
 has `kind = "brief"`, a `title` naming who gave it and when, and no `url`. It supports what that person can speak for
 (their own organisation, work, prices and plans: `source_tier = "primary"`). A figure about a platform, a law or
-anyone else still needs that source. A sensitive fact from a brief (a named client, a result, someone's personal
-details) stays `first_hand` with `sensitive = true`, so the owner approves it.
+anyone else still needs that source.
+
+Any result for a client, named or not, is sensitive, even one the brief calls typical: a job finished, time saved,
+a before and after. So is a named client or someone's personal details. Ledger each one `first_hand` with
+`sensitive = true`, never `verified`, so the owner approves it before it goes out.
 
 ### Citation proximity isn't support
 

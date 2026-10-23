@@ -851,6 +851,93 @@ same_period = true
 same_denominator = true
 supports_strength = true
 
+[[case]]
+id = "CL-brief-002"
+rule = "brief"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #76 pair, wrong half. A client's clean-up result ledgered verified from the owner's brief, next to the owner's own price."
+text = """## Catching up on old books
+
+One cafe I took on was nine months behind with its bank reconciliations, and I had it up to date in four weeks. Monthly packages start at $350.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "A result for a client, even an unnamed one, needs the owner's approval; ledgered verified from the brief, nothing holds it for them."
+text = "One cafe I took on was nine months behind with its bank reconciliations, and I had it up to date in four weeks."
+claim_type = "outcome"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Catching up on old books"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 20 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Example clean-up: one cafe was nine months behind on its bank reconciliations. Four weeks to get it current."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The owner's own starting price, pinned from their brief; a brief speaks for the owner's prices."
+text = "Monthly packages start at $350."
+claim_type = "price"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Catching up on old books"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 20 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Monthly packages start at $350."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case]]
+id = "CL-brief-003"
+rule = "brief"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #76 pair, right half. The same client result ledgered first_hand and sensitive, waiting on the owner's approval."
+text = """## Catching up on old books
+
+One cafe I took on was nine months behind with its bank reconciliations, and I had it up to date in four weeks.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "Ledgered first_hand with sensitive = true and the scope says no more than the article; claims status holds it until the owner approves."
+text = "One cafe I took on was nine months behind with its bank reconciliations, and I had it up to date in four weeks."
+claim_type = "outcome"
+prominence = "high"
+status = "first_hand"
+locations = [{kind = "body", anchor = "Catching up on old books"}]
+
+[case.claim.first_hand_scope]
+owner = "the writer"
+scope = "One clean-up job for one unnamed cafe client: nine months of bank reconciliations behind, brought up to date in four weeks."
+method = "The owner's account of the job, given in their brief."
+sensitive = true
+approved_by_owner = false
+
 # ---------------------------------------------------------------- aggregators
 
 [[case]]

@@ -77,7 +77,9 @@ What counts as support, and what doesn't:
   doesn't make the next sentence's figure first-hand. Each first-hand claim needs its own ledger entry and scope.
 - **A brief speaks only for the person who gave it.** A source with `kind = "brief"` is the person's brief, saved
   verbatim. It supports what they can speak for (their own organisation, work, prices and plans), never a figure or
-  statement about a platform, a law or anyone else.
+  statement about a platform, a law or anyone else. Any result for a client, named or not, needs the owner's
+  approval: from a brief it's `first_hand` with `sensitive = true` (which needs no finding; `claims status` holds it
+  for the owner). Ledgered `verified` instead, it's `other`, blocking.
 - **Citation proximity isn't support.** A link next to a sentence supports only what that link's pinned passage
   says. A sentence that sits beside a citation but says more than the passage is unsupported for the difference.
 - **Judgement is labelled.** A recommendation, estimate or hypothesis is fine when the article frames it as one
@@ -90,8 +92,8 @@ What counts as support, and what doesn't:
   a location that says more than the claim's ledger `text` (`scope_stretch`), even when the claim itself is
   supported; a fact about the writer or the business labelled as opinion or inference with no pinned passage; a
   fabricated quote or figure; an unledgered material statistic, price or quotation; a first-hand claim
-  stretched past its scope; a claim resting on an aggregator; a quote that isn't verbatim at its source; a
-  regulated-matrix class the matrix marks as blocking.
+  stretched past its scope; a client's result ledgered `verified` rather than sensitive; a claim resting on an
+  aggregator; a quote that isn't verbatim at its source; a regulated-matrix class the matrix marks as blocking.
 - **`warning`**: worth fixing, but the claim isn't wrong as worded. A missing hedge on a contested first, an undated
   availability claim, unlabelled judgement, wording slightly looser than the passage, an unledgered minor fact.
 
