@@ -621,6 +621,184 @@ same_period = true
 same_denominator = true
 supports_strength = true
 
+[[case]]
+id = "CL-entailment-003"
+rule = "entailment"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #77 pair, wrong half. A drop that followed a change, worded as the change causing it, next to a dated fact as pinned."
+text = """## Rosters on your phone
+
+Since March, each of our teams has had its own online calendar that families can subscribe to. It has cut the number of messages about missed games.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The brief says each team has had its own online calendar since March, one families subscribe to on their phones."
+text = "Since March, each of our teams has had its own online calendar that families can subscribe to."
+claim_type = "date"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Rosters on your phone"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Club secretary's brief, 12 May 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Since March, each team has had its own online calendar that families subscribe to on their phones."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "fail"
+why = "The brief says messages about missed games fell after the calendars started; it never says the calendars caused the fall, and 'It has cut' does."
+text = "It has cut the number of messages about missed games."
+claim_type = "causal"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Rosters on your phone"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Club secretary's brief, 12 May 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Since the calendars started, the coordinator gets about 5 messages a week about missed games, down from about 20 a week before."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case]]
+id = "CL-entailment-004"
+rule = "entailment"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #77 pair, right half. The same drop worded as the brief has it, a change in time with no cause, and the calendar fact."
+text = """## Rosters on your phone
+
+Each of our teams has its own online calendar that families can subscribe to. Since the calendars started, messages to the coordinator about missed games have dropped from about 20 a week to about 5.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The brief says each team has its own online calendar that families subscribe to on their phones."
+text = "Each of our teams has its own online calendar that families can subscribe to."
+claim_type = "product_feature"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Rosters on your phone"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Club secretary's brief, 12 May 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Since March, each team has had its own online calendar that families subscribe to on their phones."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The brief gives the same before and after (about 20 a week, now about 5) from the same starting point, and the article claims no cause."
+text = "Since the calendars started, messages to the coordinator about missed games have dropped from about 20 a week to about 5."
+claim_type = "statistic"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Rosters on your phone"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Club secretary's brief, 12 May 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Since the calendars started, the coordinator gets about 5 messages a week about missed games, down from about 20 a week before."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case]]
+id = "CL-entailment-005"
+rule = "entailment"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #77. Two facts from one passage joined with a 'because' it never states, next to a 'because' the source gives itself."
+text = """## Changes at the repair cafe
+
+We stopped taking bookings in May because about one in five people who booked didn't turn up. Sessions finish at 1 pm because the hall is booked from 1.30 for the afternoon.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "fail"
+why = "The passage gives both facts side by side but never says the no-shows were why bookings stopped; the 'because' adds a cause it doesn't state."
+text = "We stopped taking bookings in May because about one in five people who booked didn't turn up."
+claim_type = "causal"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Changes at the repair cafe"}]
+
+[case.claim.source]
+url = "https://example.org/millbrook-repair-cafe/news-2026-06"
+title = "Millbrook Repair Cafe news, June 2026"
+publisher = "Millbrook Repair Cafe"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "We stopped taking bookings in May. Last year, about one in five people who booked a slot didn't turn up."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "pass"
+why = "The source gives the reason itself: sessions finish at 1 pm because the hall is booked from 1.30 for the afternoon."
+text = "Sessions finish at 1 pm because the hall is booked from 1.30 for the afternoon."
+claim_type = "causal"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Changes at the repair cafe"}]
+
+[case.claim.source]
+url = "https://example.org/millbrook-repair-cafe/news-2026-06"
+title = "Millbrook Repair Cafe news, June 2026"
+publisher = "Millbrook Repair Cafe"
+source_tier = "primary"
+accessed_at = "2026-10-03T10:00:00+10:00"
+
+[case.claim.binding]
+passage = "We finish at 1 pm because the hall is booked from 1.30 for the afternoon."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
 # ---------------------------------------------------------------- first-hand scope
 
 [[case]]
@@ -937,6 +1115,64 @@ scope = "One clean-up job for one unnamed cafe client: nine months of bank recon
 method = "The owner's account of the job, given in their brief."
 sensitive = true
 approved_by_owner = false
+
+[[case]]
+id = "CL-brief-004"
+rule = "brief"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #77. An owner's one-person claim their brief holds, next to their old firm's practice stretched to most firms."
+text = """## Who does the work
+
+Kestrel Street Bookkeeping is just me, so you deal with me each time. At most bookkeeping firms, your books are split between three or four staff.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The brief says the business is just the owner, with no staff or subcontractors, and every client deals with them; a brief speaks for the owner's own business."
+text = "Kestrel Street Bookkeeping is just me, so you deal with me each time."
+claim_type = "first_hand"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Who does the work"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 14 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Kestrel Street Bookkeeping is just me. No staff, no subcontractors: every client deals with me."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "fail"
+why = "The brief speaks for one firm the owner worked at, and a brief can't speak for other businesses; 'most bookkeeping firms' stretches it to all of them."
+text = "At most bookkeeping firms, your books are split between three or four staff."
+claim_type = "statistic"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Who does the work"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 14 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "At the firm I worked at before this, each client's books were split between three or four of us."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
 
 # ---------------------------------------------------------------- aggregators
 
