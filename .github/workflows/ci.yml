@@ -51,6 +51,29 @@ jobs:
           out="$RUNNER_TEMP/portable"
           python -m scripts.dev.portable_export . "$out"
           for d in "$out"/*/; do if [ -d "$d" ]; then agentskills validate "$d"; fi; done
+  verdict-diff:
+    # Informational only: lints a fixed public corpus (the golden set and the prose fixtures) with the pull
+    # request's base and head and writes what moved to the job summary. A rule change is meant to move verdicts, so
+    # this never fails the build; a person reads it (guides/evals.md, "The verdict diff"). Lint only, no model.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Lint verdict diff, base against head
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          out="$RUNNER_TEMP/verdict-diff.md"
+          git fetch --quiet --no-tags --depth=1 origin "$BASE_SHA" || true
+          if ! python scripts/dev/verdict_diff.py "$BASE_SHA" HEAD > "$out"; then
+            echo "The verdict diff couldn't run; see this step's log." > "$out"
+          fi
+          cat "$out" >> "$GITHUB_STEP_SUMMARY"
+          cat "$out"
   validate:
     runs-on: ubuntu-latest
     steps:

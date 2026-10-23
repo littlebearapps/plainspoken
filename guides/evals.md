@@ -20,6 +20,7 @@ each one costs and the rules that keep the numbers honest. Every eval command pr
 | Ablations | Does the output style, the session brief or a ban list in the prompt change the drafts? | `scripts/dev/draft_runs.py`, then `scripts/dev/ablation_table.py` | subscription |
 | Blind reader test | Can a reader tell plainspoken's drafts from the author's own writing? | `eval blind build`, `form`, `run`, `score` | people: free; panel: subscription or paid |
 | Lint pass rate | What share of a folder of drafts has no lint BLOCK? | `eval lint-rate --drafts DIR` | free |
+| Verdict diff | Which lint verdicts on a fixed public corpus does a change move? | `scripts/dev/verdict_diff.py OLD NEW` | free |
 | Anti-Goodhart report | Is the lint pass rate rising while readers notice nothing? | `eval goodhart` | free |
 
 The judge report gives each group's true-positive rate (TPR: the share of real tells found) and true-negative rate
@@ -30,8 +31,8 @@ rather than the writing.
 ## Free, subscription and paid
 
 - **Free** means no model is called: the golden-set check, the rewrite graders, the lint rate and the goodhart report.
-  CI runs the unit tests for all of these on every pull request, and validates the golden set with
-  `eval golden validate --require-counts`. The lint rate and the goodhart report need drafts and history, so you run
+  CI runs the unit tests for all of these on every pull request, validates the golden set with
+  `eval golden validate --require-counts`, and posts the verdict diff (below). The lint rate and the goodhart report need drafts and history, so you run
   them yourself.
 - **Subscription** means `claude -p` on a Claude plan. Nothing is billed, but each run uses the plan's quota, and the
   CLI reports a notional cost (what the same tokens would cost through the API). A full `write` run with its check is
@@ -181,6 +182,25 @@ The golden set and the blind-test pairs are held out. They measure the checks; t
 - A blind-test folder carries a `.heldout` marker, and `kaizen mine` refuses to read it.
 - When a judge misses a case, don't edit the rubric to catch that case. Fix the rubric only from evidence outside the
   held-out set (the kaizen ledger, new examples written fresh), then measure again.
+
+## The verdict diff
+
+`scripts/dev/verdict_diff.py OLD NEW` lints one fixed public corpus with two versions of the plugin and lists every
+text whose lint status (BLOCK, WARN or CLEAN) or finding count per rule moved. OLD and NEW are git refs or checkout
+folders. The corpus is read from NEW, so both sides lint the same texts: every case in `evals/golden/` plus the
+rewrite references and the voice samples, 268 texts as of 23 October 2026. It runs the lint only, with the default
+profile. No model is called, and nothing is written into the repo. It takes about 10 seconds.
+
+On every pull request CI runs it base against head and writes the markdown to the job summary. It never
+fails the build: a rule change is meant to move verdicts, and a person reads the list to see whether the right ones
+moved. For a release, paste the output for the range into the release PR:
+
+```bash
+python3 scripts/dev/verdict_diff.py v0.12.0 HEAD           # markdown; --json for the full record
+```
+
+The report names texts by path and case id, never by their words or labels, and the held-out rule above still
+applies: a golden case that moved is a reason to look at the change, never to tune a rule to that case.
 
 ## The blind reader test
 
