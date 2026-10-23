@@ -128,6 +128,15 @@ class WriteGuard(unittest.TestCase):
         self.assertDenied(f"{pins} && printf x > {LEDGER}")
         self.assertDenied(f"{run} claims gaps a.md && sed -i 's/false/true/' {LEDGER} && {run} claims stamp a.md")
 
+    def test_a_chain_of_reader_value_calls_is_read_call_by_call(self):  # #92: reader-value allows && chains too
+        run = "python3 /p/lib/run.py"
+        contract = "'.plainspoken/reader-value/a.reader-value.toml'"
+        step3 = f"{run} paths 'a.md' && {run} reader-value deliver-input 'a.md' --contract {contract}"
+        self.assertAllowed(step3)
+        self.assertDenied(f"{step3} && printf '%s' '{REPLY_JSON}' > {DELIVERY_REPLY}")
+        self.assertDenied(f"{run} paths 'a.md' && echo '{REPLY_JSON}' | tee {DELIVERY_REPLY} && "
+                          f"{run} reader-value deliver 'a.md' --from {DELIVERY_REPLY} --reviewer delivery-checker")
+
     def test_an_unparseable_command_naming_a_reply_is_refused(self):
         self.assertDenied(f"printf '{{ > {CLAIMS_REPLY}")
 

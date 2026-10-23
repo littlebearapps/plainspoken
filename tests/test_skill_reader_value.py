@@ -273,7 +273,11 @@ class ReaderValueReferences(unittest.TestCase):
         text = self.read("claude-code.md")
         self.assertIn("/plainspoken:reader-value outline", text)
         self.assertIn("/plainspoken:reader-value deliver", text)
-        self.assertIn("one Bash call per command", text)
+        flat = " ".join(text.split())
+        self.assertNotIn("one Bash call per command", text)  # #92: as #78 for claims, chains of run.py calls are fine
+        self.assertIn("`paths` and `deliver-input` in one chain", flat)
+        self.assertIn("stops at the first call that fails", flat)
+        self.assertIn("No `;`, no pipes, no shell loops", flat)
 
 
 if __name__ == "__main__":
