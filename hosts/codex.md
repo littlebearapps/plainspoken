@@ -55,9 +55,16 @@ the skills' rule that you don't award your own pass holds here too.
 ## What's different from Claude Code
 
 - Hooks (`hooks/codex.json`): after each `apply_patch` edit, the lint and the claims integrity check report on the
-  patched files; the optional writing nudge names the right step when a prompt asks for writing. Codex runs them only
-  after the user trusts them (`/hooks`). There's no publish gate and no kaizen nudge, so run `$plainspoken:check`
-  yourself before anything goes out.
+  patched files; the optional writing nudge names the right step when a prompt asks for writing. Before each shell
+  command, the publish gate checks a `git push` and the write guard stops a shell write to a reply file or the claims
+  ledger (write those with `apply_patch`). At the end of a turn, the kaizen nudge tells the person when proposals
+  wait or calibrate is due. Codex runs them only after the user trusts them (`/hooks`), and calls tool hooks a
+  guardrail, not a complete boundary, so still run `$plainspoken:check` yourself before anything goes out.
+- The publish gate takes its strictness only from `[gate] strictness` in `.plainspoken/config.toml` (Codex has no
+  plugin options): `block` denies the push, `warn` shows a message and lets it go, and with no file it does nothing.
+- No kaizen backstop: Codex starts the agents with `spawn_agent` or `codex exec`, and a plugin can't add agent types,
+  so no hook sees a plainspoken agent finish. `kaizen report` shows 0 judge replies returned here; the recorded
+  count still holds.
 - A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
   `RUN check - < draft`, run `$plainspoken:check` on a long one, and remove what's flagged without adding facts.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's

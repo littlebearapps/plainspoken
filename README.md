@@ -25,8 +25,8 @@ Next:
   after v1.0, once samples of the author's unassisted writing exist; tier 1, with human readers, comes later.
 - **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
   ([#1](https://github.com/littlebearapps/plainspoken/issues/1)).
-- **After v1.0:** an editor agent that can rewrite, not only cut. The publish gate and the kaizen nudges for Codex
-  and Hermes Agent.
+- **After v1.0:** an editor agent that can rewrite, not only cut. The publish gate and the kaizen nudges for Hermes
+  Agent.
 
 ## Use
 
@@ -82,11 +82,12 @@ rating applies without asking, so `plugins.auto_apply: true` can apply it unatte
 `install --force --ref <new-sha>` moves it.
 
 Hooks outside Claude Code: lint and the claims integrity check after each edit, and the optional writing nudge, run
-in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Still missing: the publish gate, the
-shell write guard and the kaizen nudges, so run the check yourself before anything goes out; the install-time
-settings (pick a profile with `[engine] profile` in `.plainspoken/config.toml`, and turn the optional pieces on with
-`/plainspoken:setup`); and an enforced read-only sandbox for the agents in Hermes, where it's an instruction they
-follow.
+in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Codex also runs the publish gate
+(strictness from `[gate] strictness` only), the shell write guard and the kaizen nudge. It has no kaizen backstop,
+the hook that counts agent runs, because Codex hooks never see a plainspoken agent. Hermes doesn't have the gate, the
+guard or the kaizen nudges yet, so run the check yourself before anything goes out there. Neither has the
+install-time settings (pick a profile with `[engine] profile` in `.plainspoken/config.toml`, and turn the optional
+pieces on with `/plainspoken:setup`), and in Hermes the agents' read-only sandbox is an instruction they follow.
 
 Check a draft:
 

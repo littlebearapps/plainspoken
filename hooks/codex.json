@@ -1,5 +1,5 @@
 {
-  "description": "plainspoken hooks for Codex: the optional prompt nudge, and lint + claims integrity after each apply_patch edit. Codex asks you to trust them once (/hooks).",
+  "description": "plainspoken hooks for Codex: the optional prompt nudge, lint + claims integrity after each apply_patch edit, the opt-in publish gate and write guard before shell commands, and the kaizen nudge at the end of a turn. Codex asks you to trust them once (/hooks).",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -7,6 +7,23 @@
           {
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/nudge.py\" --host codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/hooks/publish_gate.py\" --host codex",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/hooks/write_guard.py\" --host codex",
             "timeout": 5
           }
         ]
@@ -25,6 +42,17 @@
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/integrity.py\"",
             "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/hooks/kaizen_nudge.py\" --host codex",
+            "timeout": 10
           }
         ]
       }
