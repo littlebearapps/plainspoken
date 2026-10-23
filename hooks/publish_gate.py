@@ -11,7 +11,8 @@ Registered without an `if` filter (docs/claude-code-facts.md section 6): the har
 `sudo git push`. So the first lines below exit fast, using only sys/os/json, for any command without the word "push"
 or "git" (git aliases can hide a push), and for watch mode when the project has no config file.
 
-`--host codex` writes the check command in the message as Codex's `$plainspoken:check`."""
+`--host codex` writes the check command in the message as Codex's `$plainspoken:check`, and `--host hermes` as
+Hermes' `plainspoken:check` (nudge.py's host map)."""
 import json
 import os
 import sys
@@ -25,8 +26,8 @@ def _decide(strictness: str, problems: list[str], host: str = "claude-code") -> 
     if not problems:
         return
     from _common import clip
-    msg = "plainspoken gate: " + "; ".join(problems)
-    msg = clip(msg.replace("/plainspoken:", "$plainspoken:") if host == "codex" else msg)
+    from nudge import _skill
+    msg = clip(("plainspoken gate: " + "; ".join(problems)).replace("/plainspoken:", _skill(host, "")))
     if strictness == "block":
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                                  "permissionDecisionReason": msg}}))

@@ -4,7 +4,8 @@ It says something only when the project has a kaizen ledger and either some stor
 calibrate is due (no calibrate in 30 days and at least 50 distinct events since the last one). Each message is shown
 at most once per session (state in CLAUDE_PLUGIN_DATA, as lint-watch keeps it). Output is only ever
 `{"systemMessage": …}`. It reads the ledger and the proposal store, writes neither, never blocks and always exits 0.
-`--host codex` writes the command as Codex's `$plainspoken:kaizen` (nudge.py's host map).
+`--host codex` writes the command as Codex's `$plainspoken:kaizen`, `--host hermes` as `plainspoken:kaizen`
+(nudge.py's host map). Hermes runs it from the plugin's `on_session_end` and posts the message itself.
 """
 from __future__ import annotations
 

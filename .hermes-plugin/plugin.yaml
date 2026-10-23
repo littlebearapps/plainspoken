@@ -7,3 +7,5 @@ author: Little Bear Apps
 provides_hooks:
   - pre_llm_call
   - transform_tool_result
+  - pre_tool_call
+  - on_session_end
