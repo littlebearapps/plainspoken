@@ -90,8 +90,9 @@ python3 lib/run.py eval judges-report --run .plainspoken/evals/judges-<time>
 A run that stops early, or gets interrupted, resumes when you re-run it with the same `--out`: every reply already in
 `replies.jsonl` is skipped. A model reply that isn't the JSON asked for counts as an error, never as a pass or a fail.
 
-`claude plugin eval` has no dry run. Estimate it from the last run: the trigger suite's 28 cases at one run each cost
-US$3.51 on 2026-10-14, and the rewrite suite runs every case twice (with and without the plugin). Every run here uses
+`claude plugin eval` has no dry run. Estimate it from the last run: `eval trigger-estimate` scales the last recorded
+trigger run (see the monthly drift check below; before any was recorded, 28 cases at one run each cost US$3.51 on
+2026-10-14), and the rewrite suite runs every case twice (with and without the plugin). Every run here uses
 `--no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin`. The ceiling is checked before each run launches, so
 one invocation can spend about US$5 plus the runs already in flight (up to 4 with `-j 4`), and the workflow's `all`
 suite, two invocations, about twice that:
@@ -222,10 +223,33 @@ settings still do), and the comparison doesn't measure your setup.
 Every brief must carry its own facts. The `write` skill stops and asks when a brief wants facts it doesn't have, where
 the plain model makes them up. That's the plugin working, but it leaves the arm with no draft to compare.
 
+## The monthly drift check
+
+Models change under the same name, and the CLI changes how skills start. Once a month, re-run the judges and the
+trigger suite on the current models and compare each with the last run. The runs are paid, so each needs the
+owner's OK; the comparisons are free and only read files.
+
+1. `python3 lib/run.py eval judges --models <the last run's models> --dry-run` for the estimate, and
+   `python3 lib/run.py eval trigger-estimate` for the trigger suite's (the last recorded cost per run × today's
+   cases).
+2. With the OK, run both (`eval judges … --yes --max-cost-usd N`; the trigger suite with `--json trigger.json`).
+3. `python3 lib/run.py eval drift --run <new run> --against <last month's run>` compares the judges per group and
+   model: TPR, TNR and precision with both runs' 95% intervals. It flags a drop where the new interval sits
+   entirely below the old one, a model id that changed, and a group only one run has. Overlapping intervals aren't
+   flagged: with 20 cases a label, an interval spans 0.2 to 0.35, so 0.95 to 0.82 shows in the table but may be
+   noise. Add `--fail-on-drift` to exit 1 on a flag.
+4. `python3 lib/run.py eval trigger-record trigger.json --model <model id>` adds the trigger run to the history
+   (the result file doesn't name the model) and prints how it compares with the last one: the pass rate by
+   interval, a changed CLI version or model, and the cases that passed fewer runs.
+
+A flag is a reason to look, not to retune: read the replies behind a drop before changing a judge, and never tune
+against the golden set.
+
 ## The history and the anti-Goodhart report
 
-`eval judges`, `eval judges-report`, `eval blind score` and `eval lint-rate` each add a line to
-`.plainspoken/evals/history.jsonl` (`judges-report` skips a run and `--min` the history already holds).
+`eval judges`, `eval judges-report`, `eval blind score`, `eval lint-rate` and `eval trigger-record` each add a line
+to `.plainspoken/evals/history.jsonl` (`judges-report` skips a run and `--min` the history already holds, and
+`trigger-record` a run it already holds).
 `eval goodhart` reads it and flags when, between two blind runs, the lint pass rate on their drafts rose by 0.10 or
 more while readers' results didn't improve: the two intervals overlap, or the later one sits entirely below the
 earlier. A blind score with no valid judgement adds no line. A flag means the lint may be rewarding its own patterns

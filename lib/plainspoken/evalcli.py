@@ -78,9 +78,26 @@ latest lint-rate entry on its drafts at or before it in the file (else the first
 pair with no distinct measurement is a note, not compared, as is a blind entry with no value. Exit 0 no flag, or not
 enough history · 1 a flag · 2 a `--history` file that doesn't exist.
 
+`eval drift --run NEW --against OLD [--split all|human] [--json] [--fail-on-drift]`: compare two run folders `eval
+judges` wrote, per group and judge (each model and majority row): TPR, TNR and precision with both runs' 95% Wilson
+intervals (`evaldrift`). Flags a drop (the new interval entirely below the old), a model id that changed, and a group
+only one run has; notes a judge only one run has, a changed golden set or filters, and a run that stopped early. Free.
+Exit 0 a report · 1 a flag with `--fail-on-drift` · 2 a run it can't read.
+
+`eval trigger-record RESULT [--model ID]`: add one `triggers` line for a `claude plugin eval` trigger-suite result to
+the eval history (`evaltriggers`): the share of runs that passed with its interval, each case's passes, the CLI
+version, the model and the cost per run and per case; then compare it with the last recorded run (a drop by interval,
+a changed CLI version or model, the cases that passed fewer runs). The same run twice adds nothing; a partial run isn't
+recorded. Free. Exit 0 recorded, or already there · 1 a partial run · 2 an unreadable file, another suite, or a
+history that can't be written.
+
+`eval trigger-estimate [--cases N] [--runs R] [--history FILE]`: the last recorded trigger run's cost per run × N cases
+(default: the plugin's trigger cases today) × R runs (default 1). One run's figure scaled, not a quote. Free. Exit 0 ·
+1 no trigger run recorded yet · 2 bad input.
+
 History: `eval judges` and `eval judges-report` (unless the run stopped early, and never twice for one scoring of a
 run at one `--min`), `eval blind score` (tier 2 from the non-Anthropic models only; nothing for a tier with no valid
-judgement) and `eval lint-rate` each append to `<project>/.plainspoken/evals/history.jsonl` once their own result is
+judgement), `eval lint-rate` and `eval trigger-record` each append to `<project>/.plainspoken/evals/history.jsonl` once their own result is
 written. A history failure prints one `plainspoken: eval history skipped: …` line on stderr and never changes the
 command's output or exit code. Never a traceback."""
 import argparse
@@ -92,8 +109,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plainspoken import (blind, blind_score, config, evalclaims, evalhistory, evaljudges, evaltrace, golden, kaizen,
-                         rewrite)
+from plainspoken import (blind, blind_score, config, evalclaims, evaldrift, evalhistory, evaljudges, evaltrace,
+                         evaltriggers, golden, kaizen, rewrite)
 from plainspoken import evalmetrics as em
 from plainspoken.adapters import llm_panel
 from plainspoken.doc import CONTENT_TYPES
@@ -182,6 +199,25 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
                                         "notice")
     gh.add_argument("--history", type=Path, metavar="FILE",
                     help="the history file (default: .plainspoken/evals/history.jsonl in the project)")
+    dr = es.add_parser("drift", help="compare two judge-validation runs per group and model: a drop whose 95%% "
+                                     "intervals don't overlap, a changed model id, a missing group (free)")
+    dr.add_argument("--run", type=Path, required=True, metavar="NEW", help="the newer run folder `eval judges` wrote")
+    dr.add_argument("--against", type=Path, required=True, metavar="OLD", help="the earlier run folder to compare with")
+    dr.add_argument("--split", choices=evaljudges.SPLITS, default="all",
+                    help="all cases, or only the human-labelled ones (default: all)")
+    dr.add_argument("--json", action="store_true", help="print the comparison as JSON")
+    dr.add_argument("--fail-on-drift", action="store_true", help="exit 1 when anything is flagged")
+    tr = es.add_parser("trigger-record", help="add a `claude plugin eval` trigger-suite result to the eval history "
+                                              "and compare it with the last one (free)")
+    tr.add_argument("result", type=Path, metavar="RESULT", help="the run's --json file (or aggregate-result.json)")
+    tr.add_argument("--model", metavar="ID", help="the model the run used (the result file doesn't name it)")
+    te = es.add_parser("trigger-estimate", help="estimate the next trigger-suite run's cost from the last recorded "
+                                                "one (free)")
+    te.add_argument("--cases", type=int, metavar="N",
+                    help="the number of cases (default: the trigger cases in the plugin today)")
+    te.add_argument("--runs", type=int, default=1, metavar="R", help="runs per case (default 1)")
+    te.add_argument("--history", type=Path, metavar="FILE",
+                    help="the history file (default: .plainspoken/evals/history.jsonl in the project)")
 
 
 def _claims_parser(es: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
@@ -259,6 +295,12 @@ def run(args: argparse.Namespace) -> int:
         return _lint_rate(args)
     if args.eval_cmd == "goodhart":
         return _goodhart(args)
+    if args.eval_cmd == "drift":
+        return _drift(args)
+    if args.eval_cmd == "trigger-record":
+        return _trigger_record(args)
+    if args.eval_cmd == "trigger-estimate":
+        return _trigger_estimate(args)
     if args.eval_cmd == "blind":
         return {"build": _blind_build, "form": _blind_form, "run": _blind_run,
                 "score": _blind_score}[args.blind_cmd](args)
@@ -948,4 +990,94 @@ def _goodhart(args: argparse.Namespace) -> int:
     else:
         print(f"no flag, but none of the {total} pair{'' if total == 1 else 's'} of blind runs could be compared "
               "(the notes above say why)")
+    return 0
+
+
+# ---------------------------------------------------------------- drift: judge runs and trigger runs
+
+def _drift(args: argparse.Namespace) -> int:
+    cmd = "drift"
+    for folder in (args.run, args.against):
+        if not folder.is_dir():
+            return _fail(cmd, f"{folder}: no such run folder")
+    try:
+        d = evaldrift.compare(evaldrift.load(args.run), evaldrift.load(args.against), args.split)
+    except evaldrift.DriftError as e:
+        return _fail(cmd, _first_line(e))
+    except (KeyError, TypeError, AttributeError, IndexError):
+        return _fail(cmd, f"{args.run} or {args.against}: not a judge-validation summary")
+    if args.json:
+        print(json.dumps(d, indent=2, ensure_ascii=False))
+    else:
+        print(evaldrift.render(d), end="")
+    if args.fail_on_drift and d["flags"]:
+        return _fail(cmd, f"{len(d['flags'])} flag{'' if len(d['flags']) == 1 else 's'}", 1)
+    return 0
+
+
+def _trigger_record(args: argparse.Namespace) -> int:
+    cmd = "trigger-record"
+    result = _read_json(args.result)
+    if result is None:
+        return _fail(cmd, f"{args.result}: no such file, or not JSON")
+    try:
+        t = evaltriggers.summarise(result)
+    except evaltriggers.TriggerError as e:
+        return _fail(cmd, f"{args.result}: {_first_line(e)}")
+    if t["partial"]:
+        return _fail(cmd, f"{args.result}: a partial run (it stopped early), so nothing was recorded", 1)
+    if not t["runs"]:
+        return _fail(cmd, f"{args.result}: no runs to record")
+    model = args.model or t["model"]
+    try:
+        root = config.project_root(Path.cwd())
+        rv, pv = load_config().version, kaizen.plugin_version()
+        entry = evalhistory.trigger_entry(t, str(args.result.resolve()), model=model, ruleset_version=rv,
+                                          plugin_version=pv)
+        entries = evalhistory.read(root)
+        recorded = evalhistory.trigger_recorded(entries, entry)
+        prev = evalhistory.last_trigger([e for e in entries if not evalhistory.trigger_recorded([e], entry)])
+        if not recorded:
+            evalhistory.append(root, entry)
+    except (OSError, ValueError) as e:
+        return _fail(cmd, f"eval history: {_first_line(e)}")
+    lo, hi = t["ci"]
+    cost = "not recorded" if t["cost_per_run"] is None else (f"US${llm_panel.usd(t['cost_usd'])}, "
+                                                             f"US${llm_panel.usd(t['cost_per_run'])} a run")
+    print(f"trigger run {t['started'] or 'unknown'}: {t['passed']} of {t['runs']} runs passed "
+          f"({t['rate']:.2f} [{lo:.2f}–{hi:.2f}]) across {t['case_count']} cases · CLI "
+          f"{t['claude_version'] or 'unknown'} · model {model or 'not recorded (--model)'} · cost {cost}")
+    print("already in the eval history: nothing added" if recorded else
+          f"recorded in {evalhistory.path(root)}")
+    if prev is None:
+        print("no earlier trigger run in the history to compare with")
+        return 0
+    flags, lines = evaltriggers.compare(prev, entry)
+    for line in [*lines, *(f"flag: {f}" for f in flags)]:
+        print(line)
+    return 0
+
+
+def _trigger_estimate(args: argparse.Namespace) -> int:
+    cmd = "trigger-estimate"
+    if args.runs < 1 or (args.cases is not None and args.cases < 1):
+        return _fail(cmd, "--cases and --runs must be 1 or more")
+    if args.history is not None and not args.history.is_file():
+        return _fail(cmd, f"{args.history}: no such file")
+    file = args.history or evalhistory.path(config.project_root(Path.cwd()))
+    try:
+        last = evalhistory.last_trigger(evalhistory.read_file(file))
+    except OSError as e:
+        return _fail(cmd, f"{file}: can't read it ({e.strerror or type(e).__name__})")
+    cases = args.cases if args.cases is not None else evaltriggers.count_cases()
+    usd = None if last is None else evaltriggers.estimate(last, cases, args.runs)
+    if usd is None:
+        print(f"no trigger run with a cost recorded in {file}: run `eval trigger-record RESULT` after the next "
+              "trigger-suite run")
+        return 1
+    print(f"trigger suite: about US${usd:.2f} for {cases} case{'' if cases == 1 else 's'} × {args.runs} "
+          f"run{'' if args.runs == 1 else 's'} (US${last['cost_per_run']:.4f} a run, from the run of "
+          f"{last.get('started') or last['date']}: {last['n']} runs, US${last.get('cost_usd') or 0:.2f}, CLI "
+          f"{last.get('claude_version') or 'unknown'}, model {last.get('model') or 'not recorded'})")
+    print("one run's cost scaled, not a quote: the run's own --max-cost-usd is the ceiling")
     return 0

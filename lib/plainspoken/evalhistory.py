@@ -5,7 +5,9 @@
 line per model a judge-validation summary covers: the share of groups meeting the accept bar), `blind` (one line per
 tier of a blind-test score: the majority of the non-Anthropic panel models, or the one such model, and the rater
 majority, or the one rater: `plainspoken_judged_human` with its 95% Wilson interval, plus the generated drafts'
-folder in `drafts`) or `lint` (the share of a folder's drafts with no lint BLOCK, `run` being that folder).
+folder in `drafts`), `lint` (the share of a folder's drafts with no lint BLOCK, `run` being that folder) or `triggers`
+(one `claude plugin eval` trigger-suite run: the share of runs that passed with its interval, each case's passes, the
+CLI version, the model and the cost per run; `eval trigger-record`).
 
 `goodhart` looks for the lint getting better while readers don't: between two consecutive blind entries of one
 tier, the lint pass rate measured on each entry's drafts rose by at least `lint_jump` while the reader result didn't
@@ -25,11 +27,12 @@ from pathlib import Path
 from plainspoken.adapters.llm_panel import is_anthropic
 
 HISTORY = "history.jsonl"
-KINDS = ("judges", "blind", "lint")
+KINDS = ("judges", "blind", "lint", "triggers")
 KEYS = ("date", "kind", "ruleset_version", "plugin_version", "metric", "value", "ci_low", "ci_high", "n", "run")
 JUDGES_METRIC = "judges_meets_bar_groups"
 BLIND_METRIC = "plainspoken_judged_human"
 LINT_METRIC = "lint_pass_rate"
+TRIGGER_METRIC = "trigger_pass_rate"
 LINT_JUMP = 0.10
 _EPS = 1e-9
 
@@ -181,6 +184,32 @@ def lint_entry(passed: int, n: int, ci: tuple[float, float], drafts: str, *, pro
     return make("lint", LINT_METRIC, passed / n if n else None, n=n, run=drafts, ci=ci,
                 ruleset_version=ruleset_version, plugin_version=plugin_version, profile=profile)
 
+
+
+def trigger_entry(t: dict, run: str, *, model: str | None, ruleset_version: str, plugin_version: str) -> dict:
+    """One `triggers` entry from `evaltriggers.summarise`'s figures. `plugin_version` is the version the run tested
+    when the result names it, else the one given."""
+    return make("triggers", TRIGGER_METRIC, t["rate"], n=t["runs"], run=run, ci=t["ci"],
+                ruleset_version=ruleset_version, plugin_version=t.get("plugin_version") or plugin_version,
+                model=model, claude_version=t.get("claude_version"), started=t.get("started"),
+                tags=t.get("tags"), case_filter=t.get("case_filter"), case_count=t["case_count"],
+                runs_per_case=t.get("runs_per_case"), cost_usd=t.get("cost_usd"), cost_per_run=t.get("cost_per_run"),
+                cost_per_case=t.get("cost_per_case"), cases=t["cases"])
+
+
+def last_trigger(entries: list[dict]) -> dict | None:
+    """The newest `triggers` entry (file order is the clock), or None."""
+    return next((e for e in reversed(entries) if e.get("kind") == "triggers"), None)
+
+
+def trigger_recorded(entries: list[dict], entry: dict) -> bool:
+    """True when the history already holds this run: a `triggers` entry with the same start time, CLI version and
+    cost. A run with no start time is never treated as recorded."""
+    if not entry.get("started"):
+        return False
+    key = (entry.get("started"), entry.get("claude_version"), entry.get("cost_usd"))
+    return any(e.get("kind") == "triggers" and (e.get("started"), e.get("claude_version"), e.get("cost_usd")) == key
+               for e in entries)
 
 # ---------------------------------------------------------------- the anti-Goodhart report
 
