@@ -22,7 +22,7 @@ seen.
 
 Always on and cheap: a command without `reply.json`, `.claims.` or a script name exits before anything beyond
 sys/json is imported. Any error of its own is silent (exit 0), so it never blocks an unrelated Bash call.
-`--host codex` names apply_patch, Codex's file-writing tool, in the deny."""
+`--host codex` names apply_patch, Codex's file-writing tool, in the deny; `--host hermes` names write_file and patch."""
 import json
 import os
 import sys
@@ -31,9 +31,12 @@ _MARKERS = ("reply.json", ".claims.", ".py", ".sh", ".bash", ".js", ".rb", ".pl"
 
 
 def _deny(path: str, why: str, host: str = "claude-code") -> None:
-    tool, write, edit = (("apply_patch", "Write its JSON object to that path with apply_patch", "Edit one claim at a "
-                          "time with apply_patch") if host == "codex" else
-                         ("the Write or Edit tool", "Write its JSON object to that path", "Edit one claim at a time"))
+    tool, write, edit = {
+        "codex": ("apply_patch", "Write its JSON object to that path with apply_patch",
+                  "Edit one claim at a time with apply_patch"),
+        "hermes": ("write_file or patch", "Write its JSON object to that path with write_file",
+                   "Edit one claim at a time with patch"),
+    }.get(host, ("the Write or Edit tool", "Write its JSON object to that path", "Edit one claim at a time"))
     reason = (f"plainspoken: {path} is written with {tool}, never through the shell ({why}). A reply: {write}, then "
               f"run the record command with --from. The claims ledger: {edit}, setting its five binding judgements "
               "after reading its pinned passage. To read one, use cat, or code that only reads it.")

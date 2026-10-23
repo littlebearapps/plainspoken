@@ -55,8 +55,15 @@ here too.
 ## What's different from Claude Code
 
 - Hooks: after each `write_file` or `patch`, the lint and the claims integrity check report on the file, appended to
-  the tool's result; the optional writing nudge is added to a turn that asks for writing. There's no publish gate
-  and no kaizen nudge, so run the check skill yourself before anything goes out.
+  the tool's result; the optional writing nudge is added to a turn that asks for writing. Before each `terminal`
+  command, the publish gate checks a `git push` and the write guard stops a shell write to a reply file or the claims
+  ledger (write those with `write_file` or `patch`). A block comes back as the command's result: do what it says,
+  don't work around it. The gate's strictness comes only from `[gate] strictness` in `.plainspoken/config.toml`; a
+  warn goes to the person and the command runs. At the end of a turn, the kaizen nudge tells the person when
+  proposals wait or calibrate is due. Still run the check skill yourself before anything goes out: the gate covers
+  `terminal` only.
+- No kaizen backstop: the agents run as their own `hermes chat` processes, so no hook here sees one finish.
+  `kaizen report` shows 0 judge replies returned; the recorded count still holds.
 - A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
   `RUN check - < draft`, run the check skill on a long one, and remove what's flagged without adding facts.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's

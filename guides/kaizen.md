@@ -24,8 +24,8 @@ Capture happens as you work, without a separate step:
   `kaizen missed` (a tell the check didn't flag, picked from the `kaizen diff` hunks), and `kaizen published`
   (which findings are still in the article you published).
 - The backstop hook counts each run of a plainspoken agent once, so `kaizen report` can compare the judge replies
-  that came back with the ones that were recorded. It runs in Claude Code only: in Codex no hook sees a plainspoken
-  agent, so the returned count stays at 0 there.
+  that came back with the ones that were recorded. It runs in Claude Code only: in Codex and Hermes no hook sees a
+  plainspoken agent, so the returned count stays at 0 there.
 
 Every other skill ends with a reminder: if you disagree with a finding, or Claude had to work around a step, record
 it or say so.
