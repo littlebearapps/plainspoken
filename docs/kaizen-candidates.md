@@ -21,6 +21,10 @@ rule change.
   at WARN; measure 12f fixes against reader results once the blind reader test runs (its tier-2 run is a v1.0.0 item and
   needs samples of the author's own writing).
 - **Decision needed:** none until the ledger has 12f data.
+- **Evidence 2026-10-23:** not enough yet. The production blog ledger (3 days, 5 documents) has no 12f fire. Eight
+  production project ledgers together hold 13 12f WARN spans in 9 documents, with no 12f fix and no verdict on any,
+  and there are no reader results yet. Needs 12f fixes recorded in a project that runs fix passes, then a reader
+  comparison.
 
 ## K2: word-level data from the intake sources
 
@@ -40,6 +44,10 @@ rule change.
   up / clean-up, kick off / kick-off); the closed forms "setup" and "cleanup" are flagged in prose unless they're
   part of a name. It's word-level data, so it belongs to the checker, not the guide.
 - **Decision needed:** at the first calibrate run on a real ledger.
+- **Evidence 2026-10-23:** not enough yet. A calibrate run on a copy of the production blog ledger made no proposals,
+  and no ledger on the host has a `missed` event, so nothing yet shows the checker missing these words. Needs the
+  same word or pattern recorded with `kaizen missed` in 2 or more documents. The project's own first calibrate is
+  still to come.
 
 ## K3: word-level data in the copy-audit sources
 
@@ -50,6 +58,8 @@ rule change.
 - **Candidate change:** fold them into the K2 proposal at the first calibrate run on a real ledger, checked against
   the golden set. They're re-derived from the author's own source files; they aren't kept in the repo.
 - **Decision needed:** at the first calibrate run on a real ledger, together with K2.
+- **Evidence 2026-10-23:** not enough yet, for the same reason as K2 (no `missed` events, no proposals). Stays
+  folded into K2.
 
 ## K4: rules 7d and 7b against the write skill's own guidance
 
@@ -66,6 +76,12 @@ rule change.
   If the evidence holds, narrow 7b so a plain answer in the first paragraph isn't a press-release opener, and give
   7d a reader-floor knob (or keep it WARN-only for low floors). Either goes through `kaizen apply`.
 - **Decision needed:** at the first calibrate run with 7d and 7b evidence.
+- **Evidence 2026-10-23:** not enough yet. Rule 7b hasn't fired in any production ledger (the J2 judge passed it on
+  8 of 8 runs). Rule 7d fired on 109 spans in 43 documents across eight production ledgers, 14 of them on an intro
+  section, but nobody has dismissed or upheld one, so the effective false-positive rate reads 0%. The one
+  justification (format, JR-accepted) was in a body section, not an opening. The ledger has no reader-floor facet,
+  so low-floor evidence can only come through the profile name. Needs 7d dismissals or justifications on openings
+  (2 more documents for the kept trigger) and any 7b fire at all.
 
 ## K5: a weekday check the drafting skills can run
 
@@ -78,6 +94,8 @@ rule change.
 - **Candidate change:** a `run.py` subcommand that prints the weekday for a date, covered by the existing grant, so
   no skill needs a wider one. Or record that the claims ledger is where a weekday gets checked, and leave it there.
 - **Decision needed:** whether it's worth a subcommand; the owner decides at the next kaizen review.
+- **Evidence 2026-10-23:** the ledger can't hold this evidence: refused tool calls aren't captured. It stays the
+  owner's call at the next kaizen review.
 
 ## K6: rule 12f below article length
 
@@ -89,3 +107,9 @@ rule change.
   human-written technical READMEs trip the 2+-trips WARN at every length (19 of 21 over 1,000 words). Both need
   ledger evidence before any threshold moves.
 - **Decision needed:** at the first calibrate run with 12f evidence, together with K1.
+- **Evidence 2026-10-23:** not enough yet, and nothing against the #79 decision (gate 300, paragraph-SD floor 25, no
+  change). Five production blog posts of 2,483 to 3,214 words drew no 12f WARN. Their paragraph SD ran 23.9 to 26.1
+  and was under 25 in 4 of 6 lints, always as the only trip, so the limit is close in real use too. The ledger
+  records a 12f WARN as `slop` without saying which metrics tripped or how long the piece was, so it can't yet show
+  whether paragraph SD drives the WARNs on shorter pieces (9 documents across the production ledgers). Needs 12f
+  verdicts (20 or more fires for the false-positive trigger) and a way to see which metric tripped.
