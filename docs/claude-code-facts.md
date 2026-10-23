@@ -86,6 +86,16 @@ so `omitClaudeMd: true` in a plugin agent's frontmatter did **not** hide the pro
 ignored for plugin agents, or it is not honoured in this version/mode. Judge isolation must not rely on it: pass the
 judge only what it needs and treat project instructions as potentially visible.
 
+Re-probed 2026-10-23 on CLI 2.1.308 (plan 7b.0), Linux, `claude -p --output-format stream-json --verbose` on the
+subscription, a scratch plugin and project (not committed). Two plugin agents
+with the same body (reply `visible MARKER-<digits>` if any context holds that line, else `hidden`): `omit-agent` with
+`omitClaudeMd: true` and `ctrl-agent` with `omitClaudeMd: false`. The project `CLAUDE.md` held `MARKER-7731`. Both
+Agent calls carried only the prompt "Do the check in your instructions."
+
+Result: `omit-agent` answered **`hidden`**, `ctrl-agent` answered **`visible MARKER-7731`**. On 2.1.308 the field
+works for plugin agents, with a positive control. It didn't on 2.1.296 (above). Judge isolation still shouldn't rely
+on it alone: older CLIs ignore it, so keep passing each judge only what it needs.
+
 ## Summary
 
 | # | Question | Answer |
@@ -94,7 +104,7 @@ judge only what it needs and treat project instructions as potentially visible.
 | 2 | `CLAUDE_PLUGIN_OPTION_*` in hooks | None present under `--plugin-dir`; `multiple` encoding unobserved. |
 | 3 | SKILL.md substitution | `${user_config.*}` literal; `${CLAUDE_PLUGIN_ROOT}` substituted (hook env corroborates); `${CLAUDE_SKILL_DIR}` unverified. |
 | 4 | `` !`…` `` and Bash env | Injection runs; no `CLAUDE_PLUGIN_*` or `OPTION_*` visible to it or to Bash. |
-| 5 | `omitClaudeMd: true` | Agent still saw `MARKER-7731` (`visible`). |
+| 5 | `omitClaudeMd: true` | 2.1.296: agent still saw `MARKER-7731` (`visible`). 2.1.308: hidden, control visible. |
 | 6 | `if: "Bash(git push*)"` / `"Bash(git *)"` | Push filter misses `git -C x push`; `git *` catches that and `cd x && git push` but not `env git push`. Gate registered with no `if`; its own parser and limits are listed in section 6. |
 
 ## 6. Does `if: "Bash(git push*)"` fire only for `git push`?
@@ -368,3 +378,23 @@ on by the main agent would have been visible.
 Result: **an output style reaches the main conversation only, not subagents** (project and plugin styles alike), as
 the README says. Not tested: an interactive session, `/output-style` chosen mid-session, and plugin agents
 (`plainspoken:*`), which are subagents like the two tested.
+
+## 14. Does Claude Code's sandbox stop the CLI writing `.plainspoken/`?
+
+Probed 2026-10-23 on Claude Code CLI 2.1.308, Linux, `claude -p --safe-mode --allowedTools Bash` on the
+subscription. Scratch project (a `git init` folder whose `.claude/settings.json` holds
+only `{"sandbox": {"enabled": true}}`); not committed. One Bash call:
+`mkdir -p .plainspoken && touch .plainspoken/x && ls -la .plainspoken && touch $HOME/.config/<probe>`.
+
+- The project's `.plainspoken/` was created and written. The write to `~/.config/` failed with
+  `Read-only file system`. That matches the sandbox docs: a sandboxed command can write the working directory, the
+  per-user temp directory and any added directories, and nothing else unless `sandbox.filesystem.allowWrite` lists it.
+- So the skills' CLI calls (reports, ledgers, claims, reader-value contracts, all under the project's
+  `.plainspoken/`) work with the sandbox on. Hooks don't run in the sandbox.
+- `setup --scope user` is the one CLI call that writes outside the project (`~/.config/plainspoken/config.toml`, or
+  `$XDG_CONFIG_HOME`). With the sandbox on, Claude Code refuses it and usually asks to run it outside the sandbox.
+  If that's turned off (`sandbox.allowUnsandboxedCommands: false`), add the folder to `sandbox.filesystem.allowWrite`
+  or run the command yourself.
+- The round-7 eval smoke (2.1.308, `claude plugin eval`) saw `Read-only file system` on every Bash write in the
+  run folder, `mkdir .plainspoken` in the cwd included, while the Write tool worked. Normal sandboxed use doesn't do
+  that, so it's the eval runner. Run evals that need Bash writes on CLI 2.1.303, where round 6 saw no such failure.
