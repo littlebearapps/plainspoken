@@ -9,7 +9,9 @@ error here is a deny, never a traceback.
 
 Registered without an `if` filter (docs/claude-code-facts.md section 6): the harness filter misses `env git push` and
 `sudo git push`. So the first lines below exit fast, using only sys/os/json, for any command without the word "push"
-or "git" (git aliases can hide a push), and for watch mode when the project has no config file."""
+or "git" (git aliases can hide a push), and for watch mode when the project has no config file.
+
+`--host codex` writes the check command in the message as Codex's `$plainspoken:check`."""
 import json
 import os
 import sys
@@ -19,11 +21,12 @@ if _HOOKS not in sys.path:  # once, at import: main() may run more than once in 
     sys.path.insert(0, _HOOKS)
 
 
-def _decide(strictness: str, problems: list[str]) -> None:
+def _decide(strictness: str, problems: list[str], host: str = "claude-code") -> None:
     if not problems:
         return
     from _common import clip
-    msg = clip("plainspoken gate: " + "; ".join(problems))
+    msg = "plainspoken gate: " + "; ".join(problems)
+    msg = clip(msg.replace("/plainspoken:", "$plainspoken:") if host == "codex" else msg)
     if strictness == "block":
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                                  "permissionDecisionReason": msg}}))
@@ -31,7 +34,9 @@ def _decide(strictness: str, problems: list[str]) -> None:
         print(json.dumps({"systemMessage": msg}))
 
 
-def main() -> int:
+def main(argv: list[str] = ()) -> int:
+    argv = list(argv)
+    host = argv[argv.index("--host") + 1] if "--host" in argv[:-1] else "claude-code"
     env_strictness = (os.environ.get("CLAUDE_PLUGIN_OPTION_STRICTNESS") or "watch").strip()
     try:
         event = json.load(sys.stdin)
@@ -62,17 +67,17 @@ def main() -> int:
             if strictness != "watch" and (command is None or _gate.involves_push(command, project)):
                 tail = [] if strictness == "block" else ["not checking this push"]
                 _decide("block" if strictness == "block" else "warn",
-                        [f"can't read the gate settings: {problem}", *tail])
+                        [f"can't read the gate settings: {problem}", *tail], host)
             return 0
         if strictness not in ("warn", "block"):
             return 0
         if command is None:
             raise ValueError("hook input was not valid JSON")
-        _decide(strictness, _gate.check(command, project, Path(cwd) if cwd else None))
+        _decide(strictness, _gate.check(command, project, Path(cwd) if cwd else None), host)
     except Exception as e:
-        _decide(strictness, [f"gate error: {type(e).__name__}: {e}"])
+        _decide(strictness, [f"gate error: {type(e).__name__}: {e}"], host)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

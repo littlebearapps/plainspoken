@@ -246,9 +246,9 @@ class Manifests(unittest.TestCase):
         manifest = json.loads((REPO / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["hooks"], "./hooks/codex.json")
         codex = json.loads((REPO / "hooks" / "codex.json").read_text(encoding="utf-8"))["hooks"]
-        self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolUse"})
+        self.assertEqual(set(codex), {"UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"})
         self.assertEqual(codex["PostToolUse"][0]["matcher"], "apply_patch")
-        for group in (*codex["UserPromptSubmit"], *codex["PostToolUse"]):
+        for group in (g for groups in codex.values() for g in groups):
             for h in group["hooks"]:
                 script = h["command"].split('"$PLUGIN_ROOT/')[1].split('"')[0]
                 self.assertTrue((REPO / script).is_file(), script)
