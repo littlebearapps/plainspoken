@@ -123,7 +123,7 @@ Since #12 each skill runs that call as its first step instead, which should lift
 run on the current CLI confirms it, keep using `npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI
 version at a time: two at once on one login revoked a token mid-run.
 
-Each smoke case except `humanize` and `setup`, which have no profile step, also has a `*-first` grader: the run's first
+Each smoke case except `setup`, which has no profile step, also has a `*-first` grader: the run's first
 `run.py` call must be the skill's first step, `run.py profile` (`run.py kaizen review` for kaizen). When it fails, the
 runner says only "pattern not found in trace", so run the suite with `--keep-temp` and `--json`, then `eval first-call`
 on that file: it prints the first engine call of each run.

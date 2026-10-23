@@ -133,6 +133,15 @@ class HumanizeSkill(unittest.TestCase):
         self.assertIn("never add a fact", lower)
         self.assertNotIn("fiction is exempt", lower)
 
+    def test_used_on_its_own_it_reads_the_voice_profile(self):  # #98: item 4 named notes it never loaded
+        body = " ".join(self.text.split())
+        self.assertIn("Used on its own, first run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --voice --type "
+                      "<type> --plugin-profile '${user_config.profile}'`", body)
+        self.assertIn("If the call fails, carry on without it.", body)
+        self.assertIn("the profile's voice notes for replacements", body)
+        self.assertNotIn("calibration notes", body)
+        self.assertNotIn("First, before any other step", body)  # standalone only: check has already loaded it
+
     def test_all_26_patterns_kept_in_reference(self):
         for n in range(1, 27):
             self.assertRegex(self.patterns, rf"(?m)^### {n}\. ")

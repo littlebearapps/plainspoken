@@ -7,7 +7,6 @@ runs: 1
 max_turns: 60
 timeout_seconds: 1200
 allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Agent, Bash]
-# No first-call grader (#58). humanize has no profile step; its only engine call is an optional check after the rewrite.
 ---
 
 /plainspoken:humanize Just send back the rewritten version, nothing else.

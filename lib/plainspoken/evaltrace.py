@@ -15,10 +15,9 @@ from pathlib import Path
 FIRST_CALL: dict[str, str | None] = {
     "adapt": "profile", "check": "profile", "claims": "profile", "copy-audit": "profile", "kaizen": "kaizen review",
     "plain-language": "profile", "reader-value": "profile", "register-check": "profile", "voice": "profile",
-    "write": "profile", "humanize": None, "setup": None,
+    "write": "profile", "humanize": "profile", "setup": None,
 }
 EXEMPT = {
-    "humanize": "it has no profile step: its only engine call is an optional check after the rewrite",
     "setup": "it reads no profile: its first step is `setup --status`",
 }
 
