@@ -1,5 +1,5 @@
 """CLI: python3 -m plainspoken {check|profile|config|paths|merge|status|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
-register-checklist|claims|reader-value|kaizen|eval} …
+register-checklist|claims|reader-value|kaizen|setup|doctor|eval} …
 Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
 invalid justifications or nothing to review (justify), a lint BLOCK or WARN left
 without --keep (judge-input), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
@@ -22,7 +22,8 @@ credential variable, a `gh` or Trello error, a damaged proposal file; nothing is
 off, and 2 for bad config. `kaizen mine` exits 0 with or without candidates (they're queued through the file adapter only) and 2
 for bad input: no drafts, no model with at least 10 drafts, a draft folder that isn't a model id, no human corpus, no
 briefs, a briefs folder that holds a `.heldout` marker, or a file it can't read or lint. `config profile-for` exits 3 when no profile is named for the
-file (nothing printed) and 2 for a bad project config or a profile path that doesn't exist. `eval` exit codes are
+file (nothing printed) and 2 for a bad project config or a profile path that doesn't exist. `doctor` exits 0 with or
+without warnings (2 only for bad arguments), and setup's host checks never change its exit code. `eval` exit codes are
 in evalcli.py. Never a traceback."""
 import argparse
 import json
@@ -32,7 +33,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, evalcli,
+from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, doctor, evalcli,
                          extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
                          reader_value, register, report, setup, voice)
 from plainspoken.doc import CONTENT_TYPES
@@ -90,13 +91,36 @@ def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
 
 
 def _setup(args: argparse.Namespace, root: Path) -> int:
+    """setup's own work, then the host checks' WARN lines after it (#113). A check never changes setup's output above
+    them, its file or its exit code."""
+    code = _setup_run(args, root)
+    try:
+        sys.stdout.flush()
+        lines = doctor.setup_lines(args.host, doctor.run_checks(args.host, root, os.environ))
+        # Chat hosts: stderr, so the block can't be copied into the app's instructions with the paste-in text.
+        doctor.write_lines(lines, sys.stderr if args.host in doctor.CHAT_NAMES else sys.stdout)
+    except Exception:  # noqa: BLE001 - warnings only: nothing here may change setup's exit code (doctor shows it)
+        pass
+    return code
+
+
+def _doctor(args: argparse.Namespace, root: Path) -> int:
+    checks = doctor.run_checks(args.host, root, os.environ)
+    if args.json:
+        doctor.write_lines([json.dumps([c.as_dict() for c in checks], indent=2)], sys.stdout)
+        return 0
+    doctor.write_lines([doctor.heading(args.host), *doctor.format(checks), doctor.summary(checks)], sys.stdout)
+    return 0
+
+
+def _setup_run(args: argparse.Namespace, root: Path) -> int:
     wanted = {"nudge": args.nudge, "rule": args.rule, "lint_watch": args.lint_watch}
     wanted = {k: (None if v is None else v == "on") for k, v in wanted.items()}
     if args.status:
         print("\n".join(setup.status(root, os.environ)))
         return 0
     if args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove:
-        print(setup.paste_text(args.host), end="")
+        _util.write_safe(setup.paste_text(args.host), sys.stdout)  # its "→" mustn't crash an ascii console
         return 0
     try:
         path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove)
@@ -283,6 +307,10 @@ def _main(argv: list[str] | None) -> int:
     su.add_argument("--dry-run", action="store_true", help="print the change without writing it")
     su.add_argument("--remove", action="store_true", help="delete every setting setup wrote to this file first")
     su.add_argument("--status", action="store_true", help="print what is on now")
+    dr = sub.add_parser("doctor", help="check whether this host can run what plainspoken needs: ok, WARN or not "
+                                       "checked for each (changes nothing; exit 0 with warnings)")
+    dr.add_argument("--host", required=True, choices=setup.HOSTS)
+    dr.add_argument("--json", action="store_true", help="print the checks as a JSON list")
     _claims_parser(sub)
     _reader_value_parser(sub)
     _kaizen_parser(sub)
@@ -292,6 +320,8 @@ def _main(argv: list[str] | None) -> int:
 
     if args.cmd == "setup":
         return _setup(args, root)
+    if args.cmd == "doctor":
+        return _doctor(args, root)
     if args.cmd == "check" and str(args.path) == "-":
         return _check_stdin(args, root)
     if args.cmd == "check":

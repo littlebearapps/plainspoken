@@ -13,7 +13,7 @@ Status: before v1.0 (the current version and what changed in each release: [`CHA
 - evals: a 232-case golden set for the judges and 16 cases for the claims checker, a cross-vendor judge panel,
   rewrite evals, a smoke case per skill, a blind reader test and ablations;
 - optional pieces you switch on with `/plainspoken:setup`: a writing nudge, a drafting rule, and lint after each
-  edit in Claude Code, Codex and Hermes Agent.
+  edit in Claude Code, Codex and Hermes Agent; `/plainspoken:doctor` checks what the host can run.
 
 A production host has already moved its own checks over to it.
 
@@ -30,7 +30,7 @@ Next:
 ## Use
 
 Requirements: Claude Code and Python 3.11+ as `python3` (standard library only). With an older `python3`, the
-lint-watch hook skips with one line, and the CLI the skills call won't start.
+lint-watch hook skips with one line, and the CLI the skills call prints one line saying so and exits 2.
 
 Install it from the Little Bear Apps marketplace:
 
@@ -116,7 +116,7 @@ For a text over about 600 words, or when you ask, plain-language hands it to the
 it once in a fresh context, as the reader your profile names, and reports in JSON where it got lost, which words it
 didn't know and what it would do next. It never rewrites.
 
-The other eight skills run only when you call them:
+The other nine skills run only when you call them:
 
     /plainspoken:voice build samples/*.md                       # build a voice profile from your own writing
     /plainspoken:copy-audit hero.md                             # audit buyer-facing copy against the evidence
@@ -126,9 +126,10 @@ The other eight skills run only when you call them:
     /plainspoken:reader-value outline post.md                   # set the reader's benefit before drafting (deliver checks it after)
     /plainspoken:kaizen review                                  # the proposed ruleset changes waiting for your decision
     /plainspoken:setup                                          # turn the writing nudge, drafting rule and lint after edits on or off
+    /plainspoken:doctor                                         # check what this app can run (warnings only, changes nothing)
 
 `write`, `check`, `humanize` and `plain-language` also start on their own when a request fits. `voice`, `copy-audit`,
-`register-check`, `adapt`, `claims`, `reader-value`, `kaizen` and `setup` run only when you call them.
+`register-check`, `adapt`, `claims`, `reader-value`, `kaizen`, `setup` and `doctor` run only when you call them.
 
 ### Claims and reader value
 
@@ -249,6 +250,19 @@ Project settings go in `.plainspoken/config.toml`, which beats the plugin option
     strictness = "block"         # watch | warn | block; beats the plugin option; a value it can't read gives a warning and the push goes ahead, unless block is known
 
 ### Host setup
+
+`setup` ends with host checks for the app it's run for. When one finds a problem (a `python3` older than 3.11, a
+reports folder its file permissions don't let it write, no `git` while the publish gate is on, a config that doesn't
+parse, no `hermes` on PATH) or can't run, setup prints it with its fix, plus a line saying how many things `doctor`
+lists to confirm by hand; on a healthy machine it prints nothing more. The checks never block setup or change what
+it writes. `/plainspoken:doctor` (`python3 <plugin>/lib/run.py doctor --host <host>`) runs the same checks on their
+own and marks each one `ok`, `WARN` or `not checked`. What a script can't see, such as the agent's own tools, Codex's
+hook trust or the `hermes chat` flags, stays `not checked`, and the skill asks the agent to say whether it has them.
+The one command it runs is `python3 --version`; `git`, `codex` and `hermes` are only looked up on PATH, because
+starting `codex` or `hermes` writes files of their own. It exits 0 with warnings. `--host claude-ai` or `chatgpt`
+says there's no shell in those apps, so the lint, the judges and the hooks don't run there (setup prints those lines
+on stderr, away from the text to paste). An older `python3` gets one line from every command instead,
+`plainspoken needs Python 3.11 or newer; this python3 is …`, and exit 2.
 
 A project that already has its own checks can narrow what plainspoken does. Everything below goes in
 `.plainspoken/config.toml`:

@@ -39,6 +39,12 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
    session; in Codex, trust the plugin's hooks with `/hooks`).
 6. **Undo,** when asked: `RUN setup --host <host> --scope <scope> --remove`. It deletes only the lines setup wrote.
 
+Any setup call can end with host-check warnings (under `Host checks`; nothing at all on a healthy machine). Pass
+each on to the person with its fix, in one line, and don't act on them: the person decides. A last line saying
+`doctor --host <host> lists N things to confirm by hand` points at `/plainspoken:doctor`; mention it, don't run it.
+For claude.ai and ChatGPT, the `Host checks` lines (no shell there) are on stderr: tell the person, but keep them
+out of the text to paste. If a call prints `plainspoken needs Python 3.11 or newer`, pass that line on and stop.
+
 Never edit `CLAUDE.md`, `AGENTS.md` or any other instructions file. Setup writes one config file and nothing else.
 
 Setup doesn't choose a voice profile, and the user-wide file can't. If the person asks, point them to

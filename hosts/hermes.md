@@ -83,3 +83,6 @@ here too.
   (`guides/voice-profiles.md`).
 - Agents run on this profile's default model (`hermes chat -m <model>` picks another), not the model the agent file
   names.
+- The doctor skill (or `RUN doctor --host hermes`) checks python3, the plugin files, the config files and whether
+  `hermes` is on PATH (without running it), and lists what it can't see for you to confirm (the `hermes chat`
+  flags, the profile, the working folder, the toolsets). It only reports; the person decides what to change.

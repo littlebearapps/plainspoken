@@ -24,7 +24,7 @@ CASE_KEYS = {"schema_version", "name", "description", "tags", "plugins", "runs",
              "max_turns", "timeout_seconds", "allowed_tools", "append_system_prompt", "env"}
 GRADER_TYPES = {"regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"}
 AUTO = {"check", "humanize", "write", "plain-language"}
-MANUAL = {"voice", "copy-audit", "register-check", "adapt", "claims", "reader-value", "kaizen", "setup"}
+MANUAL = {"voice", "copy-audit", "register-check", "adapt", "claims", "reader-value", "kaizen", "setup", "doctor"}
 READ_ONLY = {"Read", "Glob", "Grep", "Skill"}
 CLI_GRANT = "Bash(python3 *)"  # the run grants it with --allow-tools; covers `python3 <plugin>/lib/run.py …`
 
@@ -465,6 +465,10 @@ class EvalCases(unittest.TestCase):
                 self.assertEqual((d / flow_list(fm["plugins"])[0]).resolve(), REPO)
                 self.assertTrue(graders)
                 for name, g, _ in graders:
+                    if g.get("type") == "tool_used":  # only "never used": a skill that changes nothing (doctor)
+                        self.assertIn(g.get("tool"), ("Write", "Edit"), name)
+                        self.assertEqual((g.get("min"), g.get("max")), ("0", "0"), name)
+                        continue
                     self.assertEqual(g.get("type"), "regex", name)
                     rx = compiled(g)
                     # A kept-the-facts grader is meant to match the passage; its not_contains partner fails an echo.
@@ -573,8 +577,11 @@ class EvalCases(unittest.TestCase):
                               "- `dismiss` <file>: a wrong finding.",
                               "1. **review** shows the queue\n2. **calibrate** proposes",
                               "- `/plainspoken:kaizen review`\n- `/plainspoken:kaizen calibrate`"],
+            "doctor--slash": ["- python3: ok (3.12.1)\n- WARN git: no git on PATH\n\nUnverified: Bash permission",
+                              "| python3 | ok |\n| Bash permission | not checked |"],
         }
         echoes = {"copy-audit--slash": "Here's the copy audit: it fails on proof.",
+                  "doctor--slash": "All checks are fine.\n- python3: ok\n- Bash permission: unverified",
                   "voice--slash": "Which mode do you want: build, apply or check?",
                   "reader-value--slash": "Which mode do you want: outline or deliver?",  # one line: not the menu
                   "claims--slash": "I checked the claims against the saved sources.",
