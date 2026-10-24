@@ -49,6 +49,17 @@ Asked only for a quick lint that shouldn't count as kaizen evidence? Run step 1 
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
 run.py status.
 
+## Report only
+
+When the person asks for findings without edits (the words must stay their own, or only a person may write the
+outgoing text), run the steps below with these changes:
+- Step 1 once, fixing nothing. Pass every BLOCK and WARN line it prints to step 2 as `--keep <rule>`.
+- Steps 2 to 5 as written.
+- Then go to step 8 and stop. Skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`, and
+  never edit FILE: its bytes stay unchanged. If `status` says FILE changed, something else edited it, so say so.
+- The report gives step 8's `check:` lines, lists each BLOCK and WARN with its line, and says plainly that nothing
+  was fixed. Merge's FAIL or UNRESOLVED is the result: never call it a PASS while a BLOCK or failing WARN remains.
+
 ## Steps
 
 1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed),
