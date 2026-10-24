@@ -303,14 +303,20 @@ draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every pat
 - `.plainspoken/reports/<key>.checked.md`: a full copy of the draft as it was checked.
 - `.plainspoken/reports/<key>.prev.lint.json` and `<key>.prev.checked.md`: the same pair for the check before, from
   the second check of a changed draft on.
-- `.plainspoken/ledger/YYYY-MM.jsonl`: the kaizen events (hashes, ruleset words and section kinds, none of the draft's text).
+- `.plainspoken/ledger/YYYY-MM.jsonl`: the kaizen events (hashes, ruleset words and section kinds, none of the
+  draft's text).
 - `lint-watch-state.json` and `integrity-state.json`: the edit hooks' state, a hash of the last result for each
   session and project-relative path, in `$CLAUDE_PLUGIN_DATA`, or `.plainspoken/` when that isn't set.
+- Sometimes, and none of them holds draft text: `.plainspoken/ledger/friction.jsonl` (a capture error, a refused
+  judge reply, an incomplete merge, or a plainspoken agent finishing in Claude Code), `kaizen-backstop-state.json`
+  (that agent's id, beside the hook state above), `kaizen-nudge-state.json` (once the Stop hook has said proposals
+  wait or calibrate is due) and `.plainspoken/kaizen/capture-off.txt` (when check capture is off and a ledger exists).
 
 The full check adds the judge, justification and report files, and the claims and reader-value skills add theirs
-when you run them; each one is in `docs/report-contract.md`. `check --no-record` saves no report and no snapshot.
-With `[kaizen] capture = false`, the next check deletes the snapshots (the `.checked.md` and `.prev` files) and
-saves no new ones; it still saves the lint file.
+when you run them; each one is in `docs/report-contract.md`. `check --no-record` saves no report (unless `--out`
+names another file) and no snapshot. With `[kaizen] capture = false`, the next check deletes the snapshots (the
+`.checked.md` and `.prev` files), saves no new ones and stamps the time in `capture-off.txt`; it still saves the
+lint file.
 
 ## Optional: the writing nudge, the drafting rule and the session brief
 

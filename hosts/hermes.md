@@ -44,13 +44,13 @@ here too.
    hermes chat --query-file "$T/J1.prompt" --oneshot -Q -t file --source tool | RUN agent-reply > "$T/J1.json"
    ```
 
-   `--source tool` keeps these runs out of the user's session lists. The judge runs in the same Hermes profile as
-   you (from `HERMES_HOME`, or `-p <profile>`) and reads the project from the shell's working folder, so run it from
-   the project root under the same profile, or it reads another profile's config. The four judges can run at once
-   (end each line with `&`, then `wait`). Each takes a minute or so. Hermes has no read-only toolset (`-t file`
-   includes `write_file` and `patch`), so the agent's "never edit a file" rule is an instruction it follows, not a
-   sandbox. If `hermes chat` can't run, use `delegate_task` with the prompt file's contents as the goal, and say so
-   in the report.
+   `--source tool` keeps these runs out of the user's session lists. The judge inherits your profile through
+   `HERMES_HOME` (`-p <profile>` overrides it) and starts in the shell's working folder unless the profile sets
+   `terminal.cwd`, so run it from the project root without a different `-p`, or it reads another profile's config.
+   The four judges can run at once (end each line with `&`, then `wait`). Each takes a minute or so. Hermes has no
+   read-only toolset (`-t file` includes `write_file` and `patch`), so the agent's "never edit a file" rule is an
+   instruction it follows, not a sandbox. If `hermes chat` can't run, use `delegate_task` with the prompt file's
+   contents as the goal, and say so in the report.
 3. Record it with the skill's own record step, reading from your file instead of the `reply` path:
    `RUN judge-record "FILE" --group J1 --from "$T/J1.json"` (or `claims record … --from`, `reader-value deliver …
    --from`). The record step validates the reply; a stale or invalid one means starting that agent again, as the

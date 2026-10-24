@@ -183,6 +183,8 @@ Each path (under the project root), what writes it, and what it holds:
   line.
 - `.plainspoken/kaizen/last-calibrate.txt`: written by `kaizen calibrate`; holds when calibrate last ran, with or
   without proposals (the Stop nudge's clock).
+- `.plainspoken/kaizen/capture-off.txt`: written by `check` when check capture is off and the ledger folder exists;
+  holds when that check ran, so `kaizen diff` ignores a snapshot older than it.
 - `.plainspoken/kaizen/CHANGELOG.md`: written by `kaizen apply --target profile`; holds one entry per applied profile
   change, naming the approver.
 - `.plainspoken/kaizen/mining/<YYYY-MM>/<model id>/<brief stem>.md`: written by the kaizen skill (mining drafts);
@@ -190,11 +192,11 @@ Each path (under the project root), what writes it, and what it holds:
 
 `[kaizen] ledger_dir` (relative to the project root, default `.plainspoken/ledger`) moves the ledger month files and
 `friction.jsonl`. `[kaizen] proposals_dir` (default `.plainspoken/kaizen`) moves `proposals/` (the `.json` and `.md`
-files), `last-calibrate.txt` and the profile `CHANGELOG.md`. The mining folder doesn't move: the kaizen skill always
-writes drafts under `.plainspoken/kaizen/mining/`, and `kaizen mine --drafts` names it. The ledger's decision events,
-not the proposal files, say whether a proposal is approved. `RULESET-CHANGELOG.md`, beside the ruleset `kaizen apply`
-edits, gets one entry per applied ruleset change. The loop in plain words, with what's stored and what isn't:
-`guides/kaizen.md`.
+files), `last-calibrate.txt`, `capture-off.txt` and the profile `CHANGELOG.md`. The mining folder doesn't move: the
+kaizen skill always writes drafts under `.plainspoken/kaizen/mining/`, and `kaizen mine --drafts` names it. The
+ledger's decision events, not the proposal files, say whether a proposal is approved. `RULESET-CHANGELOG.md`, beside
+the ruleset `kaizen apply` edits, gets one entry per applied ruleset change. The loop in plain words, with what's
+stored and what isn't: `guides/kaizen.md`.
 
 ## Text normalisation
 
