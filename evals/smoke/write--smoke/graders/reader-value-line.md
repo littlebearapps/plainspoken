@@ -1,5 +1,5 @@
 ---
 type: regex
-pattern: 'Reader value \(outline\):[*_`]*\s*[*_`]*(?:READY|PARKED|INCOMPLETE)\b'
+pattern: 'Reader value \(outline\)[*_`]*:[*_`]*\s*[*_`]*(?:(?:PARKED|INCOMPLETE)\b|READY\b[^\n]*deliver)'
 flags: i
 ---

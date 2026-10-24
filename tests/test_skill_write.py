@@ -93,9 +93,9 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertEqual([line.split(":", 1)[0] for line in block],
                          ["Draft", "<every line `status` printed", "Reader value (outline)", "Anchors", "For kaizen"])
         self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
-        # #108: READY is the outline contract, not a delivery pass; the line says so itself
-        self.assertIn("Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>); delivery not checked: "
-                      "run /plainspoken:reader-value deliver <draft>", block)
+        # #108: READY is the outline contract, not a delivery pass, and only a READY line gets the deliver tail
+        self.assertIn("Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>)<, if READY: "
+                      "\"; delivery not checked: you run /plainspoken:reader-value deliver <draft>\">", block)
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
         flat = " ".join(step.split())
@@ -183,9 +183,18 @@ class ReaderValueGrader(unittest.TestCase):  # #108: the smoke grader finds the 
 
     def test_matches_the_outline_line(self):
         for line in ("Reader value (outline): READY (.plainspoken/reader-value/post.reader-value.toml); delivery not "
-                     "checked: run /plainspoken:reader-value deliver post.md",
-                     "Reader value (outline): **PARKED** (x.toml)", "reader value (outline): `INCOMPLETE` (x.toml)"):
+                     "checked: you run /plainspoken:reader-value deliver post.md",
+                     "**Reader value (outline)**: READY (x.toml); delivery not checked: you run "
+                     "/plainspoken:reader-value deliver post.md",
+                     "Reader value (outline): **PARKED** (x.toml)", "reader value (outline): `INCOMPLETE` (x.toml)",
+                     "Reader value (outline): PARKED (x.toml)", "Reader value (outline): INCOMPLETE (x.toml)"):
             self.assertRegex(line, self.pattern())
 
     def test_the_old_unscoped_line_no_longer_passes(self):
         self.assertNotRegex("Reader value: READY (x.toml)", self.pattern())
+
+    def test_ready_without_the_deliver_tail_fails(self):
+        self.assertNotRegex("Reader value (outline): READY (x.toml)", self.pattern())
+
+    def test_the_template_echo_fails(self):
+        self.assertNotRegex("Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>)", self.pattern())
