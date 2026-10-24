@@ -39,25 +39,55 @@ def _frontmatter_loader():
     return _load("_plainspoken_frontmatter", ROOT / "lib" / "plainspoken" / "frontmatter.py").load
 
 
-def _hook_output(script: str, event: dict, *args: str, timeout: int = HOOK_TIMEOUT,
-                 env: dict | None = None) -> dict | None:
-    """Run one of plainspoken's hook scripts (the same ones Claude Code and Codex run) on a Claude-shaped event and
-    return the JSON object it printed, or None. Never raises: a hook that can't run says nothing."""
+def _hook_run(script: str, event: dict, *args: str, timeout: int = HOOK_TIMEOUT,
+              env: dict | None = None) -> tuple[dict | None, bool]:
+    """Run one of plainspoken's hook scripts (the same ones Claude Code and Codex run) on a Claude-shaped event.
+    Returns (the JSON object it printed or None, whether it ran cleanly). It didn't when it couldn't start, timed
+    out, exited non-zero or printed something that isn't a JSON object; a clean run that prints nothing is
+    (None, True). Never raises."""
     try:
         cwd = event.get("cwd")
         done = subprocess.run([sys.executable, str(ROOT / "hooks" / script), *args], input=json.dumps(event),
                               capture_output=True, text=True, timeout=timeout, env=env,
                               cwd=cwd if isinstance(cwd, str) and os.path.isdir(cwd) else None)
-        out = json.loads(done.stdout) if done.stdout.strip() else None
-        return out if isinstance(out, dict) else None
+        if not done.stdout.strip():
+            return None, done.returncode == 0
+        out = json.loads(done.stdout)
+        return (out, done.returncode == 0) if isinstance(out, dict) else (None, False)
     except Exception:
-        return None
+        return None, False
 
 
-def _run_hook(script: str, event: dict, *args: str) -> str | None:
-    """A hook script's context line, or None."""
+def _hook_output(script: str, event: dict, *args: str, timeout: int = HOOK_TIMEOUT,
+                 env: dict | None = None) -> dict | None:
+    """The JSON object a hook script printed, or None, for callers where a hook that can't run should say nothing
+    (the publish gate, the write guard, the kaizen nudge). Never raises."""
+    return _hook_run(script, event, *args, timeout=timeout, env=env)[0]
+
+
+BLOCK_LEAD = "The edit is saved, but fix this before going on.\n"  # integrity.py's block-mode first line
+
+
+def _run_hook(script: str, event: dict, *args: str, quiet: bool = False) -> str | None:
+    """A hook script's line for the model, or None when there's nothing to say. A block-mode reply comes back as a
+    warning, since Hermes can't hold an edit back once it's saved. A hook that couldn't run says so in one line
+    (never its error text), unless `quiet`, for the optional writing nudge. Never raises."""
     try:
-        return _hook_output(script, event, *args)["hookSpecificOutput"]["additionalContext"]
+        out, ran = _hook_run(script, event, *args)
+        if not ran:
+            if quiet:
+                return None
+            path = (event.get("tool_input") or {}).get("file_path")
+            name = Path(path).name if isinstance(path, str) and path else "the file"
+            return f"plainspoken: {script} couldn't run on {name}; this file wasn't checked."
+        if not isinstance(out, dict):
+            return None
+        reason = out.get("reason")
+        if out.get("decision") == "block" and isinstance(reason, str) and reason.strip():
+            return ("plainspoken: block mode isn't enforced on Hermes, so the edit is saved, but fix this before "
+                    "going on.\n" + reason.removeprefix(BLOCK_LEAD))
+        line = out.get("hookSpecificOutput", {}).get("additionalContext")
+        return line if isinstance(line, str) and line else None
     except Exception:
         return None
 
@@ -170,14 +200,15 @@ def register(ctx):
             # user-wide config (`setup --host hermes --scope user`) is what usually turns the nudge on here.
             line = _run_hook("nudge.py", {"hook_event_name": "UserPromptSubmit", "prompt": user_message,
                                           "cwd": os.environ.get("TERMINAL_CWD") or os.getcwd(),
-                                          "session_id": session_id}, "--host", "hermes")
+                                          "session_id": session_id}, "--host", "hermes", quiet=True)
             if line:
                 parts.append(line)
         return {"context": "\n\n".join(parts)} if parts else None
 
     def transform_tool_result(tool_name=None, args=None, result=None, session_id=None, **kwargs):
         # After write_file or patch: the lint-watch and integrity hooks, appended to the tool result the model reads.
-        # None keeps the result as it is.
+        # A block-mode integrity reply comes back as a warning, and a hook that couldn't run says so. None keeps
+        # the result as it is.
         if tool_name not in EDIT_TOOLS or not isinstance(result, str):
             return None
         lines = []
