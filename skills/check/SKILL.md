@@ -52,13 +52,19 @@ run.py status.
 ## Report only
 
 When the person asks for findings without edits (the words must stay their own, or only a person may write the
-outgoing text), run the steps below with these changes:
-- Step 1 once, fixing nothing. Pass every BLOCK and WARN line it prints to step 2 as `--keep <rule>`.
-- Steps 2 to 5 as written.
-- Then go to step 8 and stop. Skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`, and
-  never edit FILE: its bytes stay unchanged. If `status` says FILE changed, something else edited it, so say so.
-- The report gives step 8's `check:` lines, lists each BLOCK and WARN with its line, and says plainly that nothing
-  was fixed. Merge's FAIL or UNRESOLVED is the result: never call it a PASS while a BLOCK or failing WARN remains.
+outgoing text), follow this route. It overrides the fixing in the core rules and in steps 1, 2 and 5: you never
+edit FILE, and its bytes stay unchanged.
+- Step 1: run its `check` call and fix nothing. When a later step asks you to rerun step 1, again fix nothing.
+- Step 2: the lint cuts long lists short ("… N more"), so take the rules from `judge-input`'s exit-1 list, which
+  names every open line, and rerun step 2 with `--keep <rule>` for each rule it names. Here exit 1 always means keep.
+- Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
+  and go to step 8.
+- If `status` says `INCOMPLETE (stale …)`, something else edited FILE: report INCOMPLETE, say so, and stop. Don't
+  rerun steps 1 to 5.
+- The report gives step 8's `check:` lines and lists each BLOCK and WARN with its line. Merge's status line names
+  the rules; the lines are in the `report` file from `RUN paths FILE` (each rule's `findings` from the lint,
+  `evidence` from a judge). Say plainly that nothing was fixed. Merge's FAIL or UNRESOLVED is the result: never
+  call it a PASS while a BLOCK or failing WARN remains.
 
 ## Steps
 

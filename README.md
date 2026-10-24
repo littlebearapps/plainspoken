@@ -96,8 +96,8 @@ Check a draft:
 
 The check lints the file, sends it to four isolated judges, merges their verdicts and runs up to two fix passes
 that cut, join or restate and never add a fact. It ends with PASS, FAIL, UNRESOLVED or INCOMPLETE, and writes its
-files to `.plainspoken/reports/` in the project you run it from. Ask for findings only ("check this, don't change
-anything") and it reports without editing the file.
+files to `.plainspoken/reports/` in the project you run it from. Ask for findings only and the check follows its
+report-only route: no fix passes, and the file stays as it is.
 
 Run the CLI from anywhere in the project: it finds the project root (the nearest folder with
 `.plainspoken/config.toml` or `.git`).
