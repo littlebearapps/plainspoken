@@ -50,6 +50,8 @@ count:
 
 Leave out text an AI drafted, even if the author approved and published it. It would teach the profile the AI's
 voice, not the author's. Anchors are always verbatim lines the author wrote or approved, with their source.
+Anchors and samples are verbatim text, so keep anything taken from a client's material out of a profile you commit
+or publish.
 
 **When a kind has no samples**, fill its `formatting` line from the author's stated rules or style guide, give it no
 anchors, and say so in a comment. Don't stretch habits from one kind onto another: a sign-off that's right for

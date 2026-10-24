@@ -3,8 +3,10 @@
 The judges are read-only, so the CLI writes their replies. A reply is recorded only when it is one JSON object for
 the right group and the article's current hash (and, for JR, the justification file's current hash), and only
 while the article has a current lint, whose profile_sha256 and ruleset_version the recorded file carries. A J1–J4
-reply must also echo its input's `input_digest`, a digest of the whole line `judge-input` printed, so a reply to a
-hand-built or stale input is refused (#43, #61)."""
+reply must also echo its input's `input_digest`, a digest of the whole line `judge-input` printed. The line is
+rebuilt for the current draft, so a reply to a stale input, or to a hand-built one without the current digest, is
+refused (#43, #61). The judge only echoes the digest, so a record can't show that the line reached the judge
+unedited: an edit that keeps the genuine digest still records (`input_digest`)."""
 from __future__ import annotations
 
 import hashlib

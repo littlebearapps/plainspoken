@@ -4,7 +4,7 @@ A writing plugin that helps an AI agent write like a person: specific, honest, p
 in a stated voice, with every claim traceable. Built for Claude Code; it also installs in Codex and Hermes Agent
 (see [Codex and Hermes Agent](#codex-and-hermes-agent)).
 
-Status: v0.7. It has:
+Status: before v1.0 (the current version and what changed in each release: [`CHANGELOG.md`](CHANGELOG.md)). It has:
 - the anti-AI check and humanize skills, with four isolated judges;
 - language skills (write, plain-language, voice, copy-audit, register-check, adapt), with the cold-reader agent;
 - claims integrity and reader value (claims, reader-value), with the claims-checker and delivery-checker agents and
@@ -37,10 +37,10 @@ Install it from the Little Bear Apps marketplace:
     /plugin marketplace add littlebearapps/lba-plugins
     /plugin install plainspoken@lba-plugins
 
-The marketplace entry pins a release (v0.5.0 now), so a new version reaches you when that entry moves to the next
-release. Background auto-update is off for third-party marketplaces until you turn it on: in `/plugin`, open
-**Marketplaces**, select `lba-plugins` and choose **Enable auto-update** (or set `"autoUpdate": true` on the
-marketplace's `extraKnownMarketplaces` entry in a project's `.claude/settings.json`).
+The marketplace entry pins a release, so a new version reaches you when that entry moves to the next release
+([`CHANGELOG.md`](CHANGELOG.md) lists them). Background auto-update is off for third-party marketplaces until you
+turn it on: in `/plugin`, open **Marketplaces**, select `lba-plugins` and choose **Enable auto-update** (or set
+`"autoUpdate": true` on the marketplace's `extraKnownMarketplaces` entry in a project's `.claude/settings.json`).
 
 Install it into the project that uses it (`claude plugin install plainspoken@lba-plugins --scope project`) unless
 you want it everywhere. At user scope, the lint-watch hook lints every Markdown edit in every project you open.
@@ -49,8 +49,8 @@ you want it everywhere. At user scope, the lint-watch hook lints every Markdown 
 
 The same skills, agents and engine install in two more hosts. The skills are written for Claude Code, so each host
 gets a short note on how to run them there, which the skills point to: [`hosts/codex.md`](hosts/codex.md) and
-[`hosts/hermes.md`](hosts/hermes.md). In both, the judges and checkers run as separate one-shot processes with a
-fresh context (`codex exec --sandbox read-only`, `hermes chat -q`), built by `run.py agent-prompt`.
+[`hosts/hermes.md`](hosts/hermes.md). In both, the judges and checkers run with a fresh context, from a prompt built
+by `run.py agent-prompt`; how each host starts them is in its note.
 
 Codex (CLI and the ChatGPT desktop app; it reads the same marketplace):
 
@@ -81,11 +81,12 @@ rating applies without asking, so `plugins.auto_apply: true` can apply it unatte
 `install --force --ref <new-sha>` moves it.
 
 Hooks outside Claude Code: lint and the claims integrity check after each edit, and the optional writing nudge, run
-in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Both also run the publish gate
-(strictness from `[gate] strictness` only), the shell write guard and the kaizen nudge. In Hermes the gate covers the
-`terminal` tool: a deny blocks the command, a warn is posted to you and the command runs, and the kaizen nudge is
-posted to you at the end of a turn. Neither has the kaizen backstop, the hook that counts agent runs, because their
-hooks never see a plainspoken agent finish. Neither has the install-time settings (pick a profile with
+in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Since 0.12.0, both also run the
+publish gate (strictness from `[gate] strictness` only), the shell write guard and the kaizen nudge; an older
+installed copy has none of the three, so run the check yourself before anything goes out. In Hermes the gate
+covers the `terminal` tool: a deny blocks the command, a warn is posted to you and the command runs, and the kaizen
+nudge is posted to you at the end of a turn. Neither has the kaizen backstop, the hook that counts agent runs,
+because their hooks never see a plainspoken agent finish. Neither has the install-time settings (pick a profile with
 `[engine] profile` in `.plainspoken/config.toml`, and turn the optional pieces on with `/plainspoken:setup`), and in
 Hermes the agents' read-only sandbox is an instruction they follow.
 
@@ -194,7 +195,8 @@ it before going on. Every claims report file is listed in `docs/report-contract.
 ### Kaizen: improving the checks from your verdicts
 
 The checks keep a ledger of what they flagged and what you did about it, in `.plainspoken/ledger/`: hashes, ruleset
-words and section kinds, never your text unless you switch excerpts on. Tell it when a finding is wrong or right, or
+words and section kinds. The ledger never holds your text unless you switch excerpts on; the report files do (see
+[What stays on disk](#what-stays-on-disk)). Tell it when a finding is wrong or right, or
 when it missed something, and it proposes ruleset changes from that evidence. Nothing changes until a person approves
 a proposal and runs `kaizen apply`.
 
@@ -289,6 +291,26 @@ your `.gitignore` so reports and hook state stay out of commits; to keep the pro
     .plainspoken/*
     !.plainspoken/config.toml
     !.plainspoken/profiles/
+
+A profile's anchors are verbatim text, so keep anything from a client's material out of a profile you commit.
+
+### What stays on disk
+
+With kaizen excerpts off (the default), checking and editing a draft still leave these files (`<key>` is the
+draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every path):
+
+- `.plainspoken/reports/<key>.lint.json`: each finding, with its excerpt copied word for word from the draft.
+- `.plainspoken/reports/<key>.checked.md`: a full copy of the draft as it was checked.
+- `.plainspoken/reports/<key>.prev.lint.json` and `<key>.prev.checked.md`: the same pair for the check before, from
+  the second check of a changed draft on.
+- `.plainspoken/ledger/YYYY-MM.jsonl`: the kaizen events (hashes, ruleset words and section kinds, none of the draft's text).
+- `lint-watch-state.json` and `integrity-state.json`: the edit hooks' state, a hash of the last result for each
+  session and project-relative path, in `$CLAUDE_PLUGIN_DATA`, or `.plainspoken/` when that isn't set.
+
+The full check adds the judge, justification and report files, and the claims and reader-value skills add theirs
+when you run them; each one is in `docs/report-contract.md`. `check --no-record` saves no report and no snapshot.
+With `[kaizen] capture = false`, the next check deletes the snapshots (the `.checked.md` and `.prev` files) and
+saves no new ones; it still saves the lint file.
 
 ## Optional: the writing nudge, the drafting rule and the session brief
 

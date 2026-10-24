@@ -39,6 +39,9 @@ Each file, what writes it, and what it's bound to:
 - `<key>.checked.md`: written by `check`, only when kaizen capture is on for `check` and it saves `<key>.lint.json`
   (not with `--no-save`, `--no-record` or `--out`); bound to the article's exact bytes as checked, so its sha256 is
   the lint's article_sha256 (the snapshot `kaizen diff` reads).
+- `<key>.prev.checked.md` and `<key>.prev.lint.json`: written by `check` when it saves a changed draft over a
+  snapshot and lint that belong together (the pair they replace); bound to each other, the check before the current
+  one (`kaizen dismiss --from-snapshot` reads it). Removed when check capture is off.
 
 Hash formats differ by file type. The lint, judge, justify and report files carry `article_sha256` as bare hex
 (`3f2a…`); the claims files (`claims`, `claims-check`, `claims-reply`), the delivery files (`delivery`,
@@ -48,6 +51,8 @@ field in a file of the same type, never across the two families.
 `merge` treats a file as stale, and the report as INCOMPLETE, when its bound hashes or stamps don't match the article,
 profile and ruleset now in use. `profile_sha256` covers the profile file and its calibration-notes file, so editing
 either one invalidates the lint and every judge file. `judge-record` refuses a reply when there's no current lint.
+A judge record proves the reply fitted the current draft, lint and input. It doesn't prove which process wrote it
+(`judge-record --from` accepts any valid file), and a fresh context isn't a sandbox.
 `claims status` reads `<key>.claims-check.json` only when its bound hashes match the article and ledger on disk now,
 and its `rubric_sha256` and `matrix_sha256` match the rubric and the configured matrix; otherwise the status can't be
 PASS (`checker result stale`, `checker result stale (rubric changed)`, `checker result stale (matrix changed)`, or
