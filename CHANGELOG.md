@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.12.0](https://github.com/littlebearapps/plainspoken/compare/v0.11.0...v0.12.0) (2026-10-24)
+
+
+### Features
+
+* **ci:** lint verdict diff on a public corpus, base against head ([fe6f66d](https://github.com/littlebearapps/plainspoken/commit/fe6f66de517744be8b6e9129b4e9b7e039e81e3e)), closes [#100](https://github.com/littlebearapps/plainspoken/issues/100)
+* **codex:** publish gate, write guard and kaizen nudge hooks ([5d83728](https://github.com/littlebearapps/plainspoken/commit/5d8372892171bae962c1b3a69bdba62ca40688eb)), closes [#88](https://github.com/littlebearapps/plainspoken/issues/88)
+* **eval:** drift check for judge runs and trigger evals ([fbadefd](https://github.com/littlebearapps/plainspoken/commit/fbadefd57f81796ef136d8b3fb7c879f3b64d652)), closes [#102](https://github.com/littlebearapps/plainspoken/issues/102)
+* **hermes:** publish gate, write guard and kaizen nudge hooks ([6ae264b](https://github.com/littlebearapps/plainspoken/commit/6ae264b10c1c9bf7cc5c3b7e319c0216a1ce2ebd)), closes [#90](https://github.com/littlebearapps/plainspoken/issues/90)
+* **setup:** warn-only host checks in setup, and a doctor command ([#119](https://github.com/littlebearapps/plainspoken/issues/119)) ([86b262b](https://github.com/littlebearapps/plainspoken/commit/86b262b44ef8e2e9aa6252b9bc61cc8c104a3f2b))
+
+
+### Bug Fixes
+
+* **claims:** any result for a client is sensitive, named or not ([c080629](https://github.com/littlebearapps/plainspoken/commit/c080629c180dd79d5faef2ad2cc6e48d77289909)), closes [#76](https://github.com/littlebearapps/plainspoken/issues/76)
+* **claims:** chain one step's CLI calls with && instead of one Bash call each ([e17bd14](https://github.com/littlebearapps/plainspoken/commit/e17bd1448991febbd22b1179f62fab3df16a543b)), closes [#78](https://github.com/littlebearapps/plainspoken/issues/78)
+* **gate:** say nothing is gated when warn or block has no [gate] paths ([db79fe3](https://github.com/littlebearapps/plainspoken/commit/db79fe30f72f16eebd2912bc7609088f05af23a3)), closes [#94](https://github.com/littlebearapps/plainspoken/issues/94)
+* **hermes:** pass block-mode integrity findings through and say when a hook couldn't run ([#112](https://github.com/littlebearapps/plainspoken/issues/112)) ([2ffd00a](https://github.com/littlebearapps/plainspoken/commit/2ffd00a26241c2a483b589a10b4e7f42d2d3703a))
+* **humanize:** read the voice profile when used on its own ([a6ec638](https://github.com/littlebearapps/plainspoken/commit/a6ec6385e7cbe3c26b5e29b6a4daf2fe3ce3b592)), closes [#98](https://github.com/littlebearapps/plainspoken/issues/98)
+* **lint:** report which fields were read, and document checking a post's other fields ([#115](https://github.com/littlebearapps/plainspoken/issues/115)) ([0940cee](https://github.com/littlebearapps/plainspoken/commit/0940cee6baa93ae151491435c25ac443e613159a))
+* **lint:** say lint only and give BLOCK/WARN counts in the heading, never CLEAN above WARNs ([#114](https://github.com/littlebearapps/plainspoken/issues/114)) ([3b3a842](https://github.com/littlebearapps/plainspoken/commit/3b3a8428aedd5f2c7acdfe59fdc19de41b7e0d33))
+* **reader-value:** chain one step's CLI calls with && instead of one Bash call each ([cfc1725](https://github.com/littlebearapps/plainspoken/commit/cfc172590342dd936bfb5da3c3c5c46889720ab8)), closes [#92](https://github.com/littlebearapps/plainspoken/issues/92)
+* **write:** label the report's Reader value line as outline-only ([#116](https://github.com/littlebearapps/plainspoken/issues/116)) ([c50208c](https://github.com/littlebearapps/plainspoken/commit/c50208cf653afced3cbd4648252620ab5f1c8c7b))
+
 ## [0.11.0](https://github.com/littlebearapps/plainspoken/compare/v0.10.1...v0.11.0) (2026-10-22)
 
 
