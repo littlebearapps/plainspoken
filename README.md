@@ -219,6 +219,11 @@ One profile can cover everything a person writes: habits that hold everywhere go
 map to `article`). How to lay it out, where the evidence comes from, variants by folder and switching it on in each
 app: [`guides/voice-profiles.md`](guides/voice-profiles.md).
 
+A check reads the body plus the frontmatter keys listed in the profile's `[document] visible_frontmatter_keys`
+(`title` and `description` by default). For a post or video, put the title, caption and alt text in the frontmatter
+and list their keys there, or keep alt text inline as `![alt](…)`. The lint's `read:` line (`fields_read` in the
+JSON) shows what was in scope. plainspoken checks only the text it's given, never a platform's rendered version.
+
 Plugin options (set when you install or enable the plugin):
 
 - `targets`: the globs the lint-watch hook checks after each Write or Edit. Default `**/*.md`.

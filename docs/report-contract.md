@@ -8,6 +8,10 @@ the current project; `--reports DIR` changes it). File names start with the arti
 Each file, what writes it, and what it's bound to:
 
 - `<key>.lint.json`: written by `check`; bound to article_sha256, profile_sha256, ruleset_version, content_type.
+  Its `fields_read` lists what was linted, in order: `body`, then each of the profile's
+  `visible_frontmatter_keys` the file has as a string, then the profile's `faq_frontmatter_key` once if any FAQ
+  question or answer was read (the summary prints it as `read: …`). It's additive: a lint file without it, from
+  an older version, still reads and merges.
 - `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn` (or `--all` for all four);
   bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint) and input_digest (a hash
   of the whole `judge-input` line; `judge-record` rebuilds that line for the current draft and refuses a reply
