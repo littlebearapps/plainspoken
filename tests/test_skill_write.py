@@ -91,15 +91,19 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("`RUN status '<draft>' --plugin-profile '${user_config.profile}'`", step)
         block = [line.strip() for line in step.splitlines() if line.startswith("    ")]
         self.assertEqual([line.split(":", 1)[0] for line in block],
-                         ["Draft", "<every line `status` printed", "Reader value", "Anchors", "For kaizen"])
+                         ["Draft", "<every line `status` printed", "Reader value (outline)", "Anchors", "For kaizen"])
         self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
-        self.assertIn("Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)", block)
+        # #108: READY is the outline contract, not a delivery pass, and only a READY line gets the deliver tail
+        self.assertIn("Reader value (outline): READY (<contract path>); delivery not checked: "
+                      "you run /plainspoken:reader-value deliver <draft>", block)  # the block is for a drafted piece
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
         flat = " ".join(step.split())
         self.assertIn("copied exactly as printed, never from memory or in other words", flat)
         self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
+        self.assertIn("gets only `Reader value (outline): PARKED (<contract path>)` (or `INCOMPLETE`) "
+                      "and the reason, with no delivery tail", flat)  # #108: the other shape, given literally
         self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
         self.assertIn("Ask the owner to check nothing that the `needs the owner` lines don't list", flat)
         self.assertIn("hold it `blocking` or cut it, never only ask in the report", " ".join(self.step(6).split()))
@@ -170,3 +174,29 @@ class WriteSkill(SkillBasics, unittest.TestCase):
     def test_blend_references(self):
         self.assertIn("references/answer-first.md", self.text)
         self.assertIn("references/narrative.md", self.text)
+
+
+class ReaderValueGrader(unittest.TestCase):  # #108: the smoke grader finds the relabelled line, and only that one
+    def pattern(self):
+        import re
+        text = (REPO / "evals" / "smoke" / "write--smoke" / "graders" / "reader-value-line.md").read_text(encoding="utf-8")
+        line = next(x for x in text.splitlines() if x.startswith("pattern:"))
+        return re.compile(line.split(":", 1)[1].strip().strip("'"), re.I)
+
+    def test_matches_the_outline_line(self):
+        for line in ("Reader value (outline): READY (.plainspoken/reader-value/post.reader-value.toml); delivery not "
+                     "checked: you run /plainspoken:reader-value deliver post.md",
+                     "**Reader value (outline)**: READY (x.toml); delivery not checked: you run "
+                     "/plainspoken:reader-value deliver post.md",
+                     "Reader value (outline): **PARKED** (x.toml)", "reader value (outline): `INCOMPLETE` (x.toml)",
+                     "Reader value (outline): PARKED (x.toml)", "Reader value (outline): INCOMPLETE (x.toml)"):
+            self.assertRegex(line, self.pattern())
+
+    def test_the_old_unscoped_line_no_longer_passes(self):
+        self.assertNotRegex("Reader value: READY (x.toml)", self.pattern())
+
+    def test_ready_without_the_deliver_tail_fails(self):
+        self.assertNotRegex("Reader value (outline): READY (x.toml)", self.pattern())
+
+    def test_the_template_echo_fails(self):
+        self.assertNotRegex("Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>)", self.pattern())
