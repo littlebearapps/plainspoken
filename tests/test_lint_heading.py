@@ -47,6 +47,12 @@ class LintHeading(unittest.TestCase):
         self.assertIn("no findings · lint only, judges not run", head)
         self.assertNotIn("CLEAN", head)
 
+    def test_zero_counts_read_as_no(self):
+        head = summarise(_lint([_f("CANDIDATE", "6")])).splitlines()[0]
+        self.assertIn("· no BLOCK, no WARN, 1 CANDIDATE ·", head)
+        head = summarise(_lint([_f("BLOCK")] * 3)).splitlines()[0]
+        self.assertIn("· 3 BLOCK, no WARN ·", head)
+
     def test_stable_prefix_keeps_the_profile_third(self):  # blogs' anti-ai-check reads the profile from field 3
         head = summarise(_lint([_f("WARN")])).splitlines()[0]
         self.assertTrue(head.startswith("anti-AI lint · post.md · default · "), head)
@@ -66,9 +72,11 @@ class LintHeading(unittest.TestCase):
     def test_stdin_with_warns_and_no_block_never_prints_clean(self):
         r = _stdin(WARNS)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("WARN", r.stdout)
+        head, *rest = r.stdout.splitlines()
+        warns = [line for line in rest if line.startswith("  WARN")]
+        self.assertTrue(warns, r.stdout)
+        self.assertIn(f"no BLOCK, {len(warns)} WARN", head)
         self.assertNotIn("CLEAN", r.stdout)
-        self.assertIn("no BLOCK, ", r.stdout.splitlines()[0])
 
 
 if __name__ == "__main__":

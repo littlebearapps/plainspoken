@@ -138,7 +138,7 @@ def summarise(lint: dict) -> str:
     # stay put: hosts read the profile from field 3.
     n = {sev: len(by.get(sev, [])) for sev in ("BLOCK", "WARN", "CANDIDATE")}
     if any(n.values()):
-        counts = f"{n['BLOCK'] or 'no'} BLOCK, {n['WARN']} WARN"
+        counts = f"{n['BLOCK'] or 'no'} BLOCK, {n['WARN'] or 'no'} WARN"
         if n["CANDIDATE"]:
             counts += f", {n['CANDIDATE']} CANDIDATE"
     else:
