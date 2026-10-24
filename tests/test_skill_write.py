@@ -91,9 +91,11 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("`RUN status '<draft>' --plugin-profile '${user_config.profile}'`", step)
         block = [line.strip() for line in step.splitlines() if line.startswith("    ")]
         self.assertEqual([line.split(":", 1)[0] for line in block],
-                         ["Draft", "<every line `status` printed", "Reader value", "Anchors", "For kaizen"])
+                         ["Draft", "<every line `status` printed", "Reader value (outline)", "Anchors", "For kaizen"])
         self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
-        self.assertIn("Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)", block)
+        # #108: READY is the outline contract, not a delivery pass; the line says so itself
+        self.assertIn("Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>); delivery not checked: "
+                      "run /plainspoken:reader-value deliver <draft>", block)
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
         flat = " ".join(step.split())
@@ -170,3 +172,20 @@ class WriteSkill(SkillBasics, unittest.TestCase):
     def test_blend_references(self):
         self.assertIn("references/answer-first.md", self.text)
         self.assertIn("references/narrative.md", self.text)
+
+
+class ReaderValueGrader(unittest.TestCase):  # #108: the smoke grader finds the relabelled line, and only that one
+    def pattern(self):
+        import re
+        text = (REPO / "evals" / "smoke" / "write--smoke" / "graders" / "reader-value-line.md").read_text(encoding="utf-8")
+        line = next(x for x in text.splitlines() if x.startswith("pattern:"))
+        return re.compile(line.split(":", 1)[1].strip().strip("'"), re.I)
+
+    def test_matches_the_outline_line(self):
+        for line in ("Reader value (outline): READY (.plainspoken/reader-value/post.reader-value.toml); delivery not "
+                     "checked: run /plainspoken:reader-value deliver post.md",
+                     "Reader value (outline): **PARKED** (x.toml)", "reader value (outline): `INCOMPLETE` (x.toml)"):
+            self.assertRegex(line, self.pattern())
+
+    def test_the_old_unscoped_line_no_longer_passes(self):
+        self.assertNotRegex("Reader value: READY (x.toml)", self.pattern())
