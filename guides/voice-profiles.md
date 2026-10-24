@@ -12,7 +12,9 @@ A profile has two layers.
 **Layer 1 applies to everything.** `[identity]`, `[voice]` (principles, opinion pattern, humour, tone), `[reader]`,
 `[avoid]`, `[lexicon]`, `[thresholds]` and `[[anchors]]` reach every skill, whatever the writing is. Put a habit here
 when the author does it everywhere: "Starts with the answer", "Writes '&' for 'and'", "Times as 4pm, never 4 p.m.",
-"Says 'I', never 'we'".
+"Says 'I' for their own work, and 'we' only when it means them and the reader together".
+Write a rule like that one with its context: a bare "never 'we'" would also ban the shared work the author does
+say 'we' for.
 
 **Layer 2 is per kind of writing.** `[blends]` and `[formatting]` each have four slots: `email`, `social`, `page` and
 `article`. Drafting reads only the slot for the piece in hand (`profile --voice --type <kind>`), so a rule that only
