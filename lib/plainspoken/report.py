@@ -133,7 +133,19 @@ def summarise(lint: dict) -> str:
     by: dict[str, list[dict]] = {}
     for f in lint["findings"]:
         by.setdefault(f["severity"], []).append(f)
-    lines = [f"anti-AI lint · {Path(lint['article']).name} · {lint['profile']} · {lint_status(lint)}"]
+    # The heading counts what's listed under it (INFO is never listed), so it can't read clean above WARNs. It says
+    # the judges didn't run because a bare lint covers the lint-method rules only (#109). The first three fields
+    # stay put: hosts read the profile from field 3.
+    n = {sev: len(by.get(sev, [])) for sev in ("BLOCK", "WARN", "CANDIDATE")}
+    if any(n.values()):
+        counts = f"{n['BLOCK'] or 'no'} BLOCK, {n['WARN'] or 'no'} WARN"
+        if n["CANDIDATE"]:
+            counts += f", {n['CANDIDATE']} CANDIDATE"
+    else:
+        counts = "no findings"
+    ctype = lint.get("content_type") or "article"
+    lines = [f"anti-AI lint · {Path(lint['article']).name} · {lint['profile']} · {ctype} · {counts}"
+             " · lint only, judges not run"]
     for sev in ("BLOCK", "WARN", "CANDIDATE"):
         hits = by.get(sev, [])
         for f in hits[:15]:
