@@ -52,6 +52,26 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual(kept.returncode, 0, kept.stderr)
         self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
+    def test_report_only_keeps_a_block_and_never_edits(self):  # #107: lint, keep every line, judge input, no edits
+        import hashlib
+        self.art.write_text("We delve into a robust tapestry of ideas.\n", encoding="utf-8")
+        before = hashlib.sha256(self.art.read_bytes()).hexdigest()
+        lint = cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(lint.returncode, 1, lint.stderr)
+        self.assertIn("BLOCK", lint.stdout)
+        held = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(held.returncode, 1)
+        self.assertIn("BLOCK r2", " ".join(held.stderr.split()))
+        report = json.loads(cli("check", "post.md", "--profile", "default", "--json", "--no-save", cwd=self.cwd).stdout)
+        rules = sorted({f["rule"] for f in report["findings"] if f["severity"] in ("BLOCK", "WARN")})
+        kept = cli("judge-input", "post.md", "--profile", "default", "--keep", ",".join(rules), cwd=self.cwd)
+        self.assertEqual(kept.returncode, 0, kept.stderr)
+        self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
+        merged = cli("merge", "post.md", "--profile", "default", cwd=self.cwd)  # no judges recorded yet
+        self.assertEqual(merged.returncode, 1)
+        self.assertNotRegex(merged.stdout, r"(?m)^\S*\s*PASS\b")
+        self.assertEqual(hashlib.sha256(self.art.read_bytes()).hexdigest(), before)
+
     def test_judge_record_valid_and_invalid(self):
         import hashlib
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)

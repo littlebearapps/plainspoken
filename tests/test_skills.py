@@ -46,6 +46,15 @@ class CheckSkill(unittest.TestCase):
     def test_profile_read_first(self):  # #12: an explicit first step, not a load-time command
         assert_first_step(self, self.text, PROFILE_CALL)
 
+    def test_report_only_route(self):  # #107: findings without edits, never described as a pass
+        m = __import__("re").search(r"(?ms)^#+ [^\n]*Report only[^\n]*\n(.*?)(?=^#+ |\Z)", self.text)
+        self.assertIsNotNone(m, "no 'Report only' heading in skills/check/SKILL.md")
+        route = " ".join(m.group(1).split())
+        for needle in ("--keep", "step 6", "step 7", "humanize", "PASS"):
+            self.assertIn(needle, route)
+        self.assertRegex(route, r"(?i)unchanged|same bytes|byte for byte|never edit")
+        self.assertRegex(route, r"(?i)nothing (was|is) (fixed|changed)")
+
     def test_no_ban_list_words(self):  # lists live in the checker
         lists = __import__("plainspoken.registry", fromlist=["load_config"]).load_config().lists
         for word in lists["ban_literal"]:
