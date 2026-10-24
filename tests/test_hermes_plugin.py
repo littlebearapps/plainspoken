@@ -348,3 +348,108 @@ class HermesKaizenNudge(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HermesHookResults(unittest.TestCase):
+    """#106: integrity's block-mode reply reaches the model as a warning, and a hook that can't run says so instead of
+    looking like a clean file."""
+
+    UNSOURCED = "---\ntitle: Test\ndescription: Revenue grew 47% in 2025.\n---\n\nBody text here with no links.\n"
+
+    def setUp(self):
+        import os
+        self.project = temp_dir(self)
+        (self.project / ".git").mkdir()
+        (self.project / ".plainspoken").mkdir()
+        self.post = self.project / "post.md"
+        self.post.write_text(self.UNSOURCED, encoding="utf-8")
+        clean_env(self, HOME=str(temp_dir(self)))
+        old = os.getcwd()
+        os.chdir(self.project)
+        self.addCleanup(os.chdir, old)
+        self.shim = load_shim()
+        self.ctx = FakeCtx(cwd=str(self.project))
+        self.shim.register(self.ctx)
+        self.n = 0
+
+    def mode(self, mode: str) -> None:
+        (self.project / ".plainspoken" / "config.toml").write_text(
+            f'[integrity]\nmode = "{mode}"\npaths = ["**/*.md"]\n', encoding="utf-8")
+
+    def event(self) -> dict:
+        self.n += 1  # the hooks de-duplicate per session, so each call gets its own
+        return {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": f"r106-{self.n}",
+                "cwd": str(self.project), "tool_input": {"file_path": str(self.post)}}
+
+    def write(self) -> str | None:
+        self.n += 1
+        return self.ctx.hooks["transform_tool_result"](tool_name="write_file", args={"path": str(self.post)},
+                                                       result="Wrote post.md", session_id=f"r106-w{self.n}")
+
+    def test_block_mode_finding_reaches_the_model_as_a_warning(self):
+        self.mode("block")
+        got = self.shim._run_hook("integrity.py", self.event())
+        self.assertIsNotNone(got)
+        self.assertIn("block mode isn't enforced on Hermes", got)
+        self.assertIn("prominent numbers with no source", got)
+        got = self.write()
+        self.assertTrue(got.startswith("Wrote post.md\n\n"), got)
+        self.assertIn("block mode isn't enforced on Hermes", got)
+        self.assertIn("prominent numbers with no source", got)
+        self.assertNotIn("blocked", got.lower())
+
+    def test_warn_mode_is_unchanged(self):
+        self.mode("warn")
+        got = self.shim._run_hook("integrity.py", self.event())
+        self.assertIn("prominent numbers with no source", got)
+        self.assertNotIn("isn't enforced", got)
+        self.assertNotIn("couldn't run", got)
+
+    def test_a_clean_file_appends_nothing(self):
+        self.mode("block")
+        self.post.write_text("---\ntitle: Test\n---\n\nI fixed the login bug on Friday.\n", encoding="utf-8")
+        self.assertIsNone(self.shim._run_hook("integrity.py", self.event()))
+        self.assertIsNone(self.write())
+
+    def test_a_missing_hook_says_it_couldnt_run(self):
+        got = self.shim._run_hook("no_such_hook.py", self.event())
+        self.assertIsNotNone(got)
+        self.assertIn("couldn't run", got)
+        self.assertIn("post.md", got)
+        self.assertIn("wasn't checked", got)
+        self.assertNotIn("Errno", got)
+        self.assertNotIn("can't open file", got)
+
+    def _failing_runs(self):
+        import subprocess
+        yield "non-JSON", subprocess.CompletedProcess([], 0, stdout="not json at all\n", stderr="")
+        yield "JSON that isn't an object", subprocess.CompletedProcess([], 0, stdout="[1, 2]\n", stderr="")
+        yield "non-zero exit", subprocess.CompletedProcess([], 1, stdout="", stderr="Traceback (most recent call last):\n  boom\n")
+        yield "timeout", subprocess.TimeoutExpired(cmd="hook", timeout=15)
+        yield "raises", OSError("Errno 2 secret detail")
+
+    def test_a_failing_hook_after_an_edit_is_one_couldnt_run_line_never_the_raw_error(self):
+        self.mode("warn")
+        for label, outcome in self._failing_runs():
+            with self.subTest(label), unittest.mock.patch.object(
+                    self.shim.subprocess, "run",
+                    side_effect=outcome if isinstance(outcome, BaseException) else None,
+                    return_value=None if isinstance(outcome, BaseException) else outcome):
+                got = self.write()
+                self.assertIsNotNone(got, label)
+                added = got.split("Wrote post.md\n\n", 1)[1]
+                self.assertIn("couldn't run", added, label)
+                self.assertIn("wasn't checked", added, label)
+                for raw in ("Traceback", "boom", "Errno", "secret detail", "not json", "PASS"):
+                    self.assertNotIn(raw, added, label)
+
+    def test_the_writing_nudge_still_fails_silently(self):
+        (self.project / ".plainspoken" / "config.toml").write_text('[nudge]\nmode = "on"\n', encoding="utf-8")
+        hook = self.ctx.hooks["pre_llm_call"]
+        for label, outcome in self._failing_runs():
+            with self.subTest(label), unittest.mock.patch.object(
+                    self.shim.subprocess, "run",
+                    side_effect=outcome if isinstance(outcome, BaseException) else None,
+                    return_value=None if isinstance(outcome, BaseException) else outcome):
+                self.assertIsNone(hook(is_first_turn=False, session_id="n1",
+                                       user_message="Draft an email to the parents about Friday"), label)
