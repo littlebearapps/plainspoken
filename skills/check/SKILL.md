@@ -49,6 +49,23 @@ Asked only for a quick lint that shouldn't count as kaizen evidence? Run step 1 
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
 run.py status.
 
+## Report only
+
+When the person asks for findings without edits (the words must stay their own, or only a person may write the
+outgoing text), follow this route. It overrides the fixing in the core rules and in steps 1, 2 and 5: you never
+edit FILE, and its bytes stay unchanged.
+- Step 1: run its `check` call and fix nothing. When a later step asks you to rerun step 1, again fix nothing.
+- Step 2: the lint cuts long lists short ("… N more"), so take the rules from `judge-input`'s exit-1 list, which
+  names every open line, and rerun step 2 with `--keep <rule>` for each rule it names. Here exit 1 always means keep.
+- Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
+  and go to step 8.
+- If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (`status` doesn't
+  say which): report INCOMPLETE with that line, and stop. Don't rerun steps 1 to 5.
+- The report gives step 8's `check:` lines and lists each BLOCK and WARN with its line. Merge's status line names
+  the rules; the lines are in the `report` file from `RUN paths FILE` (each rule's `findings` from the lint,
+  `evidence` from a judge). Say plainly that nothing was fixed. Merge's FAIL or UNRESOLVED is the result: never
+  call it a PASS while a BLOCK or failing WARN remains.
+
 ## Steps
 
 1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed),
