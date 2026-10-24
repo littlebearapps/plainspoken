@@ -277,8 +277,11 @@ class Runner(unittest.TestCase):
         pid_file = tmp / "pid"
         child = ("import subprocess, sys, time; p = subprocess.Popen([sys.executable, '-c', 'import time; "
                  f"time.sleep(60)']); open({str(pid_file)!r}, 'w').write(str(p.pid)); time.sleep(60)")
+        started = time.monotonic()
         with mock.patch("plainspoken.doctor.TIMEOUT", 1), self.assertRaises(subprocess.TimeoutExpired):
             doctor._run([sys.executable, "-c", child], dict(os.environ))
+        # Killing only the child leaves the grandchild holding the pipes, and _run waits out its 60 s sleep.
+        self.assertLess(time.monotonic() - started, 1 + 3, "_run waited for the grandchild instead of killing it")
         grandchild = int(pid_file.read_text())
         for _ in range(50):
             try:
@@ -408,6 +411,13 @@ class Command(Base):
                 r = self.run_cli(*args, env=ascii_env)
                 self.assertEqual(r.returncode, 0, r.stderr)
                 self.assertIn("WARN", r.stdout)
+        for host in ("chatgpt", "claude-ai"):  # the paste-in text has a "→": replaced, never a crash
+            with self.subTest(host=host):
+                r = self.run_cli("setup", "--host", host, env=ascii_env)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertIn("Settings ? ", r.stdout)
+                self.assertIn("Paste:", r.stdout)
+                self.assertIn("no shell", r.stderr)
         r = self.run_cli("setup", "--host", "hermes", "--scope", "user", "--nudge", "on", env=ascii_env)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("Host checks", r.stdout)
@@ -447,7 +457,22 @@ class Launcher(unittest.TestCase):
         head = text[:text.index("def _run")]
         self.assertNotRegex(head, r"(?m)^\s*(?:from|import) plainspoken")
         self.assertLess(text.index("too_old()"), text.index("from plainspoken"))
-        self.assertNotIn('f"', text)  # an old interpreter must still parse it
+
+    def test_the_launcher_parses_on_an_old_interpreter(self):
+        """No f-string and no annotation anywhere in lib/run.py, so a python3 older than 3.6 still reaches the check."""
+        import ast
+        text = (REPO / "lib" / "run.py").read_text(encoding="utf-8")
+        tree = ast.parse(text, feature_version=(3, 7))
+        found = []
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.JoinedStr, ast.AnnAssign)):
+                found.append(f"{type(node).__name__} line {node.lineno}")
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.returns is not None:
+                found.append(f"return annotation line {node.lineno}")
+            if isinstance(node, ast.arg) and node.annotation is not None:
+                found.append(f"annotation line {node.lineno}")
+        self.assertEqual(found, [])
+        self.assertNotIn("from __future__", text)
 
 
 class SetupPrintsWarnings(Base):

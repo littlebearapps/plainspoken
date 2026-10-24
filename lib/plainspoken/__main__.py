@@ -120,7 +120,7 @@ def _setup_run(args: argparse.Namespace, root: Path) -> int:
         print("\n".join(setup.status(root, os.environ)))
         return 0
     if args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove:
-        print(setup.paste_text(args.host), end="")
+        _util.write_safe(setup.paste_text(args.host), sys.stdout)  # its "→" mustn't crash an ascii console
         return 0
     try:
         path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove)

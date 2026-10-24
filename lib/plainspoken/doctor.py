@@ -20,7 +20,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from plainspoken import config, hosts
+from plainspoken import _util, config, hosts
 
 __all__ = ["Check", "HERMES_FLAGS", "STATUSES", "format", "heading", "plugin_root", "run_checks", "setup_lines",
            "summary", "write_lines"]
@@ -318,9 +318,5 @@ def setup_lines(host: str, checks: list[Check]) -> list[str]:
 def write_lines(lines: list[str], stream) -> None:
     """Print `lines` to `stream`, replacing any character its encoding can't take (a path, a config message), so the
     output never raises."""
-    if not lines:
-        return
-    encoding = getattr(stream, "encoding", None) or "utf-8"
-    text = "\n".join(lines) + "\n"
-    stream.write(text.encode(encoding, errors="replace").decode(encoding, errors="replace"))
-    stream.flush()
+    if lines:
+        _util.write_safe("\n".join(lines) + "\n", stream)
