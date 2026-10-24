@@ -196,9 +196,9 @@ class MiningReference(unittest.TestCase):
 
 class CaptureStep(unittest.TestCase):
     def test_every_other_skill_ends_with_the_capture_step(self):
-        # setup checks nothing, so it has no finding to dismiss or uphold
+        # setup and doctor check no draft, so they have no finding to dismiss or uphold
         others = sorted(p.parent.name for p in (REPO / "skills").glob("*/SKILL.md")
-                        if p.parent.name not in ("kaizen", "setup"))
+                        if p.parent.name not in ("kaizen", "setup", "doctor"))
         self.assertEqual(len(others), 10)
         for name in others:
             _, text = load(name)

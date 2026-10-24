@@ -72,3 +72,5 @@ the skills' rule that you don't award your own pass holds here too.
   `.plainspoken/config.toml` (see the README); turn the nudge on with `$plainspoken:setup` (`RUN setup --host codex
   …`). Kaizen records go to `.plainspoken/` in the project.
 - Agents run on your Codex model, not the model the agent file names.
+- To see what this setup can run (hook trust, sandbox writes, the judges' tools), run `$plainspoken:doctor` or
+  `RUN doctor --host codex`. It only reports; the person decides what to change.

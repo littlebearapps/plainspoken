@@ -13,7 +13,7 @@ Status: before v1.0 (the current version and what changed in each release: [`CHA
 - evals: a 232-case golden set for the judges and 16 cases for the claims checker, a cross-vendor judge panel,
   rewrite evals, a smoke case per skill, a blind reader test and ablations;
 - optional pieces you switch on with `/plainspoken:setup`: a writing nudge, a drafting rule, and lint after each
-  edit in Claude Code, Codex and Hermes Agent.
+  edit in Claude Code, Codex and Hermes Agent; `/plainspoken:doctor` checks what the host can run.
 
 A production host has already moved its own checks over to it.
 
@@ -116,7 +116,7 @@ For a text over about 600 words, or when you ask, plain-language hands it to the
 it once in a fresh context, as the reader your profile names, and reports in JSON where it got lost, which words it
 didn't know and what it would do next. It never rewrites.
 
-The other eight skills run only when you call them:
+The other nine skills run only when you call them:
 
     /plainspoken:voice build samples/*.md                       # build a voice profile from your own writing
     /plainspoken:copy-audit hero.md                             # audit buyer-facing copy against the evidence
@@ -126,9 +126,10 @@ The other eight skills run only when you call them:
     /plainspoken:reader-value outline post.md                   # set the reader's benefit before drafting (deliver checks it after)
     /plainspoken:kaizen review                                  # the proposed ruleset changes waiting for your decision
     /plainspoken:setup                                          # turn the writing nudge, drafting rule and lint after edits on or off
+    /plainspoken:doctor                                         # check what this app can run (warnings only, changes nothing)
 
 `write`, `check`, `humanize` and `plain-language` also start on their own when a request fits. `voice`, `copy-audit`,
-`register-check`, `adapt`, `claims`, `reader-value`, `kaizen` and `setup` run only when you call them.
+`register-check`, `adapt`, `claims`, `reader-value`, `kaizen`, `setup` and `doctor` run only when you call them.
 
 ### Claims and reader value
 
@@ -249,6 +250,14 @@ Project settings go in `.plainspoken/config.toml`, which beats the plugin option
     strictness = "block"         # watch | warn | block; beats the plugin option; a value it can't read gives a warning and the push goes ahead, unless block is known
 
 ### Host setup
+
+`setup` ends with host checks for the app it's run for, and prints only the warnings: a `python3` older than 3.11, a
+reports folder it can't write, no `git` while the publish gate is on, a config that doesn't parse, missing Hermes
+flags. They never block it or change what it writes. `/plainspoken:doctor` (`python3 <plugin>/lib/run.py doctor
+--host <host>`) runs the same checks on their own and marks each one `ok`, `WARN` or `not checked`. What a script
+can't see, such as the agent's own tools or Codex's hook trust, stays `not checked`, and the skill asks the agent to
+say whether it has them. It changes nothing and exits 0 with warnings. In claude.ai and ChatGPT chat it says there's
+no shell, so the lint, the judges and the hooks don't run there.
 
 A project that already has its own checks can narrow what plainspoken does. Everything below goes in
 `.plainspoken/config.toml`:

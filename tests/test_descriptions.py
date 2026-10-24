@@ -21,6 +21,7 @@ CAPS = {
     "skills/reader-value/SKILL.md": 250,
     "skills/kaizen/SKILL.md": 250,
     "skills/setup/SKILL.md": 250,
+    "skills/doctor/SKILL.md": 250,
     "agents/tells-judge.md": 160,
     "agents/cold-reader.md": 140,
     "agents/claims-checker.md": 140,

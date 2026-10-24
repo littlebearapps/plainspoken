@@ -39,6 +39,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
    session; in Codex, trust the plugin's hooks with `/hooks`).
 6. **Undo,** when asked: `RUN setup --host <host> --scope <scope> --remove`. It deletes only the lines setup wrote.
 
+Any setup call can end with host-check warnings (under `Host checks`). Pass each on to the person with its fix,
+in one line, and don't act on them: the person decides. `/plainspoken:doctor` runs the full checks.
+
 Never edit `CLAUDE.md`, `AGENTS.md` or any other instructions file. Setup writes one config file and nothing else.
 
 Setup doesn't choose a voice profile, and the user-wide file can't. If the person asks, point them to

@@ -83,3 +83,5 @@ here too.
   (`guides/voice-profiles.md`).
 - Agents run on this profile's default model (`hermes chat -m <model>` picks another), not the model the agent file
   names.
+- To see what this profile can run (the `hermes chat` flags, the user-wide config, the toolsets), run the doctor
+  skill or `RUN doctor --host hermes`. It only reports; the person decides what to change.
