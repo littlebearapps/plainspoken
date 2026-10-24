@@ -57,7 +57,9 @@ comprehension_floor = 7    # drafting: the school year a reader needs to follow 
 knows = ["seasons", "watering"]   # not read by any skill yet (v0.2): what the reader already knows.
 
 [blends]
-# drafting: "answer-first" or "narrative", per kind of writing (article, page, email, social).
+# drafting: "answer-first" or "narrative", per kind of writing (article, page, email, social). Four fixed slots:
+# email = emails, texts, DMs; social = posts; page = web pages; article = blog posts, reports, proposals, guides.
+# A habit for every kind goes in [voice] principles instead (guides/voice-profiles.md).
 article = "answer-first"
 social = "narrative"
 

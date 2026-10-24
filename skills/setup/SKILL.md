@@ -40,3 +40,7 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
 6. **Undo,** when asked: `RUN setup --host <host> --scope <scope> --remove`. It deletes only the lines setup wrote.
 
 Never edit `CLAUDE.md`, `AGENTS.md` or any other instructions file. Setup writes one config file and nothing else.
+
+Setup doesn't choose a voice profile, and the user-wide file can't. If the person asks, point them to
+`/plainspoken:voice build` and `guides/voice-profiles.md`: a profile is switched on per project folder (in Hermes
+Agent, per Hermes profile's working folder).

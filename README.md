@@ -214,6 +214,11 @@ A profile describes the voice the skills draft and check in. Copy `templates/voi
 `.plainspoken/profiles/<name>.toml` and edit it, or run `/plainspoken:voice build` on five to ten of your own
 writing samples. Activate it with `[engine] profile = "<name>"` in `.plainspoken/config.toml`.
 
+One profile can cover everything a person writes: habits that hold everywhere go in the shared sections, and
+`[blends]` and `[formatting]` have a slot each for `email`, `social`, `page` and `article` (reports and proposals
+map to `article`). How to lay it out, where the evidence comes from, variants by folder and switching it on in each
+app: [`guides/voice-profiles.md`](guides/voice-profiles.md).
+
 Plugin options (set when you install or enable the plugin):
 
 - `targets`: the globs the lint-watch hook checks after each Write or Edit. Default `**/*.md`.

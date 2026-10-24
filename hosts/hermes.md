@@ -70,5 +70,9 @@ here too.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
   `.plainspoken/config.toml` (see the README); turn the nudge on with the setup skill (`RUN setup --host hermes
   --scope user --nudge on` for every session of this profile). Kaizen records go to `.plainspoken/` in the project.
+- The project is the Hermes profile's working folder (`terminal.cwd` in its `config.yaml`). Put
+  `.plainspoken/config.toml` and `.plainspoken/profiles/<name>.toml` there, once per Hermes profile. The user-wide
+  file can't pick a profile; `PLAINSPOKEN_PROFILE` can, but it beats every project's config
+  (`guides/voice-profiles.md`).
 - Agents run on this profile's default model (`hermes chat -m <model>` picks another), not the model the agent file
   names.
