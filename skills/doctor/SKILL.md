@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: Checks whether this app can run what plainspoken needs (python3, the hooks, the judges' tools) and lists each problem with its fix. Changes nothing. Manual only.
+description: Checks what plainspoken needs here (python3, its files, the config, the commands the judges use), lists each problem with its fix, and what to confirm by hand. Changes nothing. Manual only.
 argument-hint: "[claude-code | codex | hermes | claude-ai | chatgpt]"
 disable-model-invocation: true
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py doctor *)
@@ -19,7 +19,8 @@ Never fix, install, enable or edit anything, even when the fix looks small. The 
 
 1. **Run the checks.** Run `RUN doctor --host <host>`. The host is the app this session runs in: `claude-code`
    here, `codex` in Codex or ChatGPT Work, `hermes` in Hermes Agent. If the person named a host in the arguments, use
-   that one. Each line is `ok`, `WARN` or `not checked`; it exits 0 even with warnings.
+   that one. Each line is `ok`, `WARN` or `not checked`; it exits 0 even with warnings. If it prints `plainspoken
+   needs Python 3.11 or newer` instead, pass that line on to the person and stop: nothing else can run.
 2. **Fill in what you can see.** A `not checked` line that names something you can see yourself (your own tools, your
    permissions, whether you may run the Bash command it names) gets one line from you: whether you have it. Don't run
    anything to find out. Say nothing about the ones you can't see.

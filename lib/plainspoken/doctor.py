@@ -1,15 +1,20 @@
 """`doctor`: check whether this host can run what plainspoken needs, and say so. Warnings only, never a blocker.
 
-`setup` prints the WARN lines of the same checks after its own output, and `doctor` prints all of them. Neither
-writes, creates, installs, enables or deletes anything because of a check. The only commands run are `python3
---version` and `hermes chat --help`, each with a short timeout; nothing starts an agent session or calls a model.
-What a script can't see (the agent's own tools and permissions, Codex's hook trust) is `not checked`, never `ok`.
+`setup` prints the WARN rows of the same checks (and any check that couldn't run) after its own output, and `doctor`
+prints every row. Neither writes, creates, installs, enables or deletes anything because of a check. The one command
+either runs is `<python3 on PATH> --version`, in its own process group with a 10 s timeout. `git`, `codex` and
+`hermes` are only looked up on PATH, never run: `codex --version` writes helper files under its home folder, and
+`hermes` sets up its log files and runs startup recovery before it reads `--help`. Nothing starts an agent session
+or calls a model. What a script can't see (the agent's own tools and permissions, Codex's hook trust, the Hermes
+flags) is `not checked`, never `ok`, and such a row is marked `static`: it's the same on every machine.
+Output is ASCII (`->`, `|`), so a console that can't print UTF-8 still shows it.
 """
 from __future__ import annotations
 
 import os
 import re
 import shutil
+import signal
 import subprocess
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
@@ -17,7 +22,8 @@ from pathlib import Path
 
 from plainspoken import config, hosts
 
-__all__ = ["Check", "HERMES_FLAGS", "STATUSES", "format", "plugin_root", "run_checks", "setup_lines", "summary"]
+__all__ = ["Check", "HERMES_FLAGS", "STATUSES", "format", "heading", "plugin_root", "run_checks", "setup_lines",
+           "summary", "write_lines"]
 
 OK, WARN, NOT_CHECKED = "ok", "WARN", "not checked"
 STATUSES = (OK, WARN, NOT_CHECKED)
@@ -39,8 +45,9 @@ class Check:
     status: str  # one of STATUSES
     detail: str  # one line
     fix: str = ""  # one line: what the person could do; empty for ok
+    static: bool = False  # `not checked` by design (a script can never see it), not because the check failed
 
-    def as_dict(self) -> dict[str, str]:
+    def as_dict(self) -> dict[str, str | bool]:
         return asdict(self)
 
 
@@ -53,8 +60,24 @@ def _which(cmd: str, env: Mapping[str, str]) -> str | None:
 
 
 def _run(args: list[str], env: Mapping[str, str]) -> subprocess.CompletedProcess:
-    return subprocess.run(args, capture_output=True, text=True, timeout=TIMEOUT, stdin=subprocess.DEVNULL,
-                          env=dict(env), check=False)
+    """Run one command with TIMEOUT. On POSIX it gets its own process group, and a timeout kills the whole group, so
+    a child it started can't outlive it. Raises subprocess.TimeoutExpired after that."""
+    posix = os.name == "posix"
+    with subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                          env=dict(env), start_new_session=posix) as proc:
+        try:
+            out, err = proc.communicate(timeout=TIMEOUT)
+        except subprocess.TimeoutExpired:
+            if posix:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except OSError:
+                    proc.kill()
+            else:
+                proc.kill()
+            proc.communicate()
+            raise
+    return subprocess.CompletedProcess(args, proc.returncode, out, err)
 
 
 def _safe(name: str, fn: Callable[[], Check | list[Check]]) -> list[Check]:
@@ -107,7 +130,8 @@ def _reports(root: Path) -> Check:
         return Check("reports folder", WARN, f"{near} is not a folder, so {target} can't be made", fix)
     if not os.access(near, os.W_OK | os.X_OK):
         return Check("reports folder", WARN, f"{near} isn't writable, so reports can't be saved to {target}", fix)
-    return Check("reports folder", OK, f"{target} {'is writable' if near == target else 'can be made'}")
+    made = "exists" if near == target else "not made yet"
+    return Check("reports folder", OK, f"{target} ({made}; file permissions allow writing it)")
 
 
 def _git(root: Path, env: Mapping[str, str]) -> Check:
@@ -173,7 +197,7 @@ def _claude_code() -> list[Check]:
     run = f"python3 {plugin_root()}/lib/run.py"
     return [*_safe("plugin agents", _agents),
             Check("Bash permission", NOT_CHECKED, "a script can't see Claude Code's permissions or sandbox",
-                  f"allow Bash to run {run}")]
+                  f"allow Bash to run {run}", static=True)]
 
 
 def _codex(env: Mapping[str, str]) -> list[Check]:
@@ -183,14 +207,15 @@ def _codex(env: Mapping[str, str]) -> list[Check]:
         if path:
             return Check("codex CLI", OK, path)
         return Check("codex CLI", NOT_CHECKED, "no codex on PATH (the Codex app or ChatGPT Work may still run "
-                                               "plainspoken; codex exec for the judges needs it)")
+                                               "plainspoken; codex exec for the judges needs it)", static=True)
     return [*_safe("codex CLI", cli),
             Check("hooks trusted", NOT_CHECKED, "a script can't see whether Codex trusts the plugin's hooks",
-                  "run /hooks in Codex and trust plainspoken's hooks"),
+                  "run /hooks in Codex and trust plainspoken's hooks", static=True),
             Check("sandbox writes", NOT_CHECKED, "the engine saves reports to .plainspoken/reports in the project",
-                  "run Codex with workspace write access (sandbox workspace-write) in the project folder"),
+                  "run Codex with workspace write access (sandbox workspace-write) in the project folder",
+                  static=True),
             Check("judges", NOT_CHECKED, "the judges need spawn_agent, or codex exec run outside the sandbox",
-                  "confirm spawn_agent is in your tools, or that codex exec can run here")]
+                  "confirm spawn_agent is in your tools, or that codex exec can run here", static=True)]
 
 
 def _hermes(root: Path, env: Mapping[str, str]) -> list[Check]:
@@ -204,48 +229,40 @@ def _hermes(root: Path, env: Mapping[str, str]) -> list[Check]:
                      "put the hermes command on PATH (the judges fall back to delegate_task without it)")
 
     def flags() -> list[Check]:
-        names = [f"hermes chat {flag}" for flag in HERMES_FLAGS]
-        path = _which("hermes", env)
-        if not path:
-            return [Check(n, NOT_CHECKED, "no hermes on PATH") for n in names]
-        done = _run([path, "chat", "--help"], env)
-        text = f"{done.stdout}\n{done.stderr}"
-        if done.returncode != 0 or not text.strip():
-            return [Check(n, NOT_CHECKED, f"`hermes chat --help` exited {done.returncode}") for n in names]
-        rows = []
-        for flag, name in zip(HERMES_FLAGS, names):
-            if re.search(rf"(?<![\w-]){re.escape(flag)}(?![\w-])", text):
-                rows.append(Check(name, OK, "listed"))
-            else:
-                rows.append(Check(name, WARN, f"`hermes chat --help` doesn't list {flag}, which the judges' "
-                                              "command needs", "update Hermes Agent"))
-        return rows
+        # Never run: hermes sets up its log files and runs startup recovery before argparse reads --help.
+        fix = "confirm `hermes chat --help` lists --query-file, --oneshot and --source"
+        why = "hermes isn't run here (it writes its logs as it starts)" if _which("hermes", env) else \
+            "no hermes on PATH"
+        return [Check(f"hermes chat {flag}", NOT_CHECKED, why, fix, static=True) for flag in HERMES_FLAGS]
 
     def profile() -> Check:
         home = (env.get("HERMES_HOME") or "").strip()
-        if home:
+        if home and Path(home).is_dir():
             return Check("Hermes profile", OK, f"HERMES_HOME is {home}")
+        if home:
+            return Check("Hermes profile", WARN, f"HERMES_HOME is {home}, which isn't a folder",
+                         "point HERMES_HOME at the Hermes profile's folder, or unset it")
         return Check("Hermes profile", NOT_CHECKED, "HERMES_HOME not set (the sticky active profile applies)",
-                     "confirm which Hermes profile this session runs in")
+                     "confirm which Hermes profile this session runs in", static=True)
 
     out += _safe("hermes CLI", cli)
     out += _safe("hermes chat flags", flags)
     out += _safe("Hermes profile", profile)
     out.append(Check("working folder", NOT_CHECKED, f"the project is the Hermes profile's working folder "
                                                     f"(terminal.cwd); this run used {root}",
-                     "confirm terminal.cwd is the project folder, or cd there before each run"))
+                     "confirm terminal.cwd is the project folder, or cd there before each run", static=True))
     out.append(Check("toolsets", NOT_CHECKED, "the skills need terminal, read_file, write_file and patch, and the "
                                               "judges' fallback needs delegate_task",
-                     "confirm these tools are on for this Hermes profile"))
+                     "confirm these tools are on for this Hermes profile", static=True))
     return out
 
 
 def _chat(host: str) -> list[Check]:
     app = CHAT_NAMES[host]
     return [Check("shell", NOT_CHECKED, f"no shell in {app} chat, so the lint, the judges and the hooks don't run "
-                                        "there"),
+                                        "there", static=True),
             Check("paste-in text", NOT_CHECKED, "the paste-in text is guidance the model follows, not a check, so "
-                                                "a \"check\" in chat is the model's own read")]
+                                                "a \"check\" in chat is the model's own read", static=True)]
 
 
 def run_checks(host: str, root: Path, env: Mapping[str, str]) -> list[Check]:
@@ -266,27 +283,44 @@ def run_checks(host: str, root: Path, env: Mapping[str, str]) -> list[Check]:
 
 
 def format(checks: list[Check]) -> list[str]:
-    """One line per check: `  <status>  <name>: <detail>`, with ` → <fix>` when there's one."""
-    return [f"  {c.status:<{_WIDTH}}{c.name}: {c.detail}" + (f" → {c.fix}" if c.fix else "") for c in checks]
+    """One line per check: `  <status>  <name>: <detail>`, with ` -> <fix>` when there's one."""
+    return [f"  {c.status:<{_WIDTH}}{c.name}: {c.detail}" + (f" -> {c.fix}" if c.fix else "") for c in checks]
+
+
+def heading(host: str) -> str:
+    return f"plainspoken doctor | {host} | checks only, nothing changed"
 
 
 def summary(checks: list[Check]) -> str:
     n = {s: sum(1 for c in checks if c.status == s) for s in STATUSES}
-    return f"{n[OK]} ok · {n[WARN]} WARN · {n[NOT_CHECKED]} not checked"
+    return f"{n[OK]} ok | {n[WARN]} WARN | {n[NOT_CHECKED]} not checked"
 
 
 def setup_lines(host: str, checks: list[Check]) -> list[str]:
-    """What `setup` adds after its own output: the WARN lines and a count of what needs confirming; for the chat
-    hosts, every line (there's nothing else to say). Empty when every check is ok."""
+    """What `setup` adds after its own output. Shell hosts: the WARN rows and any check that couldn't run (failed
+    or timed out), then, when there are by-design `not checked` rows, one line pointing at doctor for them. Empty when
+    there's nothing wrong, so a healthy machine sees no block. Chat hosts: their no-shell rows (the caller sends
+    those to stderr, away from the paste-in text)."""
     if host in CHAT_NAMES:
-        shown, unconfirmed = checks, 0
+        shown, static = checks, 0
     else:
-        shown = [c for c in checks if c.status == WARN]
-        unconfirmed = sum(1 for c in checks if c.status == NOT_CHECKED)
-    if not shown and not unconfirmed:
+        shown = [c for c in checks if c.status == WARN or (c.status == NOT_CHECKED and not c.static)]
+        static = sum(1 for c in checks if c.status == NOT_CHECKED and c.static)
+    if not shown:
         return []
     lines = ["", "Host checks (warnings only; setup changed nothing because of them):", *format(shown)]
-    if unconfirmed:
-        verb = "check needs" if unconfirmed == 1 else "checks need"
-        lines.append(f"  {unconfirmed} {verb} you to confirm: run doctor --host {host}")
+    if static:
+        lines.append(f"  doctor --host {host} lists {static} {'thing' if static == 1 else 'things'} to confirm by "
+                     "hand")
     return lines
+
+
+def write_lines(lines: list[str], stream) -> None:
+    """Print `lines` to `stream`, replacing any character its encoding can't take (a path, a config message), so the
+    output never raises."""
+    if not lines:
+        return
+    encoding = getattr(stream, "encoding", None) or "utf-8"
+    text = "\n".join(lines) + "\n"
+    stream.write(text.encode(encoding, errors="replace").decode(encoding, errors="replace"))
+    stream.flush()

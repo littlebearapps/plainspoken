@@ -465,6 +465,10 @@ class EvalCases(unittest.TestCase):
                 self.assertEqual((d / flow_list(fm["plugins"])[0]).resolve(), REPO)
                 self.assertTrue(graders)
                 for name, g, _ in graders:
+                    if g.get("type") == "tool_used":  # only "never used": a skill that changes nothing (doctor)
+                        self.assertIn(g.get("tool"), ("Write", "Edit"), name)
+                        self.assertEqual((g.get("min"), g.get("max")), ("0", "0"), name)
+                        continue
                     self.assertEqual(g.get("type"), "regex", name)
                     rx = compiled(g)
                     # A kept-the-facts grader is meant to match the passage; its not_contains partner fails an echo.
@@ -577,7 +581,7 @@ class EvalCases(unittest.TestCase):
                               "| python3 | ok |\n| Bash permission | not checked |"],
         }
         echoes = {"copy-audit--slash": "Here's the copy audit: it fails on proof.",
-                  "doctor--slash": "I'll check python3 and the rest for you.",
+                  "doctor--slash": "All checks are fine.\n- python3: ok\n- Bash permission: unverified",
                   "voice--slash": "Which mode do you want: build, apply or check?",
                   "reader-value--slash": "Which mode do you want: outline or deliver?",  # one line: not the menu
                   "claims--slash": "I checked the claims against the saved sources.",

@@ -30,7 +30,7 @@ Next:
 ## Use
 
 Requirements: Claude Code and Python 3.11+ as `python3` (standard library only). With an older `python3`, the
-lint-watch hook skips with one line, and the CLI the skills call won't start.
+lint-watch hook skips with one line, and the CLI the skills call prints one line saying so and exits 2.
 
 Install it from the Little Bear Apps marketplace:
 
@@ -251,13 +251,18 @@ Project settings go in `.plainspoken/config.toml`, which beats the plugin option
 
 ### Host setup
 
-`setup` ends with host checks for the app it's run for, and prints only the warnings: a `python3` older than 3.11, a
-reports folder it can't write, no `git` while the publish gate is on, a config that doesn't parse, missing Hermes
-flags. They never block it or change what it writes. `/plainspoken:doctor` (`python3 <plugin>/lib/run.py doctor
---host <host>`) runs the same checks on their own and marks each one `ok`, `WARN` or `not checked`. What a script
-can't see, such as the agent's own tools or Codex's hook trust, stays `not checked`, and the skill asks the agent to
-say whether it has them. It changes nothing and exits 0 with warnings. In claude.ai and ChatGPT chat it says there's
-no shell, so the lint, the judges and the hooks don't run there.
+`setup` ends with host checks for the app it's run for. When one finds a problem (a `python3` older than 3.11, a
+reports folder its file permissions don't let it write, no `git` while the publish gate is on, a config that doesn't
+parse, no `hermes` on PATH) or can't run, setup prints it with its fix, plus a line saying how many things `doctor`
+lists to confirm by hand; on a healthy machine it prints nothing more. The checks never block setup or change what
+it writes. `/plainspoken:doctor` (`python3 <plugin>/lib/run.py doctor --host <host>`) runs the same checks on their
+own and marks each one `ok`, `WARN` or `not checked`. What a script can't see, such as the agent's own tools, Codex's
+hook trust or the `hermes chat` flags, stays `not checked`, and the skill asks the agent to say whether it has them.
+The one command it runs is `python3 --version`; `git`, `codex` and `hermes` are only looked up on PATH, because
+starting `codex` or `hermes` writes files of their own. It exits 0 with warnings. `--host claude-ai` or `chatgpt`
+says there's no shell in those apps, so the lint, the judges and the hooks don't run there (setup prints those lines
+on stderr, away from the text to paste). An older `python3` gets one line from every command instead,
+`plainspoken needs Python 3.11 or newer; this python3 is …`, and exit 2.
 
 A project that already has its own checks can narrow what plainspoken does. Everything below goes in
 `.plainspoken/config.toml`:

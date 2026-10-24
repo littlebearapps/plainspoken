@@ -94,24 +94,22 @@ def _setup(args: argparse.Namespace, root: Path) -> int:
     """setup's own work, then the host checks' WARN lines after it (#113). A check never changes setup's output above
     them, its file or its exit code."""
     code = _setup_run(args, root)
-    sys.stdout.flush()
     try:
+        sys.stdout.flush()
         lines = doctor.setup_lines(args.host, doctor.run_checks(args.host, root, os.environ))
-    except Exception:  # noqa: BLE001 - warnings only: a check that can't run says nothing here (doctor shows it)
-        lines = []
-    if lines:
-        print("\n".join(lines))
+        # Chat hosts: stderr, so the block can't be copied into the app's instructions with the paste-in text.
+        doctor.write_lines(lines, sys.stderr if args.host in doctor.CHAT_NAMES else sys.stdout)
+    except Exception:  # noqa: BLE001 - warnings only: nothing here may change setup's exit code (doctor shows it)
+        pass
     return code
 
 
 def _doctor(args: argparse.Namespace, root: Path) -> int:
     checks = doctor.run_checks(args.host, root, os.environ)
     if args.json:
-        print(json.dumps([c.as_dict() for c in checks], indent=2, ensure_ascii=False))
+        doctor.write_lines([json.dumps([c.as_dict() for c in checks], indent=2)], sys.stdout)
         return 0
-    print(f"plainspoken doctor · {args.host} · checks only, nothing changed")
-    print("\n".join(doctor.format(checks)))
-    print(doctor.summary(checks))
+    doctor.write_lines([doctor.heading(args.host), *doctor.format(checks), doctor.summary(checks)], sys.stdout)
     return 0
 
 

@@ -1,11 +1,13 @@
 """`doctor` and the host checks `setup` prints (#113): warnings only, nothing written, never `ok` for what a script
-can't see."""
+can't see, and the only command run is `python3 --version`."""
 import io
 import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
+import time
 import tomllib
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -14,11 +16,9 @@ from unittest import mock
 
 from plainspoken import __main__ as cli_main
 from plainspoken import doctor, setup
-from tests.test_cli import cli
+from tests.test_cli import REPO, cli
 
-HELP_ALL = ("usage: hermes chat [-h] [-q QUERY] [--query-file FILE] [--oneshot] [-Q] [-t TOOLSETS]\n"
-            "  --source SOURCE  where the session came from\n")
-HELP_NO_SOURCE = "usage: hermes chat [-h] [--query-file FILE] [--oneshot] [--sources-dir DIR]\n"
+PY = "/usr/bin/python3"
 
 
 def done(stdout: str = "", returncode: int = 0, stderr: str = "") -> subprocess.CompletedProcess:
@@ -26,17 +26,15 @@ def done(stdout: str = "", returncode: int = 0, stderr: str = "") -> subprocess.
 
 
 class Fakes:
-    """Patch PATH lookups, commands and os.access for one test. `bins` maps a command to its path (absent = not on
-    PATH); `outputs` maps a command's argv tail (as a tuple) to its CompletedProcess."""
+    """Patch PATH lookups, the one command doctor runs, and os.access for one test. `bins` maps a command to its path
+    (absent = not on PATH); `version` is what `python3 --version` gives (a CompletedProcess or an exception)."""
 
-    def __init__(self, case: unittest.TestCase, bins: dict | None = None, outputs: dict | None = None,
-                 writable: bool = True):
-        self.bins = {"python3": "/usr/bin/python3", "git": "/usr/bin/git"} if bins is None else bins
-        self.outputs = {("python3", "--version"): done("Python 3.12.1\n")} if outputs is None else outputs
-        self.calls: list[tuple[list[str], dict]] = []
+    def __init__(self, case: unittest.TestCase, bins: dict | None = None, version=None, writable: bool = True):
+        self.bins = {"python3": PY, "git": "/usr/bin/git"} if bins is None else bins
+        self.version = done("Python 3.12.1\n") if version is None else version
+        self.calls: list[list[str]] = []
         self.writable = writable
-        for target, fn in (("plainspoken.doctor.shutil.which", self.which),
-                           ("plainspoken.doctor.subprocess.run", self.run),
+        for target, fn in (("plainspoken.doctor.shutil.which", self.which), ("plainspoken.doctor._run", self.run),
                            ("plainspoken.doctor.os.access", self.access)):
             p = mock.patch(target, side_effect=fn)
             p.start()
@@ -45,16 +43,13 @@ class Fakes:
     def which(self, cmd, path=None):
         return self.bins.get(cmd)
 
-    def run(self, args, **kw):
-        self.calls.append((list(args), kw))
-        name = Path(args[0]).name
-        key = (name, *args[1:])
-        if key not in self.outputs:
-            raise AssertionError(f"unexpected command {args}")
-        out = self.outputs[key]
-        if isinstance(out, BaseException):
-            raise out
-        return out
+    def run(self, args, env):
+        self.calls.append(list(args))
+        if list(args) != [self.bins.get("python3"), "--version"]:
+            raise AssertionError(f"doctor may only run python3 --version, not {args}")
+        if isinstance(self.version, BaseException):
+            raise self.version
+        return self.version
 
     def access(self, path, mode):
         return self.writable
@@ -86,27 +81,27 @@ class ShellChecks(Base):
     def test_python3_ok_old_and_missing(self):
         Fakes(self)
         c = self.checks("claude-code")["python3"]
-        self.assertEqual(c.status, "ok")
+        self.assertEqual((c.status, c.fix), ("ok", ""))
         self.assertIn("3.12.1", c.detail)
-        self.assertEqual(c.fix, "")
-
-    def test_python3_older_than_311_warns(self):
-        Fakes(self, outputs={("python3", "--version"): done("", stderr="Python 3.10.4\n")})
+        # older than 3.11 (some pythons print the version on stderr)
+        Fakes(self, version=done("", stderr="Python 3.10.4\n"))
         c = self.checks("codex")["python3"]
         self.assertEqual(c.status, "WARN")
         self.assertIn("3.10.4", c.detail)
         self.assertIn("3.11", c.fix)
-
-    def test_python3_missing_warns(self):
-        Fakes(self, bins={"git": "/usr/bin/git"}, outputs={})
+        # not on PATH at all
+        f = Fakes(self, bins={"git": "/usr/bin/git"})
         c = self.checks("hermes")["python3"]
         self.assertEqual(c.status, "WARN")
         self.assertIn("PATH", c.detail)
         self.assertIn("3.11", c.fix)
+        self.assertEqual(f.calls, [])
 
     def test_python3_version_unreadable_is_not_checked(self):
-        Fakes(self, outputs={("python3", "--version"): done("something else\n")})
-        self.assertEqual(self.checks("claude-code")["python3"].status, "not checked")
+        Fakes(self, version=done("something else\n"))
+        c = self.checks("claude-code")["python3"]
+        self.assertEqual(c.status, "not checked")
+        self.assertFalse(c.static)
 
     def test_plugin_files_present_and_missing(self):
         Fakes(self)
@@ -119,9 +114,12 @@ class ShellChecks(Base):
         for part in ("lib/run.py", "data/rules.toml", "skills/"):
             self.assertIn(part, c.detail)
 
-    def test_reports_folder_writable_or_not_and_nothing_created(self):
+    def test_reports_folder_permissions_and_nothing_created(self):
         Fakes(self)
-        self.assertEqual(self.checks("claude-code")["reports folder"].status, "ok")
+        c = self.checks("claude-code")["reports folder"]
+        self.assertEqual(c.status, "ok")
+        self.assertIn("file permissions allow", c.detail)
+        self.assertNotIn("is writable", c.detail)
         Fakes(self, writable=False)
         c = self.checks("claude-code")["reports folder"]
         self.assertEqual(c.status, "WARN")
@@ -130,7 +128,7 @@ class ShellChecks(Base):
         self.assertFalse((self.root / ".plainspoken").exists())
 
     def test_git_missing_warns_only_when_the_gate_is_on(self):
-        Fakes(self, bins={"python3": "/usr/bin/python3"})
+        Fakes(self, bins={"python3": PY})
         self.assertEqual(self.checks("claude-code")["git"].status, "ok")
         self.write_project_config('[gate]\npaths = ["posts/*.md"]\nstrictness = "block"\n')
         c = self.checks("claude-code")["git"]
@@ -157,13 +155,21 @@ class ShellChecks(Base):
         self.assertNotIn("\n", found["project config"].detail)
 
 
+STATIC = {
+    "claude-code": {"Bash permission"},
+    "codex": {"hooks trusted", "sandbox writes", "judges"},
+    "hermes": {"hermes chat --query-file", "hermes chat --oneshot", "hermes chat --source", "Hermes profile",
+               "working folder", "toolsets"},
+}
+
+
 class HostChecks(Base):
     def test_claude_code_agents_and_bash_permission(self):
         Fakes(self)
         found = self.checks("claude-code")
         self.assertEqual(found["plugin agents"].status, "ok")
         perm = found["Bash permission"]
-        self.assertEqual(perm.status, "not checked")
+        self.assertEqual((perm.status, perm.static), ("not checked", True))
         self.assertEqual(perm.fix, f"allow Bash to run python3 {doctor.plugin_root()}/lib/run.py")
         empty = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, empty, ignore_errors=True)
@@ -172,42 +178,39 @@ class HostChecks(Base):
         self.assertEqual(c.status, "WARN")
         self.assertIn("tells-judge", c.detail)
 
+    def test_by_design_rows_are_static(self):
+        Fakes(self, bins={"python3": PY, "git": "/usr/bin/git", "codex": "/opt/bin/codex", "hermes": "/opt/bin/h"})
+        for host, names in STATIC.items():
+            with self.subTest(host=host):
+                found = self.checks(host)
+                self.assertEqual({n for n, c in found.items() if c.static}, names)
+                for name in names:
+                    self.assertEqual(found[name].status, "not checked", name)
+                    self.assertTrue(found[name].fix, name)
+
     def test_codex_cli_found_or_not_checked(self):
-        Fakes(self, bins={"python3": "/usr/bin/python3", "git": "/usr/bin/git", "codex": "/opt/bin/codex"},
-              outputs={("python3", "--version"): done("Python 3.12.1\n")})
+        f = Fakes(self, bins={"python3": PY, "git": "/usr/bin/git", "codex": "/opt/bin/codex"})
         found = self.checks("codex")  # never run: even `codex --version` writes helper files under ~/.codex
         self.assertEqual(found["codex CLI"].status, "ok")
         self.assertIn("/opt/bin/codex", found["codex CLI"].detail)
+        self.assertEqual(f.calls, [[PY, "--version"]])
         for name, needle in (("hooks trusted", "/hooks"), ("sandbox writes", ".plainspoken/reports"),
                              ("judges", "spawn_agent")):
             self.assertEqual(found[name].status, "not checked", name)
             self.assertIn(needle, found[name].detail + found[name].fix, name)
         Fakes(self)
-        self.assertEqual(self.checks("codex")["codex CLI"].status, "not checked")
+        c = self.checks("codex")["codex CLI"]
+        self.assertEqual((c.status, c.static), ("not checked", True))
 
-    def hermes(self, help_text: str):
-        return Fakes(self, bins={"python3": "/usr/bin/python3", "git": "/usr/bin/git", "hermes": "/opt/bin/hermes"},
-                     outputs={("python3", "--version"): done("Python 3.12.1\n"),
-                              ("hermes", "chat", "--help"): done(help_text)})
-
-    def test_hermes_flags_all_listed(self):
-        self.hermes(HELP_ALL)
+    def test_hermes_found_is_never_run_and_the_flags_are_left_to_confirm(self):
+        f = Fakes(self, bins={"python3": PY, "git": "/usr/bin/git", "hermes": "/opt/bin/hermes"})
         found = self.checks("hermes")
         self.assertEqual(found["hermes CLI"].status, "ok")
+        self.assertEqual(f.calls, [[PY, "--version"]])
         for flag in doctor.HERMES_FLAGS:
-            self.assertEqual(found[f"hermes chat {flag}"].status, "ok", flag)
-
-    def test_hermes_missing_source_warns_naming_it(self):
-        self.hermes(HELP_NO_SOURCE)
-        found = self.checks("hermes")
-        c = found["hermes chat --source"]
-        self.assertEqual(c.status, "WARN")
-        self.assertIn("--source", c.detail)
-        self.assertTrue(c.fix)
-        self.assertEqual(found["hermes chat --query-file"].status, "ok")
-        self.assertEqual(found["hermes chat --oneshot"].status, "ok")
-        line = "\n".join(doctor.format(list(found.values())))
-        self.assertRegex(line, r"WARN\s+hermes chat --source: .*--source.* → ")
+            c = found[f"hermes chat {flag}"]
+            self.assertEqual((c.status, c.static), ("not checked", True), flag)
+            self.assertEqual(c.fix, "confirm `hermes chat --help` lists --query-file, --oneshot and --source")
 
     def test_hermes_missing(self):
         Fakes(self)
@@ -215,23 +218,29 @@ class HostChecks(Base):
         self.assertEqual(found["hermes CLI"].status, "WARN")
         for flag in doctor.HERMES_FLAGS:
             self.assertEqual(found[f"hermes chat {flag}"].status, "not checked", flag)
+            self.assertIn("no hermes on PATH", found[f"hermes chat {flag}"].detail)
 
     def test_hermes_profile_user_config_and_toolsets(self):
-        self.hermes(HELP_ALL)
+        Fakes(self, bins={"python3": PY, "git": "/usr/bin/git", "hermes": "/opt/bin/hermes"})
         found = self.checks("hermes")
         self.assertIn("not set (the sticky active profile applies)", found["Hermes profile"].detail)
-        self.assertNotEqual(found["Hermes profile"].status, "ok")
+        self.assertEqual(found["Hermes profile"].status, "not checked")
         self.assertEqual(found["user-wide config"].status, "WARN")
         self.assertIn("--scope user", found["user-wide config"].fix)
         tools = found["toolsets"]
         self.assertEqual(tools.status, "not checked")
         for tool in ("terminal", "read_file", "write_file", "patch", "delegate_task"):
             self.assertIn(tool, tools.detail)
-        self.env["HERMES_HOME"] = str(self.home / ".hermes" / "profiles" / "work")
+        profile = self.home / ".hermes" / "profiles" / "work"
+        self.env["HERMES_HOME"] = str(profile)
+        c = self.checks("hermes")["Hermes profile"]  # set, but no such folder
+        self.assertEqual((c.status, c.static), ("WARN", False))
+        self.assertIn("isn't a folder", c.detail)
+        profile.mkdir(parents=True)
         self.write_user_config('[nudge]\nmode = "on"\n')
         found = self.checks("hermes")
         self.assertEqual(found["Hermes profile"].status, "ok")
-        self.assertIn(self.env["HERMES_HOME"], found["Hermes profile"].detail)
+        self.assertIn(str(profile), found["Hermes profile"].detail)
         self.assertEqual(found["user-wide config"].status, "ok")
 
     def test_user_config_missing_is_fine_off_hermes(self):
@@ -239,7 +248,7 @@ class HostChecks(Base):
         self.assertEqual(self.checks("codex")["user-wide config"].status, "ok")
 
     def test_chat_hosts_run_nothing_and_say_so(self):
-        Fakes(self, bins={}, outputs={})
+        f = Fakes(self, bins={})
         for host in ("claude-ai", "chatgpt"):
             with self.subTest(host=host):
                 found = doctor.run_checks(host, self.root, self.env)
@@ -248,17 +257,43 @@ class HostChecks(Base):
                 text = " ".join(c.detail for c in found)
                 for needle in ("no shell", "lint", "judges", "hooks", "guidance"):
                     self.assertIn(needle, text)
+        self.assertEqual(f.calls, [])
 
-    def test_only_short_read_only_commands(self):
-        f = Fakes(self, bins={"python3": "/usr/bin/python3", "git": "/usr/bin/git", "hermes": "/h", "codex": "/c"},
-                  outputs={("python3", "--version"): done("Python 3.12.1\n"), ("hermes", "chat", "--help"):
-                           done(HELP_ALL)})
+    def test_the_only_command_is_python3_version(self):
+        """The exact allowlist: `<python3 on PATH> --version` once a run, and nothing else, on every host (a `--help`
+        or `--version` isn't read-only by itself: codex and hermes both write when started)."""
+        f = Fakes(self, bins={"python3": PY, "git": "/usr/bin/git", "hermes": "/opt/bin/hermes",
+                              "codex": "/opt/bin/codex"})
         for host in setup.HOSTS:
             doctor.run_checks(host, self.root, self.env)
-        self.assertTrue(f.calls)
-        for args, kw in f.calls:
-            self.assertIn(args[-1], ("--version", "--help"), args)
-            self.assertLessEqual(kw.get("timeout", 99), 10, args)
+        self.assertEqual(f.calls, [[PY, "--version"]] * len(doctor.SHELL_HOSTS))
+
+
+class Runner(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "process groups are POSIX")
+    def test_a_timeout_kills_the_whole_process_group(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        pid_file = tmp / "pid"
+        child = ("import subprocess, sys, time; p = subprocess.Popen([sys.executable, '-c', 'import time; "
+                 f"time.sleep(60)']); open({str(pid_file)!r}, 'w').write(str(p.pid)); time.sleep(60)")
+        with mock.patch("plainspoken.doctor.TIMEOUT", 1), self.assertRaises(subprocess.TimeoutExpired):
+            doctor._run([sys.executable, "-c", child], dict(os.environ))
+        grandchild = int(pid_file.read_text())
+        for _ in range(50):
+            try:
+                os.kill(grandchild, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.1)
+        else:
+            os.kill(grandchild, 9)
+            self.fail("the grandchild outlived the timeout")
+
+    def test_run_returns_the_output(self):
+        r = doctor._run([sys.executable, "--version"], dict(os.environ))
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("Python 3.", r.stdout + r.stderr)
 
 
 class Failures(Base):
@@ -267,16 +302,16 @@ class Failures(Base):
         with mock.patch("plainspoken.doctor.shutil.which", side_effect=RuntimeError("tok-123 secret")):
             found = self.checks("claude-code")
         c = found["python3"]
-        self.assertEqual(c.status, "not checked")
+        self.assertEqual((c.status, c.static), ("not checked", False))
         self.assertIn("RuntimeError", c.detail)
         text = "\n".join(doctor.format(list(found.values())))
         self.assertNotIn("tok-123", text)
         self.assertNotIn("Traceback", text)
 
     def test_a_timeout_is_not_checked(self):
-        Fakes(self, outputs={("python3", "--version"): subprocess.TimeoutExpired(["python3"], 10)})
+        Fakes(self, version=subprocess.TimeoutExpired(["python3"], 10))
         c = self.checks("claude-code")["python3"]
-        self.assertEqual(c.status, "not checked")
+        self.assertEqual((c.status, c.static), ("not checked", False))
         self.assertIn("timed out", c.detail)
 
     def test_format_layout_and_summary(self):
@@ -284,9 +319,10 @@ class Failures(Base):
                 doctor.Check("c", "not checked", "can't see", "confirm it")]
         lines = doctor.format(rows)
         self.assertEqual(lines[0], "  ok           a: fine")
-        self.assertEqual(lines[1], "  WARN         b: broken → mend it")
-        self.assertEqual(lines[2], "  not checked  c: can't see → confirm it")
-        self.assertEqual(doctor.summary(rows), "1 ok · 1 WARN · 1 not checked")
+        self.assertEqual(lines[1], "  WARN         b: broken -> mend it")
+        self.assertEqual(lines[2], "  not checked  c: can't see -> confirm it")
+        self.assertEqual(doctor.summary(rows), "1 ok | 1 WARN | 1 not checked")
+        self.assertEqual(doctor.heading("codex"), "plainspoken doctor | codex | checks only, nothing changed")
 
 
 def tree(*folders: Path) -> dict[str, bytes]:
@@ -297,10 +333,16 @@ def tree(*folders: Path) -> dict[str, bytes]:
     return out
 
 
+def fake_bin(folder: Path, name: str, marker: Path) -> None:
+    """A `name` on PATH that leaves `marker` behind if anything ever runs it."""
+    script = folder / name
+    script.write_text(f"#!/bin/sh\necho ran >> '{marker}'\n", encoding="utf-8")
+    script.chmod(0o755)
+
+
 class Command(Base):
     def run_cli(self, *args, env=None):
-        """The CLI with the real PATH (so the real python3, git, codex and hermes are looked up), unless `env` sets
-        one."""
+        """The CLI with the real PATH (so the real python3 and git are looked up), unless `env` sets one."""
         return cli(*args, cwd=self.root, env={**self.env, "PATH": os.environ.get("PATH", ""), **(env or {})})
 
     def test_doctor_writes_nothing_on_any_host(self):
@@ -309,10 +351,28 @@ class Command(Base):
             with self.subTest(host=host):
                 r = self.run_cli("doctor", "--host", host)
                 self.assertEqual(r.returncode, 0, r.stderr)
-                self.assertTrue(r.stdout.startswith(f"plainspoken doctor · {host} · checks only, nothing changed\n"))
-                self.assertRegex(r.stdout.strip().splitlines()[-1], r"^\d+ ok · \d+ WARN · \d+ not checked$")
+                self.assertTrue(r.stdout.startswith(f"{doctor.heading(host)}\n"))
+                self.assertRegex(r.stdout.strip().splitlines()[-1], r"^\d+ ok \| \d+ WARN \| \d+ not checked$")
                 self.assertNotIn("Traceback", r.stdout + r.stderr)
         self.assertEqual(tree(self.root, self.home), before)
+
+    @unittest.skipUnless(os.name == "posix", "the fakes are shell scripts")
+    def test_doctor_and_setup_never_run_hermes_or_codex(self):
+        bin_dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, bin_dir, ignore_errors=True)
+        marker = self.home / "ran.txt"
+        for name in ("hermes", "codex", "git"):
+            fake_bin(bin_dir, name, marker)
+        path = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+        for args in (("doctor", "--host", "hermes"), ("doctor", "--host", "codex"),
+                     ("setup", "--host", "hermes", "--status"), ("setup", "--host", "codex", "--status"),
+                     ("setup", "--host", "hermes", "--scope", "user", "--nudge", "on", "--dry-run")):
+            with self.subTest(args=args):
+                r = self.run_cli(*args, env={"PATH": path})
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertFalse(marker.exists(), f"{args} ran a fake command")
+        self.assertIn(f"hermes CLI: {bin_dir / 'hermes'}", self.run_cli("doctor", "--host", "hermes",
+                                                                       env={"PATH": path}).stdout)
 
     def test_chat_hosts_print_the_no_shell_lines(self):
         for host in ("claude-ai", "chatgpt"):
@@ -321,19 +381,14 @@ class Command(Base):
             self.assertTrue(body)
             self.assertTrue(all(line.startswith("  not checked  ") for line in body), body)
             self.assertIn("no shell", r.stdout)
-            self.assertIn("0 ok · 0 WARN", r.stdout)
+            self.assertIn("0 ok | 0 WARN", r.stdout)
         self.assertFalse((self.root / ".plainspoken").exists())
 
     def test_warnings_exit_0_and_a_bad_host_exits_2(self):
-        bin_dir = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, bin_dir, ignore_errors=True)
-        fake = bin_dir / "hermes"
-        fake.write_text(f"#!/bin/sh\nprintf '%s' '{HELP_NO_SOURCE}'\n", encoding="utf-8")
-        fake.chmod(0o755)
-        r = self.run_cli("doctor", "--host", "hermes", env={"PATH": str(bin_dir)})
+        r = self.run_cli("doctor", "--host", "hermes", env={"PATH": "/nowhere"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertRegex(r.stdout, r"WARN\s+hermes chat --source: ")
         self.assertRegex(r.stdout, r"WARN\s+python3: ")  # no python3 on that PATH
+        self.assertRegex(r.stdout, r"WARN\s+hermes CLI: ")
         self.assertEqual(self.run_cli("doctor", "--host", "nope").returncode, 2)
 
     def test_json(self):
@@ -342,8 +397,57 @@ class Command(Base):
         rows = json.loads(r.stdout)
         self.assertTrue(rows)
         for row in rows:
-            self.assertEqual(set(row), {"name", "status", "detail", "fix"})
+            self.assertEqual(set(row), {"name", "status", "detail", "fix", "static"})
             self.assertIn(row["status"], doctor.STATUSES)
+
+    def test_ascii_console(self):
+        """A console that can't print UTF-8 (cp1252, ascii) still gets the block, and the exit codes don't move."""
+        ascii_env = {"PYTHONIOENCODING": "ascii", "PATH": "/nowhere"}
+        for args in (("doctor", "--host", "hermes"), ("doctor", "--host", "codex", "--json")):
+            with self.subTest(args=args):
+                r = self.run_cli(*args, env=ascii_env)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertIn("WARN", r.stdout)
+        r = self.run_cli("setup", "--host", "hermes", "--scope", "user", "--nudge", "on", env=ascii_env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Host checks", r.stdout)
+        self.assertNotIn("internal error", r.stderr)
+        self.assertTrue((self.home / ".config" / "plainspoken" / "config.toml").is_file())
+
+
+class Launcher(unittest.TestCase):
+    """lib/run.py refuses an old python3 with one line and exit 2, before any plainspoken import (#113 I1)."""
+
+    def load(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("plainspoken_run_launcher", REPO / "lib" / "run.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_too_old(self):
+        run = self.load()
+        self.assertEqual(run.too_old((3, 10, 12, "final", 0)),
+                         "plainspoken needs Python 3.11 or newer; this python3 is 3.10.12")
+        self.assertIsNone(run.too_old((3, 11, 0, "final", 0)))
+        self.assertIsNone(run.too_old(sys.version_info))
+
+    def test_an_old_python_gets_one_line_and_exit_2(self):
+        code = ("import runpy, sys; sys.version_info = (3, 10, 12, 'final', 0); "
+                f"sys.argv = ['run.py', 'doctor', '--host', 'codex']; runpy.run_path({str(REPO / 'lib' / 'run.py')!r}, "
+                "run_name='__main__')")
+        with tempfile.TemporaryDirectory() as cwd:
+            r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=cwd)
+        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.stderr, "plainspoken needs Python 3.11 or newer; this python3 is 3.10.12\n")
+        self.assertEqual(r.stdout, "")
+
+    def test_the_launcher_imports_no_plainspoken_module_before_the_check(self):
+        text = (REPO / "lib" / "run.py").read_text(encoding="utf-8")
+        head = text[:text.index("def _run")]
+        self.assertNotRegex(head, r"(?m)^\s*(?:from|import) plainspoken")
+        self.assertLess(text.index("too_old()"), text.index("from plainspoken"))
+        self.assertNotIn('f"', text)  # an old interpreter must still parse it
 
 
 class SetupPrintsWarnings(Base):
@@ -367,7 +471,7 @@ class SetupPrintsWarnings(Base):
 
     WARN = [doctor.Check("python3", "WARN", "no python3 on PATH", "install Python 3.11 or later"),
             doctor.Check("git", "ok", "found"),
-            doctor.Check("Bash permission", "not checked", "can't see it", "allow Bash")]
+            doctor.Check("Bash permission", "not checked", "can't see it", "allow Bash", static=True)]
 
     def config(self) -> str:
         return (self.root / ".plainspoken" / "config.toml").read_text(encoding="utf-8")
@@ -382,9 +486,10 @@ class SetupPrintsWarnings(Base):
         self.assertTrue(out.startswith(out_clean), out)
         tail = out[len(out_clean):]
         self.assertIn("Host checks (warnings only; setup changed nothing because of them):", tail)
-        self.assertIn("WARN         python3: no python3 on PATH → install Python 3.11 or later", tail)
+        self.assertIn("WARN         python3: no python3 on PATH -> install Python 3.11 or later", tail)
         self.assertNotIn("git: found", tail)
-        self.assertIn("1 check needs you to confirm: run doctor --host claude-code", tail)
+        self.assertNotIn("Bash permission", tail)
+        self.assertIn("doctor --host claude-code lists 1 thing to confirm by hand", tail)
         self.assertEqual(tomllib.loads(clean)["nudge"]["mode"], "on")
 
     def test_every_path_prints_them_and_keeps_its_exit_code(self):
@@ -398,10 +503,18 @@ class SetupPrintsWarnings(Base):
                 self.assertIn("WARN         python3:", out[len(out_clean):])
         self.assertFalse((self.root / ".plainspoken").exists())
 
-    def test_clean_checks_add_nothing(self):
-        _, out, _ = self.main("--host", "codex", "--status",
-                              checks=[doctor.Check("git", "ok", "found")])
-        self.assertNotIn("Host checks", out)
+    def test_a_healthy_machine_gets_no_block(self):
+        static = [doctor.Check("git", "ok", "found"),
+                  doctor.Check("hooks trusted", "not checked", "can't see it", "run /hooks", static=True)]
+        _, out, err = self.main("--host", "codex", "--status", checks=static)
+        self.assertNotIn("Host checks", out + err)
+        self.assertNotIn("confirm by hand", out + err)
+
+    def test_a_check_that_failed_is_shown_without_a_warning(self):
+        failed = [doctor.Check("python3", "not checked", "timed out after 10 s")]
+        _, out, _ = self.main("--host", "codex", "--status", checks=failed)
+        self.assertIn("not checked  python3: timed out after 10 s", out)
+        self.assertNotIn("confirm by hand", out)
 
     def test_a_check_that_raises_never_changes_setup(self):
         rc_clean, out_clean, _ = self.main("--host", "claude-code", "--nudge", "on")
@@ -410,11 +523,13 @@ class SetupPrintsWarnings(Base):
         rc, out, _ = self.main("--host", "claude-code", "--nudge", "on", raises=True)
         self.assertEqual((rc, out, self.config()), (rc_clean, out_clean, clean))
 
-    def test_chat_hosts_print_the_no_shell_lines_after_the_paste_text(self):
-        rc, out, _ = self.main("--host", "chatgpt", checks=doctor.run_checks("chatgpt", self.root, self.env))
-        self.assertEqual(rc, 0)
-        paste = out.index("Custom instructions")
-        self.assertGreater(out.index("no shell"), paste)
+    def test_chat_hosts_send_the_no_shell_lines_to_stderr(self):
+        rc_clean, out_clean, _ = self.main("--host", "chatgpt")
+        rc, out, err = self.main("--host", "chatgpt", checks=doctor.run_checks("chatgpt", self.root, self.env))
+        self.assertEqual((rc, out), (rc_clean, out_clean))  # the paste-in text alone on stdout
+        self.assertIn("Custom instructions", out)
+        self.assertIn("no shell", err)
+        self.assertNotIn("Host checks", out)
         self.assertFalse((self.root / ".plainspoken").exists())
 
     def test_real_checks_through_the_cli(self):
@@ -422,6 +537,7 @@ class SetupPrintsWarnings(Base):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertRegex(r.stdout, r"lint after edits: on\n\nHost checks")
         self.assertRegex(r.stdout, r"WARN\s+python3: ")
+        self.assertIn("doctor --host codex lists 4 things to confirm by hand", r.stdout)
 
 
 if __name__ == "__main__":
