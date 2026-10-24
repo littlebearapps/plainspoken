@@ -137,7 +137,7 @@ printed, never from memory or in other words:
 
     Draft: <draft path>
     <every line `status` printed: check, claims and its reasons, needs the owner, words, the reader-value contract>
-    Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>)<, if READY: "; delivery not checked: you run /plainspoken:reader-value deliver <draft>">
+    Reader value (outline): READY (<contract path>); delivery not checked: you run /plainspoken:reader-value deliver <draft>
     Anchors: <ids used>; no anchors: <tags, or none>; <every (skipped anchor …) line>
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 
@@ -146,9 +146,9 @@ the `words:` line's, never an estimate, and you say it counts body text only. As
 the `needs the owner` lines don't list. A check or claims result that isn't PASS is never described as passed. The
 person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
 
-A piece step 2 parked, or left INCOMPLETE, gets only the `Reader value (outline)` line, without the delivery tail,
-and the reason: there's no draft to check. READY means the outline has a contract, not that the draft delivers
-it, so only a READY line gets the tail. Before a drafted piece ships, the user runs
+A piece step 2 parked, or left INCOMPLETE, gets only `Reader value (outline): PARKED (<contract path>)` (or
+`INCOMPLETE`) and the reason, with no delivery tail: there's no draft to check. READY means the outline has a
+contract, not that the draft delivers it. Before a drafted piece ships, the user runs
 `/plainspoken:reader-value deliver <draft>` to check the draft keeps the contract's promise.
 
 If the person disagrees with a finding, or you had to work around a step, record it:

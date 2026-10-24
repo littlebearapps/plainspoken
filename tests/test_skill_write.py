@@ -94,14 +94,16 @@ class WriteSkill(SkillBasics, unittest.TestCase):
                          ["Draft", "<every line `status` printed", "Reader value (outline)", "Anchors", "For kaizen"])
         self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
         # #108: READY is the outline contract, not a delivery pass, and only a READY line gets the deliver tail
-        self.assertIn("Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>)<, if READY: "
-                      "\"; delivery not checked: you run /plainspoken:reader-value deliver <draft>\">", block)
+        self.assertIn("Reader value (outline): READY (<contract path>); delivery not checked: "
+                      "you run /plainspoken:reader-value deliver <draft>", block)  # the block is for a drafted piece
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
         flat = " ".join(step.split())
         self.assertIn("copied exactly as printed, never from memory or in other words", flat)
         self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
+        self.assertIn("gets only `Reader value (outline): PARKED (<contract path>)` (or `INCOMPLETE`) "
+                      "and the reason, with no delivery tail", flat)  # #108: the other shape, given literally
         self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
         self.assertIn("Ask the owner to check nothing that the `needs the owner` lines don't list", flat)
         self.assertIn("hold it `blocking` or cut it, never only ask in the report", " ".join(self.step(6).split()))
