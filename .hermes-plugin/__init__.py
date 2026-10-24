@@ -65,7 +65,9 @@ def _hook_output(script: str, event: dict, *args: str, timeout: int = HOOK_TIMEO
     return _hook_run(script, event, *args, timeout=timeout, env=env)[0]
 
 
-BLOCK_LEAD = "The edit is saved, but fix this before going on.\n"  # integrity.py's block-mode first line
+# integrity.py's block-mode first line: must match the reason `_emit` builds in hooks/integrity.py.
+BLOCK_LEAD = "The edit is saved, but fix this before going on.\n"
+UNCHECKED = {"lint_watch.py": "it wasn't linted", "integrity.py": "its figures weren't checked"}
 
 
 def _run_hook(script: str, event: dict, *args: str, quiet: bool = False) -> str | None:
@@ -78,8 +80,9 @@ def _run_hook(script: str, event: dict, *args: str, quiet: bool = False) -> str 
             if quiet:
                 return None
             path = (event.get("tool_input") or {}).get("file_path")
-            name = Path(path).name if isinstance(path, str) and path else "the file"
-            return f"plainspoken: {script} couldn't run on {name}; this file wasn't checked."
+            name = (Path(path).name if isinstance(path, str) else "") or "the file"
+            unchecked = UNCHECKED.get(script, "this file wasn't checked")
+            return f"plainspoken: {script} couldn't run on {name}; {unchecked}."
         if not isinstance(out, dict):
             return None
         reason = out.get("reason")

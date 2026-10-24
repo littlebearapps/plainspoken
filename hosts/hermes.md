@@ -64,8 +64,8 @@ here too.
   or calibrate is due. Still run the check skill yourself before anything goes out: the gate covers
   `terminal` only.
 - `[integrity] mode = "block"` works as a warning here: the finding reaches you after the edit, but Hermes can't hold
-  the edit back, so fix it before going on. A lint or integrity hook that couldn't run says so in one line, and that
-  file wasn't checked.
+  the edit back, so fix it before going on. A lint or integrity hook that can't start, times out or prints something
+  unreadable says so in one line, and that check didn't run on the file.
 - No kaizen backstop: the agents run as their own `hermes chat` processes, so no hook here sees one finish.
   `kaizen report` shows 0 judge replies returned; the recorded count still holds.
 - A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with

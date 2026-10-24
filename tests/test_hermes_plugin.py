@@ -346,9 +346,6 @@ class HermesKaizenNudge(unittest.TestCase):
         self.assertIn("plainspoken:kaizen review", "\n".join(logs.output))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class HermesHookResults(unittest.TestCase):
     """#106: integrity's block-mode reply reaches the model as a warning, and a hook that can't run says so instead of
@@ -396,6 +393,7 @@ class HermesHookResults(unittest.TestCase):
         self.assertTrue(got.startswith("Wrote post.md\n\n"), got)
         self.assertIn("block mode isn't enforced on Hermes", got)
         self.assertIn("prominent numbers with no source", got)
+        self.assertEqual(got.count("fix this before going on"), 1, got)
         self.assertNotIn("blocked", got.lower())
 
     def test_warn_mode_is_unchanged(self):
@@ -438,8 +436,9 @@ class HermesHookResults(unittest.TestCase):
                 got = self.write()
                 self.assertIsNotNone(got, label)
                 added = got.split("Wrote post.md\n\n", 1)[1]
-                self.assertIn("couldn't run", added, label)
-                self.assertIn("wasn't checked", added, label)
+                self.assertEqual(added.splitlines(), [
+                    "plainspoken: lint_watch.py couldn't run on post.md; it wasn't linted.",
+                    "plainspoken: integrity.py couldn't run on post.md; its figures weren't checked."], label)
                 for raw in ("Traceback", "boom", "Errno", "secret detail", "not json", "PASS"):
                     self.assertNotIn(raw, added, label)
 
@@ -453,3 +452,7 @@ class HermesHookResults(unittest.TestCase):
                     return_value=None if isinstance(outcome, BaseException) else outcome):
                 self.assertIsNone(hook(is_first_turn=False, session_id="n1",
                                        user_message="Draft an email to the parents about Friday"), label)
+
+
+if __name__ == "__main__":
+    unittest.main()
