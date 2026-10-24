@@ -37,8 +37,9 @@ holds hashes (of the finding's text, the article and its project-relative path),
 or a decision, cut to 200 characters. Short excerpts (up to 120 characters) are stored only when you switch them on
 with `[kaizen] excerpts = true` (or the plugin option, when the project config doesn't say).
 
-**What's never stored.** Your article text (unless excerpts are on), judge evidence, justification reasons, the
-judges' replies, and file paths. Friction lines hold an engine message with any file names and values taken out.
+**What's never stored in the ledger.** Your article text (unless excerpts are on), judge evidence, justification
+reasons, the judges' replies, and file paths. Friction lines hold an engine message with any file names and values
+taken out. The report files do hold your text: [What stays on disk](../README.md#what-stays-on-disk).
 
 `[kaizen] capture = false` in `.plainspoken/config.toml` turns capture off. To keep some sources and drop others, list
 the ones to keep in `[kaizen] capture_sources` (default all four: `check`, `merge`, `judge` and `lint-watch`; `judge`

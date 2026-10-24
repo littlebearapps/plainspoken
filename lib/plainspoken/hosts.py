@@ -2,8 +2,8 @@
 
 Claude Code starts `agents/<name>.md` as an isolated subagent. Other hosts get the same instructions as one prompt:
 the agent file's body (frontmatter dropped), then the opener the skill would have sent, then the input. The caller
-runs it in a fresh process (`codex exec --sandbox read-only`, `hermes chat -q`), so the agent still never sees the
-writer's session. See hosts/codex.md and hosts/hermes.md.
+runs it with a fresh context, the way each host's note says (hosts/codex.md, hosts/hermes.md), so the agent still
+never sees the writer's session.
 """
 from __future__ import annotations
 
