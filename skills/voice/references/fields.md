@@ -58,7 +58,12 @@ doesn't print reaches no drafting skill.
 ## Writing types
 
 - `blends`: `answer-first` or `narrative`, per kind of writing (article, page, email, social). Who reads it: drafting.
-- `formatting`: one line of layout rules per kind of writing. Example: "Plain text. One ask." Who reads it: drafting.
+  The four slots are fixed, so map each kind of writing onto one: `email` for emails, texts and direct messages,
+  `social` for posts, `page` for web and landing pages, `article` for blog posts, reports, proposals, guides and
+  newsletters (`guides/voice-profiles.md`).
+- `formatting`: one line of layout rules per kind of writing. Example: "Plain text. One ask." Who reads it: drafting,
+  for the one kind it's drafting (`profile --voice --type <kind>`). Start the line by naming what the slot covers
+  ("Emails, texts and DMs. …"). A rule for every kind belongs in `principles` instead.
 - `topics` (under `[avoid]`): subjects to stay off. Who reads it: drafting and the voice check.
 - `moves` (under `[avoid]`): things the author never does. Example: "Opens with a dictionary definition." Who reads it:
   the voice check. `profile --voice` prints them for every skill, but drafting is told not to steer by them.
