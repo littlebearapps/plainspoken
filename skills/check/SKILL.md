@@ -39,6 +39,12 @@ argument; quote it in every command (`"drafts/my post.md"`). Pass `--content-typ
 asks for it or the file is a social post. When the project gives files their own profile (`[engine] profiles` in
 `.plainspoken/config.toml`), every call that takes FILE uses FILE's profile by itself; the first step's summary is
 the project's default (`RUN config profile-for FILE` prints FILE's).
+
+For a post or video with a title, caption and alt text, put each in the frontmatter and list its key in the profile's
+`[document] visible_frontmatter_keys`, or keep alt text inline as `![alt](…)` in the body. The `read:` line under
+the lint heading (`fields_read` in the JSON) shows what the lint read. The plugin checks only the text it's given,
+never a platform's rendered version.
+
 Asked only for a quick lint that shouldn't count as kaizen evidence? Run step 1 with `--no-record` and stop there.
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
 run.py status.

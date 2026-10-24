@@ -106,6 +106,7 @@ def run_lint(path: Path, profile: Profile, content_type: str = "article", cfg=No
         "profile_sha256": profile.sha256,
         "ruleset_version": cfg.version,
         "content_type": content_type,
+        "fields_read": doc.fields_read(),  # #110: what was in scope (additive; older lint files lack it)
         "article_sha256": sha256(path),
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "lint_rules": lint_rules,
@@ -146,6 +147,8 @@ def summarise(lint: dict) -> str:
     ctype = lint.get("content_type") or "article"
     lines = [f"anti-AI lint · {Path(lint['article']).name} · {lint['profile']} · {ctype} · {counts}"
              " · lint only, judges not run"]
+    if lint.get("fields_read"):  # an older lint.json has no fields_read
+        lines.append(f"  read: {', '.join(lint['fields_read'])}")
     for sev in ("BLOCK", "WARN", "CANDIDATE"):
         hits = by.get(sev, [])
         for f in hits[:15]:
