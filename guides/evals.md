@@ -4,6 +4,23 @@ The checks can only claim what they've been measured to do, so this guide covers
 each one costs and the rules that keep the numbers honest. Every eval command prints its own `--help`; the CLI is
 `python3 lib/run.py eval …`.
 
+## Results so far
+
+The golden set now holds 254 cases: 232 for the judges (J1 to J4 and JR) and 22 for the claims checker
+(`eval golden validate --require-counts` prints the counts). The runs below were made on the 226 judge cases it held
+in October 2026; the full write-up is `docs/acceptance/p6-evals.md`.
+
+- On the golden set, Claude Opus as judge met the 0.8 bar in every group in 3 of 3 runs. That's an upper bound,
+  because Claude built and labelled most of the cases.
+- A five-vendor panel judged all 226 cases through OpenRouter for US$3.86: GLM-5.3, GPT-6 Luna (J1 to J4 only),
+  Gemini 3.8 Flash, DeepSeek V4.1 Flash and Muse Glimmer 30B. Its majority vote was right on 222 of 225 decided
+  cases. On the 17 cases backed by the owner's own decisions, DeepSeek got 16 right and Claude 15.
+- Four other models were screened and left out: Cohere Command A+, Inception Mercury 2.5, Writer Palmyra X5 and
+  Mistral Large 4.
+- The blind reader test against the author's own writing hasn't run yet: it needs samples of the author's
+  unassisted writing. Model readers have compared pieces made with and without the plugin
+  (`docs/acceptance/v1.0-eval-campaign.md`).
+
 ## What each eval measures
 
 | Eval | Question it answers | Command | Cost |

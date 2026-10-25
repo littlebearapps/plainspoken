@@ -13,7 +13,8 @@ wins in Hermes; the skill still decides *what* to do.
   literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
 - Claude Code tool names map as: Read → `read_file`, Write → `write_file`, Edit → `patch`, Bash → `terminal`,
   Grep/Glob → `search_files`. `allowed-tools`, `argument-hint` and `disable-model-invocation` are Claude Code
-  settings; the manual-only skills (`claims`, `reader-value`, `kaizen`) still start only when the user asks.
+  settings; the nine manual-only skills (`adapt`, `claims`, `copy-audit`, `doctor`, `kaizen`, `reader-value`,
+  `register-check`, `setup`, `voice`) still start only when the user asks.
 - Another skill named as `/plainspoken:<name>` loads with `skill_view("plainspoken:<name>")`. If that returns not
   found, read `<root>/skills/<name>/SKILL.md` and follow it.
 - Run every engine call from the project root (`cd` there first), as the skills say. Report files are keyed to it.
