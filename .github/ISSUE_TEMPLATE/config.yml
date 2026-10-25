@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Docs
+    url: https://github.com/littlebearapps/plainspoken/blob/main/guides/README.md
+    about: Every guide, from installing to the kaizen loop
+  - name: FAQ
+    url: https://github.com/littlebearapps/plainspoken/blob/main/guides/faq.md
+    about: Answers to the common questions
+  - name: Troubleshooting
+    url: https://github.com/littlebearapps/plainspoken/blob/main/guides/troubleshooting.md
+    about: What to do when a skill, hook or check doesn't behave
+  - name: Report a vulnerability
+    url: https://github.com/littlebearapps/plainspoken/security/advisories/new
+    about: Report security problems privately, never in a public issue

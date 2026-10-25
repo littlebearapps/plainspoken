@@ -1,0 +1,27 @@
+name: Feature request
+description: A new feature, or a change to how something works
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a check that flags writing that's fine, misses a tell or could catch a new pattern, use the False
+        positive, Missed tell or Pattern proposal form instead: those feed the kaizen loop.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way?
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How would you like it to work?
+    validations: { required: true }
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways you've tried or considered
+    validations: { required: false }
