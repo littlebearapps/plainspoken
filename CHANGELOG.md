@@ -1,6 +1,13 @@
 # Changelog
 
+Every plainspoken release, newest first. Before 1.0, versions follow semantic versioning with a minor release for
+new features and a patch release for fixes. release-please writes each entry from the commit messages; the plain
+"In short" lines were added by hand.
+
 ## [0.11.0](https://github.com/littlebearapps/plainspoken/compare/v0.10.1...v0.11.0) (2026-10-22)
+
+In short: the claims checker gets its own golden set to be measured against, the judges wait until open lint findings
+are dealt with, and the writing nudge and write guard misfire less.
 
 
 ### Features
@@ -19,6 +26,9 @@
 
 ## [0.10.1](https://github.com/littlebearapps/plainspoken/compare/v0.10.0...v0.10.1) (2026-10-22)
 
+In short: drafting is routed by the size of the piece, not its name, lint findings are fixed before the judges run,
+and judge-record and claims refuse replies built by hand or written by a shell command.
+
 
 ### Bug Fixes
 
@@ -31,6 +41,9 @@
 * **write:** start the report with the status block, shortfall after it ([3bb5a30](https://github.com/littlebearapps/plainspoken/commit/3bb5a30cb4c67adf8616b144dd0f4ffd5a55f07f)), closes [#41](https://github.com/littlebearapps/plainspoken/issues/41)
 
 ## [0.10.0](https://github.com/littlebearapps/plainspoken/compare/v0.9.0...v0.10.0) (2026-10-22)
+
+In short: `check --no-record` for a look that records nothing, `judge-record --all`, briefs as saved claims sources
+with `claims stamp`, many check and write fixes, and Hermes Agent's install scan now rates the plugin safe.
 
 
 ### Features
@@ -57,12 +70,18 @@
 
 ## [0.9.0](https://github.com/littlebearapps/plainspoken/compare/v0.8.0...v0.9.0) (2026-10-21)
 
+In short: asks for a long piece now go to write, and write always runs its check and claims steps instead of skipping
+them.
+
 
 ### Features
 
 * long-form asks go to write with the full check; write never skips its check and claims steps ([#20](https://github.com/littlebearapps/plainspoken/issues/20)) ([cf1a1a7](https://github.com/littlebearapps/plainspoken/commit/cf1a1a7b9a4d04de4d68d5f8869a33fbb432bc6f))
 
 ## [0.8.0](https://github.com/littlebearapps/plainspoken/compare/v0.7.0...v0.8.0) (2026-10-21)
+
+In short: humanize cuts empty claims instead of restating them and writes as the sender would, and write and check
+start on more kinds of request, such as text messages, scripts and a single line.
 
 
 ### Features
@@ -71,6 +90,9 @@
 
 ## [0.7.0](https://github.com/littlebearapps/plainspoken/compare/v0.6.1...v0.7.0) (2026-10-21)
 
+In short: an optional writing nudge and drafting rule, lint after edits in Codex and Hermes Agent, `check -` for text
+on stdin, `/plainspoken:setup` to switch the pieces on or off, and a user-wide config file.
+
 
 ### Features
 
@@ -78,12 +100,18 @@
 
 ## [0.6.1](https://github.com/littlebearapps/plainspoken/compare/v0.6.0...v0.6.1) (2026-10-21)
 
+In short: a test-only fix that keeps Trello credentials in your shell out of the tests, plus the `stable` branch,
+which holds the latest release and is what Hermes Agent installs follow.
+
 
 ### Bug Fixes
 
 * **tests:** keep shell Trello credentials out of the CLI tests ([ac48aec](https://github.com/littlebearapps/plainspoken/commit/ac48aecf22f8a971fc4150b10cea498055f5e0ff))
 
-## [0.6.0](https://github.com/littlebearapps/plainspoken/compare/v0.5.0...v0.6.0) (2026-10-20)
+## [0.6.0](https://github.com/littlebearapps/plainspoken/compare/v0.5.0...v0.6.0) (2026-10-21)
+
+In short: plainspoken installs in Codex and Hermes Agent as well as Claude Code, with the same skills, agents and
+engine. The hooks still ran in Claude Code only.
 
 ### Highlights
 
@@ -95,7 +123,8 @@ the judges and checkers run as separate one-shot processes with a fresh context,
 - **Hermes Agent:** `hermes plugins install littlebearapps/plainspoken --enable`. Hermes rates the plugin "caution"
   and asks you to confirm; over SSH or in a script, review the findings and add `--force`.
 - Not yet outside Claude Code: the hooks (lint after each edit, publish gate, kaizen nudges) and the install-time
-  settings. Run the check yourself before anything goes out.
+  settings. Run the check yourself before anything goes out. (Lint and the integrity check came to Codex and
+  Hermes in 0.7.0)
 
 ### Features
 
@@ -107,6 +136,8 @@ the judges and checkers run as separate one-shot processes with a fresh context,
 * clear the Hermes install scan's avoidable HIGH findings ([987afd5](https://github.com/littlebearapps/plainspoken/commit/987afd567b94d623679b78fd11157bd6fea0d444))
 
 ## 0.5.0 — first public release (2026-10-20)
+
+In short: the first public release, under the MIT licence, with 11 skills, 4 agents and ruleset 4.3.0.
 
 plainspoken is a Claude Code plugin that helps Claude write like a person: specific, honest and plain, in a stated
 voice, with every claim traceable to a saved source. It checks drafts for the patterns that make text read as
@@ -131,8 +162,9 @@ standard library only. This is the first public release, under the MIT licence.
 
 ### Engine
 
-- Ruleset 4.3.0: 55 rules, each checked by the lint, a judge or both, some in shadow (report only) until evidence
-  promotes them. Per-content-type caps for articles and social posts, and en-AU, en-GB and en-US word lists.
+- Ruleset 4.3.0: 55 rules. 54 are checked by the lint, a judge or both; rule 3 (Markdown in short-form social) has
+  no checker. Some run in shadow (report only) until evidence promotes them. Per-content-type caps for articles and
+  social posts, and en-AU, en-GB and en-US word lists.
 - Voice profiles in TOML, a shipped neutral default, and per-folder profiles (`[engine] profiles` globs).
 - A quotation that runs over several sentences stays quoted, so its words never count against the writer.
 - Reports follow a documented contract with a JSON schema, are written atomically and stamp the command that wrote
@@ -159,12 +191,51 @@ standard library only. This is the first public release, under the MIT licence.
 ### Evals
 
 - A 232-case golden set with held-out cases, a cross-vendor judge panel, rewrite evals against a no-plugin baseline,
-  trigger evals for the skills, ablations of the optional pieces, and a blind reader test. The unit tests and the
-  golden-set validation are free and run in CI; paid runs need a person's OK. Results so far are in
-  `docs/acceptance/p6-evals.md`.
+  trigger evals for the skills, ablations of the optional pieces, and a harness for a blind reader test, which
+  hasn't been run yet. The unit tests and the golden-set validation are free and run in CI; paid runs need a
+  person's OK. Results so far are in `docs/acceptance/p6-evals.md`.
 
 ### Tooling
 
 - A leak guard that keeps private names out of the repo. Its list lives outside the repo, hits are logged by
   position rather than by name, and names can be stored as keyed hashes.
 - Link, frontmatter, release-version and always-on token-budget checks, and a portable export of the skills.
+
+## Earlier releases (private repository)
+
+plainspoken was built in a private repository before it went public at 0.5.0, so these releases have no public
+tags, commits or issues to link to.
+
+### 0.4.0 (2026-10-18)
+
+- Changes to the judges and evals only.
+- The golden set's labels were reviewed by a person: 41 cases now carry human labels.
+- Rubric fixes for rules 27, 12c and 17.
+- Panel replies record which host served them.
+
+### 0.3.0 (2026-10-18)
+
+- The kaizen loop: a local ledger (hashes only by default), with `dismiss`, `uphold`, `missed` and `published` for
+  your own verdicts.
+- `calibrate` proposes at most 3 changes, and `apply` makes one only after a person approves it. Proposals go to a
+  file, a GitHub issue or a Trello card; `mine` compares model drafts with human writing; `report --share` prints
+  counts only.
+- Stop nudge and backstop hooks for kaizen.
+- Evals: a 226-case golden set, a cross-vendor judge panel, rewrite graders, and blind-test and ablation harnesses.
+
+### 0.2.0 (2026-10-14)
+
+- New skills: write, plain-language, voice, copy-audit, register-check, adapt, claims and reader-value, with the
+  cold-reader and claims-checker agents.
+- Claim ledgers in TOML or JSON, each claim pinned to a saved source and rechecked offline.
+- An integrity hook (warn by default), and an opt-in output style and session brief.
+- Fixes: the publish gate never blocks a push unless you opt in, and hook state never follows symlinks.
+
+### 0.1.0 (2026-10-11)
+
+- The engine: Python 3.11+, standard library only.
+- Ruleset 4.1.0 with 54 rules (5 in shadow, which report only), a default profile, en-AU, en-GB and en-US word
+  lists, and a social content type.
+- check (lint, then 4 isolated judges, a merge, and fix or justify, with up to 2 fix passes) and humanize
+  (removal-only, adapted from blader/humanizer), with the tells-judge agent.
+- A lint-watch hook, and an opt-in publish gate on `git push`.
