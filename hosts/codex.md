@@ -12,7 +12,8 @@ Codex; the skill still decides *what* to do.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
   literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
 - `allowed-tools`, `argument-hint` and `disable-model-invocation` in the frontmatter are Claude Code settings. Codex
-  ignores them. The manual-only skills (`claims`, `reader-value`, `kaizen`) still start only when the user asks.
+  ignores them. The nine manual-only skills (`adapt`, `claims`, `copy-audit`, `doctor`, `kaizen`, `reader-value`,
+  `register-check`, `setup`, `voice`) still start only when the user asks.
 - Another skill named as `/plainspoken:<name>` is `$plainspoken:<name>` here. If it doesn't load, read
   `<root>/skills/<name>/SKILL.md` and follow it.
 - Run every engine call from the project root, as the skills say. Report files are keyed to it.

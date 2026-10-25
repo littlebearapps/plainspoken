@@ -1,312 +1,125 @@
 # plainspoken
 
-A writing plugin that helps an AI agent write like a person: specific, honest, plain,
-in a stated voice, with every claim traceable. Built for Claude Code; it also installs in Codex and Hermes Agent
-(see [Codex and Hermes Agent](#codex-and-hermes-agent)).
+<p align="center">
+  <strong>Write like a person, not an AI.</strong><br>
+  A writing plugin for AI agents that finds the tells in a draft, cuts them out without adding facts, and keeps
+  every claim traceable to a source.
+</p>
 
-Status: before v1.0 (the current version and what changed in each release: [`CHANGELOG.md`](CHANGELOG.md)). It has:
-- the anti-AI check and humanize skills, with four isolated judges;
-- language skills (write, plain-language, voice, copy-audit, register-check, adapt), with the cold-reader agent;
-- claims integrity and reader value (claims, reader-value), with the claims-checker and delivery-checker agents and
-  the integrity hook;
-- the kaizen loop: a ledger of what the checks flagged and what you did, calibrate, and approval-gated `kaizen apply`;
-- evals: a 232-case golden set for the judges and 16 cases for the claims checker, a cross-vendor judge panel,
-  rewrite evals, a smoke case per skill, a blind reader test and ablations;
-- optional pieces you switch on with `/plainspoken:setup`: a writing nudge, a drafting rule, and lint after each
-  edit in Claude Code, Codex and Hermes Agent; `/plainspoken:doctor` checks what the host can run.
+<p align="center">
+  <a href="https://github.com/littlebearapps/plainspoken/actions/workflows/ci.yml"><img src="https://github.com/littlebearapps/plainspoken/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/littlebearapps/plainspoken/releases"><img src="https://img.shields.io/github/v/release/littlebearapps/plainspoken" alt="Latest release" /></a>
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue" alt="Licence: MIT" /></a>
+</p>
 
-A production host has already moved its own checks over to it.
+<p align="center">
+  <a href="#quick-start">Quick start</a> · <a href="#what-you-get">What you get</a> · <a href="#how-a-check-works">How a check works</a> · <a href="#documentation">Docs</a> · <a href="#contributing">Contributing</a>
+</p>
 
-Next:
-- **v1.0.0:** one accept item is left: the rewrite-quality eval against a no-plugin baseline. Its first run
-  (20 Oct 2026) showed no difference, because the model never started `humanize` on those prompts. v0.7 widens
-  humanize's trigger wording, adds a slash arm (`--tag rewrite-slash`) and lint-counts both arms
-  (`eval rewrite-delta`), so the re-run can show a difference if there is one. The tier-2 blind reader test runs
-  after v1.0, once samples of the author's unassisted writing exist; tier 1, with human readers, comes later.
-- **Smaller fixes:** a read-only lint mode for `check` that records no kaizen events
-  ([#1](https://github.com/littlebearapps/plainspoken/issues/1)).
-- **After v1.0:** an editor agent that can rewrite, not only cut.
+---
 
-## Use
+AI drafts have tells: stock words, padded lists of three, sentences that all run the same length, claims nobody can
+trace. plainspoken catches them in two ways. First a lint, a fixed set of rules that runs as plain code and gives
+the same answer every time. Then four judges, each a separate reviewer that reads the draft in a fresh context and
+never sees your session. When it fixes a draft, it cuts, joins or restates what's already there and never adds a
+fact. It keeps a ledger of what it flagged and what you did about it, and proposes changes to its own rules from
+your verdicts. Nothing changes until you approve. It works in Claude Code and Cowork, Codex and Hermes Agent.
 
-Requirements: Claude Code and Python 3.11+ as `python3` (standard library only). With an older `python3`, the
-lint-watch hook skips with one line, and the CLI the skills call prints one line saying so and exits 2.
+## Quick start
 
-Install it from the Little Bear Apps marketplace:
+You need Python 3.11 or newer as `python3`. plainspoken uses the standard library only, so there's nothing else to
+install.
+
+**Claude Code and Cowork.** Add the Little Bear Apps marketplace, then install:
 
     /plugin marketplace add littlebearapps/lba-plugins
     /plugin install plainspoken@lba-plugins
 
-The marketplace entry pins a release, so a new version reaches you when that entry moves to the next release
-([`CHANGELOG.md`](CHANGELOG.md) lists them). Background auto-update is off for third-party marketplaces until you
-turn it on: in `/plugin`, open **Marketplaces**, select `lba-plugins` and choose **Enable auto-update** (or set
-`"autoUpdate": true` on the marketplace's `extraKnownMarketplaces` entry in a project's `.claude/settings.json`).
+Install it into the project that uses it unless you want it everywhere, because at user scope the lint after each
+edit checks every Markdown file you edit in every project you open:
 
-Install it into the project that uses it (`claude plugin install plainspoken@lba-plugins --scope project`) unless
-you want it everywhere. At user scope, the lint-watch hook lints every Markdown edit in every project you open.
+    claude plugin install plainspoken@lba-plugins --scope project
 
-### Codex and Hermes Agent
-
-The same skills, agents and engine install in two more hosts. The skills are written for Claude Code, so each host
-gets a short note on how to run them there, which the skills point to: [`hosts/codex.md`](hosts/codex.md) and
-[`hosts/hermes.md`](hosts/hermes.md). In both, the judges and checkers run with a fresh context, from a prompt built
-by `run.py agent-prompt`; how each host starts them is in its note.
-
-Codex (CLI and the ChatGPT desktop app; it reads the same marketplace):
+**Codex** (CLI and the ChatGPT desktop app):
 
     codex plugin marketplace add littlebearapps/lba-plugins
     codex plugin add plainspoken@lba-plugins
 
-Then start a new session and use `$plainspoken:check`, `$plainspoken:humanize` and the rest.
+Start a new session and call the skills as `$plainspoken:check`, `$plainspoken:humanize` and so on.
 
-Hermes Agent:
+**Hermes Agent:**
 
     hermes plugins install littlebearapps/plainspoken --enable
 
-Hermes scans a plugin before it installs it. Hermes v0.22 rates plainspoken "safe": it lists medium and low findings
-(the engine runs Python, and the docs show commands) but no high ones, so the install doesn't stop to ask. If your
-Hermes rates it "caution", it asks you to confirm; over SSH or in a script, where it can't ask, review the findings
-and add `--force`. Then start a new session (or `/reset`). Hermes loads `.hermes-plugin/`, which registers the
-skills as `plainspoken:<name>` and tells the model where the plugin lives. To add it to one Hermes profile only,
-name the profile first: `hermes -p <profile> plugins install littlebearapps/plainspoken --enable`. The install also
-warns that the repo root has no `plugin.yaml`; that's expected, because the Hermes manifest sits in
-`.hermes-plugin/`.
+Then start a new session (or `/reset`).
 
-Updates: this install follows the `stable` branch, which only moves when a release ships. Hermes checks for a new
-commit once a day (`plugins.auto_update_check_hours`), `hermes plugins check-updates` checks now, and Hermes Desktop
-shows an **Update** button. Apply it with `hermes plugins update plainspoken`. The update is scanned again; a "safe"
-rating applies without asking, so `plugins.auto_apply: true` can apply it unattended (a "caution" rating asks
-"Update anyway?" and needs `--force` where it can't ask). To stay on one release instead, pin its full commit with
-`--ref <sha>` (Hermes takes no tags or branches there); `update` then leaves it alone, and
-`install --force --ref <new-sha>` moves it.
+**claude.ai and ChatGPT chat.** Neither has a shell, so the lint, the judges and the hooks don't run there. From a
+machine with the plugin, `python3 lib/run.py setup --host claude-ai` (or `--host chatgpt`) prints a short writing
+rule to paste into the app's preferences or a project's instructions.
 
-Hooks outside Claude Code: lint and the claims integrity check after each edit, and the optional writing nudge, run
-in both (Codex runs plugin hooks only after you trust them: `/hooks` in Codex). Since 0.12.0, both also run the
-publish gate (strictness from `[gate] strictness` only), the shell write guard and the kaizen nudge; an older
-installed copy has none of the three, so run the check yourself before anything goes out. In Hermes the gate
-covers the `terminal` tool: a deny blocks the command, a warn is posted to you and the command runs, and the kaizen
-nudge is posted to you at the end of a turn. Neither has the kaizen backstop, the hook that counts agent runs,
-because their hooks never see a plainspoken agent finish. Neither has the install-time settings (pick a profile with
-`[engine] profile` in `.plainspoken/config.toml`, and turn the optional pieces on with `/plainspoken:setup`), and in
-Hermes the agents' read-only sandbox is an instruction they follow.
+**Check it worked.** Run `/plainspoken:doctor`. It checks `python3`, the plugin files, the reports folder and the
+config, marks each `ok`, `WARN` or `not checked`, and changes nothing.
 
-Check a draft:
+**Check your first draft:**
 
     /plainspoken:check post.md
-    /plainspoken:check thread.md --content-type social
 
-The check lints the file, sends it to four isolated judges, merges their verdicts and runs up to two fix passes
-that cut, join or restate and never add a fact. It ends with PASS, FAIL, UNRESOLVED or INCOMPLETE, and writes its
-files to `.plainspoken/reports/` in the project you run it from. Ask for findings only and the check follows its
-report-only route: no fix passes, and the file stays as it is.
+Updates, pinning a release, the Hermes install scan and uninstalling are in [guides/install.md](guides/install.md).
 
-Run the CLI from anywhere in the project: it finds the project root (the nearest folder with
-`.plainspoken/config.toml` or `.git`).
+## What you get
 
-Rewrite a draft without a full check:
+Thirteen skills. Four start on their own when a request fits; the other nine run only when you call them, so their
+descriptions stay out of your context.
 
-    /plainspoken:humanize post.md
+| Skill | What it does | Starts |
+|---|---|---|
+| `check` | Lints a draft, sends it to four isolated judges and fixes what they find, never adding | on its own |
+| `humanize` | Rewrites AI patterns out of a draft in your voice, without adding facts | on its own |
+| `write` | Drafts from your notes or brief in your voice, then runs the check | on its own |
+| `plain-language` | Rewrites or checks text so someone outside the field gets it on one read | on its own |
+| `voice` | Builds a voice profile from your own writing samples, applies it or checks against it | when called |
+| `copy-audit` | Audits buyer-facing copy line by line against the evidence | when called |
+| `register-check` | Flags tone, pressure and consent problems in a message before you send it (flags only) | when called |
+| `adapt` | Drafts platform versions of a post; nothing is posted | when called |
+| `claims` | Checks every number, quote, name and date against sources you've saved | when called |
+| `reader-value` | Sets what the reader gets before drafting, then checks the draft delivers it | when called |
+| `kaizen` | Turns your verdicts on findings into proposed rule changes you approve or reject | when called |
+| `setup` | Turns the optional pieces on or off, or prints the paste-in text for chat apps | when called |
+| `doctor` | Checks what this app can run and lists what to fix; changes nothing | when called |
 
-Draft from your notes, or make writing plainer:
+Four agents do the reviewing, each in a fresh context, read-only:
+- `tells-judge`: the check's judges, one per group of tells, returning JSON verdicts with the exact text as evidence.
+- `cold-reader`: reads a text once as the reader your profile names and reports where it got lost.
+- `claims-checker`: reviews the claim ledger against the article and the saved sources.
+- `delivery-checker`: reads a draft against its reader-value contract. Where no subagent can run, the writer's own
+  reading is kept as a self-check, which can keep a FAIL but never makes a PASS.
 
-    /plainspoken:write notes.md
-    /plainspoken:plain-language page.md --rewrite
+Hooks run alongside: lint after each edit of a draft file, a claims integrity check that flags unsourced numbers,
+a publish gate on `git push` (off until you set it), and an optional writing nudge and drafting rule you switch on
+with `/plainspoken:setup`. The kaizen loop records what the checks flagged and what you did, and proposes ruleset
+changes from that evidence ([guides/kaizen.md](guides/kaizen.md)).
 
-For a text over about 600 words, or when you ask, plain-language hands it to the `cold-reader` agent. The agent reads
-it once in a fresh context, as the reader your profile names, and reports in JSON where it got lost, which words it
-didn't know and what it would do next. It never rewrites.
+## How a check works
 
-The other nine skills run only when you call them:
+1. **Lint.** Fixed rules run first and flag what they find, with the line and the exact text.
+2. **Judges.** Four isolated judges read the draft for the tells a rule can't catch.
+3. **Merge.** Their verdicts and the lint are combined into one result, and the merge proves that a judge covered
+   every group of tells before it gives a status.
+4. **Fix.** Up to two fix passes cut, join or restate. A WARN you keep needs a reason another reviewer accepts.
+5. **Result.** PASS means no BLOCK is left and every kept WARN has an accepted reason. FAIL means a BLOCK is still
+   there. UNRESOLVED means no BLOCK is left but a flagged WARN has no accepted reason. INCOMPLETE means a step is
+   missing or stale, usually because the draft changed after a judge read it.
 
-    /plainspoken:voice build samples/*.md                       # build a voice profile from your own writing
-    /plainspoken:copy-audit hero.md                             # audit buyer-facing copy against the evidence
-    /plainspoken:register-check email.md --kind follow-up       # flag a message that reads wrong for its kind (flags only)
-    /plainspoken:adapt post.md linkedin bluesky                 # draft platform versions of a post (drafts only, nothing is posted)
-    /plainspoken:claims post.md                                 # verify every number, quote, name and date against saved sources
-    /plainspoken:reader-value outline post.md                   # set the reader's benefit before drafting (deliver checks it after)
-    /plainspoken:kaizen review                                  # the proposed ruleset changes waiting for your decision
-    /plainspoken:setup                                          # turn the writing nudge, drafting rule and lint after edits on or off
-    /plainspoken:doctor                                         # check what this app can run (warnings only, changes nothing)
+Ask for findings only and the check follows its report-only route, where it runs no fix passes, leaves your file as
+it is and lists each BLOCK and WARN with its line.
+Reports go to `.plainspoken/reports/` in the project you run it from. More detail: [guides/checking.md](guides/checking.md).
 
-`write`, `check`, `humanize` and `plain-language` also start on their own when a request fits. `voice`, `copy-audit`,
-`register-check`, `adapt`, `claims`, `reader-value`, `kaizen`, `setup` and `doctor` run only when you call them.
+## Privacy
 
-### Claims and reader value
-
-Two manual skills keep a piece honest about what it says and what it gives the reader. `write` uses both: it runs
-the reader-value outline before it drafts, and the claims skill on the saved draft.
-
-    /plainspoken:reader-value outline drafts/hot-water.md   # the contract, before drafting; parks a piece with no honest benefit
-    /plainspoken:reader-value deliver drafts/hot-water.md   # an isolated reviewer: does the draft deliver the contract?
-    /plainspoken:claims drafts/hot-water.md                 # claim ledger + pinned passages + the isolated claims checker
-
-The claims skill never fetches: you save each source's text under `.plainspoken/sources/` (the `sources_dir`), and
-`claims pin` finds the passage in it or refuses. A source outside that folder, or the article itself, never counts.
-The ledger (`.plainspoken/claims/<key>.claims.toml`, or `.claims.json`; `paths` prints it) holds one status per
-claim. Only `claims status` says PASS, and only after the isolated `claims-checker` agent has reviewed the current
-article and ledger. A changed article or ledger means INCOMPLETE until it's checked again. The reader-value contract
-lives at `.plainspoken/reader-value/<draft stem>.reader-value.toml`. In deliver mode the isolated `delivery-checker`
-agent reads the draft against that contract in a fresh context, and `reader-value deliver` records its verdicts in
-`<key>.delivery.json`, bound to the draft, contract and rubric hashes. Only that reviewer's reply can make the result
-PASS. Where no subagent can run, the writer's own reading is recorded as a self-check (`--reviewer self-check`): it
-keeps a FAIL, and a PASS reading becomes INCOMPLETE. `reader-value status` reads the record back: STALE once the
-draft, contract or rubric has changed, and PASS only for a current pass from the isolated reviewer.
-
-The skills call these CLI subcommands (`python3 lib/run.py <subcommand>`; each prints its own `--help`):
-
-- `claims hash | stamp | validate | candidates | gaps | pin | recheck | scaffold | status | checker-input | record`:
-  hash the article, write its hash and the time into the ledger, validate a ledger, list the values and quotes in an
-  article and the ones the ledger misses, pin a passage in a saved source, recheck every pin offline, write a
-  starter ledger, report the status, print the checker's input, and record its reply.
-- `reader-value validate | modules | template | deliver-input | deliver | status`: validate a contract, check an
-  article's `<!-- module:NAME -->` blocks, print a starter contract, print the delivery reviewer's input, record its
-  reply, and read the delivery record back against the current files.
-- `status <draft>`: the last saved check and claims status lines, the ledger's claims that need the owner, the
-  draft's word count (as the check counts it) and the reader-value contract path, read back without running or writing anything, so `write`'s report quotes them. A
-  check or claims step that never ran, or ran on an older version of the draft, shows as INCOMPLETE; it exits 0 only
-  when both say PASS.
-
-**The integrity hook.** After each Write or Edit of a target file, a PostToolUse hook flags prominent numbers that
-nothing sources: a statistic in a chart, in the `> **TL;DR:**` block or in the frontmatter description with no link
-to a source. Your own data takes an `<!-- integrity:allow -->` comment inside or beside the chart, or just above the
-TL;DR (a marker inside a chart covers that chart, never the TL;DR), or `# integrity: allow` in the frontmatter, and a
-`first_hand` claim in the ledger. When the file has a claim ledger, the hook lists the ledger's gaps instead.
-It says nothing when there's nothing to flag; in warn mode it repeats itself only when a file's result changes.
-A Bash hook refuses a shell command that writes a judge or checker reply, or a claim ledger, including through a script
-it runs by name: those go through the Write and Edit tools. Reading them is fine.
-
-Settings for all three go in `.plainspoken/config.toml`:
-
-    [claims]
-    ledger_dir = ".plainspoken/claims"     # relative to the project root
-    sources_dir = ".plainspoken/sources"   # where saved source text lives
-    regulated_matrix = "docs/regulated-claims.md"  # your own regulated-claims list; unset means none (the plugin ships none)
-    platforms_extra = ["Acme Portal"]      # platform names to treat as claims, on top of the shipped list
-
-    [reader_value]
-    cta_phrases = ["book a site visit"]    # your own calls to action, which can never count as reader value
-
-    [integrity]
-    mode = "warn"                          # off | warn (the default) | block
-    paths = ["content/**/*.md"]            # files the hook checks; unset means the targets option, else **/*.md
-
-`block` returns a block decision on every edit while findings remain: the edit is saved, and Claude is told to fix
-it before going on. Every claims report file is listed in `docs/report-contract.md`.
-
-### Kaizen: improving the checks from your verdicts
-
-The checks keep a ledger of what they flagged and what you did about it, in `.plainspoken/ledger/`: hashes, ruleset
-words and section kinds. The ledger never holds your text unless you switch excerpts on; the report files do (see
-[What stays on disk](#what-stays-on-disk)). Tell it when a finding is wrong or right, or
-when it missed something, and it proposes ruleset changes from that evidence. Nothing changes until a person approves
-a proposal and runs `kaizen apply`.
-
-    /plainspoken:kaizen dismiss post.md      # a finding is wrong (uphold: it's right; missed: a tell it didn't flag)
-    /plainspoken:kaizen calibrate            # propose at most 3 changes from the ledger (never applies them)
-    /plainspoken:kaizen decisions            # read the decisions people made, then `apply` an approved one
-    /plainspoken:kaizen report --share       # anonymised counts to paste into an upstream issue
-
-Proposals go to a file in `.plainspoken/kaizen/proposals/` by default, or to a GitHub issue or Trello card when you
-set `[kaizen] adapter` and `[kaizen] approvers` in `.plainspoken/config.toml`. You decide by posting one plain line,
-`APPROVE: <your name>: <reason>` or `REJECT: …`; the plugin never writes one. A Stop hook shows a one-line nudge when
-proposals are waiting or calibrate is due, and adds nothing to Claude's context. The whole loop, what's stored and
-what isn't: [guides/kaizen.md](guides/kaizen.md). Every file it writes: `docs/report-contract.md`.
-
-### Voice profiles
-
-A profile describes the voice the skills draft and check in. Copy `templates/voice-profile.toml` to
-`.plainspoken/profiles/<name>.toml` and edit it, or run `/plainspoken:voice build` on five to ten of your own
-writing samples. Activate it with `[engine] profile = "<name>"` in `.plainspoken/config.toml`.
-
-One profile can cover everything a person writes: habits that hold everywhere go in the shared sections, and
-`[blends]` and `[formatting]` have a slot each for `email`, `social`, `page` and `article` (reports and proposals
-map to `article`). How to lay it out, where the evidence comes from, variants by folder and switching it on in each
-app: [`guides/voice-profiles.md`](guides/voice-profiles.md).
-
-A check reads the body plus the frontmatter keys listed in the profile's `[document] visible_frontmatter_keys`
-(`title` and `description` by default). For a post or video, put the title, caption and alt text in the frontmatter
-and list their keys there, or keep alt text inline as `![alt](…)`. The lint's `read:` line (`fields_read` in the
-JSON) shows what the lint read. plainspoken checks only the text it's given, never a platform's rendered version.
-
-Plugin options (set when you install or enable the plugin):
-
-- `targets`: the globs the lint-watch hook checks after each Write or Edit. Default `**/*.md`.
-- `strictness`: what the publish gate does on `git push`. `watch` (the default) does nothing, `warn` warns, and
-  `block` refuses a push unless every gated file has a current PASS. `warn` and `block` need `[gate] paths` (below);
-  with none set, the gate only warns on each push that nothing is gated. The gate is a guardrail against accidental
-  pushes of unchecked writing, not a security boundary (limits: `docs/claude-code-facts.md` section 6).
-
-If you use the gate with a profile other than `default`, set `[engine] profile` in `.plainspoken/config.toml` as well.
-The project config wins everywhere (skills, hooks, CLI). An installed copy's hooks see the plugin settings, but a
-session that loads the plugin with `--plugin-dir` gives them none (`docs/claude-code-facts.md` section 11).
-
-Project settings go in `.plainspoken/config.toml`, which beats the plugin option:
-
-    [engine]
-    profile = "default"          # a profile name, or a path to a profile TOML
-
-    [gate]
-    paths = ["content/**/*.md"]  # the files the publish gate checks; unset, it only warns that nothing is gated
-    strictness = "block"         # watch | warn | block; beats the plugin option; a value it can't read gives a warning and the push goes ahead, unless block is known
-
-### Host setup
-
-`setup` ends with host checks for the app it's run for. When one finds a problem (a `python3` older than 3.11, a
-reports folder its file permissions don't let it write, no `git` while the publish gate is on, a config that doesn't
-parse, no `hermes` on PATH) or can't run, setup prints it with its fix, plus a line saying how many things `doctor`
-lists to confirm by hand; on a healthy machine it prints nothing more. The checks never block setup or change what
-it writes. `/plainspoken:doctor` (`python3 <plugin>/lib/run.py doctor --host <host>`) runs the same checks on their
-own and marks each one `ok`, `WARN` or `not checked`. What a script can't see, such as the agent's own tools, Codex's
-hook trust or the `hermes chat` flags, stays `not checked`, and the skill asks the agent to say whether it has them.
-The one command it runs is `python3 --version`; `git`, `codex` and `hermes` are only looked up on PATH, because
-starting `codex` or `hermes` writes files of their own. It exits 0 with warnings. `--host claude-ai` or `chatgpt`
-says there's no shell in those apps, so the lint, the judges and the hooks don't run there (setup prints those lines
-on stderr, away from the text to paste). An older `python3` gets one line from every command instead,
-`plainspoken needs Python 3.11 or newer; this python3 is …`, and exit 2.
-
-A project that already has its own checks can narrow what plainspoken does. Everything below goes in
-`.plainspoken/config.toml`:
-
-    [engine]
-    profile = "default"                                  # files no entry below matches
-    profiles = [                                         # first match wins
-      { glob = "docs/**", profile = "technical" },       # a profile name, or a path relative to .plainspoken/
-      { glob = "posts/**", profile = "profiles/essay.toml" },
-    ]
-
-    [lint_watch]
-    mode = "on"                    # "off": the hook lints, says and records nothing
-    paths = ["posts/**/*.md"]      # the files it lints; beats the plugin's targets option; unset means **/*.md
-
-    [kaizen]
-    capture_sources = ["check", "merge", "judge"]   # drop lint-watch events; default all four
-
-- **One voice per folder.** Each `[engine] profiles` glob is matched against the file's path from the project root.
-  `check`, `merge`, `judge-input`, `justify`, the lint-watch hook and the publish gate all use the file's own
-  profile; `python3 <plugin>/lib/run.py config profile-for <file>` prints it, and the skills pass it to the calls that
-  don't take a file. `--profile` and `PLAINSPOKEN_PROFILE` still come first.
-- **Skills only when asked.** To stop Claude starting a skill by itself while keeping the slash command, deny the
-  Skill tool for it in the project's `.claude/settings.json`:
-
-      {
-        "permissions": {
-          "deny": ["Skill(plainspoken:write)", "Skill(plainspoken:check)",
-                   "Skill(plainspoken:humanize)", "Skill(plainspoken:plain-language)"]
-        }
-      }
-
-  `/plainspoken:write …` still runs (probed with Claude Code 2.1.303: `docs/claude-code-facts.md` section 11). Asking
-  for a denied skill in plain words no longer works: type its slash command. When a skill hands over to a denied one
-  (write to check, check to humanize), it reads that skill's file and follows its steps instead.
-
-Every report file, and what each one is bound to, is listed in `docs/report-contract.md`. Add `.plainspoken/` to
-your `.gitignore` so reports and hook state stay out of commits; to keep the project settings tracked, use:
-
-    .plainspoken/*
-    !.plainspoken/config.toml
-    !.plainspoken/profiles/
-
-A profile's anchors are verbatim text, so keep anything from a client's material out of a profile you commit.
+Checks run on your machine and post or send nothing. The judges are subagents of the app you already use. Kaizen
+proposals go to a GitHub issue or a Trello card only if you set that up, and the paid evals call outside models only
+when you run them. The kaizen ledger holds hashes and rule words, not your text, unless you switch excerpts on.
 
 ### What stays on disk
 
@@ -327,90 +140,53 @@ draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every pat
   wait or calibrate is due) and `.plainspoken/kaizen/capture-off.txt` (when check capture is off and a ledger exists).
 
 The full check adds the judge, justification and report files, and the claims and reader-value skills add theirs
-when you run them; each one is in `docs/report-contract.md`. `check --no-record` saves no report (unless `--out`
-names another file) and no snapshot. With `[kaizen] capture = false`, the next check deletes the snapshots (the
-`.checked.md` and `.prev` files), saves no new ones and stamps the time in `capture-off.txt`; it still saves the
-lint file.
+when you run them; each one is in [docs/report-contract.md](docs/report-contract.md). `check --no-record` saves no
+report (unless `--out` names another file) and no snapshot. With `[kaizen] capture = false`, the next check deletes
+the snapshots (the `.checked.md` and `.prev` files), saves no new ones and stamps the time in `capture-off.txt`; it
+still saves the lint file.
 
-## Optional: the writing nudge, the drafting rule and the session brief
+## Documentation
 
-All of these are off by default and add 0 tokens until you switch them on. `/plainspoken:setup` turns them on or
-off for the app you're in and shows what's on; underneath it runs
-`python3 <plugin>/lib/run.py setup --host <host> [--scope project|user] [--nudge on|off] [--rule on|off]
-[--lint-watch on|off] [--dry-run | --remove | --status]`. It edits one config file, the project's
-`.plainspoken/config.toml` or the user-wide `~/.config/plainspoken/config.toml`, marks every line it writes, and
-`--remove` deletes only those lines.
+Every guide, in one list: [guides/README.md](guides/README.md).
 
-| Piece | What it does | Where it runs |
-|---|---|---|
-| Writing nudge (`[nudge] mode = "on"`) | When a prompt asks for an email, a text, a post, a script, a page or a rewrite that sounds like a person, one line names the plainspoken step that fits: lint a short piece on stdin (`check -`), use write (draft, full check, fix) for a long one, use humanize for a rewrite. Chat, code and slash commands don't trigger it | Claude Code and Cowork (`UserPromptSubmit`), Codex CLI, app and ChatGPT Work (`UserPromptSubmit`), Hermes (`pre_llm_call`) |
-| Drafting rule (`[rule] enabled = true`) | Every session starts with a short rule: whenever something people will read is drafted, use plainspoken. It's added by the plugin with this install's paths, so it never goes stale after an update, and it only applies where plainspoken is installed | Claude Code and Cowork |
-| Lint after edits (`[lint_watch] mode`, on by default) | After a draft file is saved, the lint's findings come straight back | Claude Code, Cowork, Codex, Hermes |
-| Paste-in text (`setup --host claude-ai` or `chatgpt`) | The same rule as text to paste into the app's personal preferences, custom instructions or a project's instructions | claude.ai chat, ChatGPT chat (neither runs hooks) |
-| Session brief (`[brief] enabled = true`) | A short writing brief (at most 800 characters) at session start and in each subagent, never in plainspoken's own agents | Claude Code and Cowork |
-| Output style (`/output-style plainspoken`) | The same guidance as an output style, for the main conversation only | Claude Code |
+- **Get started:** [install and update](guides/install.md) · [configuration](guides/configuration.md)
+- **Using it:** [checking a draft](guides/checking.md) · [claims and reader value](guides/claims-and-reader-value.md) ·
+  [voice profiles](guides/voice-profiles.md) · [kaizen](guides/kaizen.md)
+- **Hosts:** [Codex](hosts/codex.md) · [Hermes Agent](hosts/hermes.md)
+- **Reference:** [report contract](docs/report-contract.md) · [Claude Code facts](docs/claude-code-facts.md) ·
+  [evals](guides/evals.md) · [evidence method](guides/evidence-method.md) · [Australian English](guides/locale-en-AU.md)
+- **Help:** [FAQ](guides/faq.md) · [troubleshooting](guides/troubleshooting.md) · [changelog](CHANGELOG.md) ·
+  [roadmap](ROADMAP.md) · [support](SUPPORT.md)
 
-A project's config wins over the user-wide file, and the user-wide file wins over the Claude Code options (`nudge`,
-`rule`). The user-wide file holds only `[nudge]`, `[rule]` and `[lint_watch]`.
+## Status
 
-The session brief and the output style aren't on by default yet: the Phase 6 ablation (21 drafts, 2026-10-16) gave no
-lint evidence for either, and with 3 drafts per variant that's only a hint. The blind reader test decides.
+plainspoken is before v1.0, so expect changes between releases. The latest release and what changed in each one are
+in [CHANGELOG.md](CHANGELOG.md); what's planned next is in [ROADMAP.md](ROADMAP.md).
 
-## Evals
+## Contributing
 
-The evals measure whether the plugin does what it says: the judges against a held-out golden set, the skills'
-triggers, rewrites against a no-plugin baseline, ablations of the optional pieces, and a blind reader test. CI runs
-the unit tests for the free ones on every pull request and validates the golden set; the rest run on a Claude plan
-or are billed, and a person OKs each billed run. What each one measures, what it costs and how to run it:
-[guides/evals.md](guides/evals.md).
+Found a bug or want a feature? [Open an issue](https://github.com/littlebearapps/plainspoken/issues/new/choose).
+Three forms there feed the kaizen loop directly: **False positive** (a finding that's wrong), **Missed tell** (one
+it didn't flag) and **Pattern proposal** (a new tell to catch).
 
-**Results so far** (`docs/acceptance/p6-evals.md`):
-- On the golden set, Claude Opus as judge meets the 0.8 bar in every group in 3 of 3 runs. That's an upper bound,
-  because most cases were built and labelled by Claude.
-- A five-vendor panel judged all 226 cases then in the set through OpenRouter for US$3.86: GLM-5.3, GPT-6 Luna
-  (J1–J4 only), Gemini 3.8 Flash, DeepSeek V4.1 Flash and Muse Glimmer 30B.
-  - Its majority vote was right on 222 of 225 decided cases.
-  - On the 17 cases backed by the owner's own decisions, DeepSeek got 16 right and Claude 15.
-- Four other models were screened and left out: Cohere Command A+, Inception Mercury 2.5, Writer Palmyra X5 and
-  Mistral Large 4.
-- The blind reader test hasn't run yet. Its tier-2 run is the remaining v1.0.0 item, and it needs samples of the
-  author's unassisted writing.
+To contribute code or docs, read [CONTRIBUTING.md](CONTRIBUTING.md). Report a vulnerability privately through
+[SECURITY.md](SECURITY.md), and find help in [SUPPORT.md](SUPPORT.md).
 
-**Always-on token cost.** Measured 2026-10-19 with Claude Code CLI 2.1.303: `claude --plugin-dir . plugin details
-plainspoken` reports `Always-on: ~1,042 tok`. That figure counts the seven manual-only skills (about 560 tokens),
-whose descriptions Claude Code keeps out of context (`docs/claude-code-facts.md` section 7). Without them,
-`python3 -m scripts.dev.token_budget .` reports 482 tokens, against a budget of 500 (the delivery-checker agent added
-about 30; shorter cold-reader, tells-judge and humanize descriptions took about 15 off). Hooks add none. In v0.7 it's
-486: humanize's wider trigger wording, paid for by a shorter tells-judge description; the setup skill is manual-only.
-(`claude plugin details plainspoken` without `--plugin-dir` only finds an installed copy.)
+## Acknowledgements
 
-## Develop
+The `humanize` skill is adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT), whose pattern
+catalogue it keeps verbatim. Exact attribution and the upstream licence are in [NOTICE.md](NOTICE.md).
 
-Work happens on `main`: open pull requests against it, and release-please cuts releases from it. The default
-branch, `stable`, holds the latest release only; the release workflow moves it (`.github/workflows/stable.yml`), so
-never open a pull request against it.
+## About Little Bear Apps
 
-    claude --plugin-dir .                 # load for one session
-    claude plugin validate . --strict     # manifest + components
-    python3 -m unittest discover -s tests # tests (stdlib only)
-    python3 scripts/dev/leak_guard.py     # no private names (see below)
-    python3 scripts/dev/check_links.py .  # no links outside the plugin
-    python3 scripts/dev/lint_frontmatter.py
-    PYTHONPATH=lib python3 -m plainspoken check <file> --profile default   # lint one file
+plainspoken is made by [Little Bear Apps](https://littlebearapps.com) ([GitHub](https://github.com/littlebearapps)),
+and it's listed in the Little Bear Apps plugin marketplace, `littlebearapps/lba-plugins`, beside other tools such as
+PitchDocs, a plugin that writes repo docs. Other public projects include
+[Untether](https://github.com/littlebearapps/untether), a Telegram bridge for AI coding agents, and Outlook
+Assistant, an MCP server for Outlook.
 
-The leak guard fails on any name that must never appear in the repo. `data/leak-denylist.txt` holds only generic
-patterns; the names themselves live in a private list kept outside the repo, in the file `PLAINSPOKEN_LEAK_LIST`
-points at. CI on this repo reads that list from a repository secret, fails when the secret is missing, and logs a
-hit as `private#<line>`, never the name. A fork, a pull request from a fork or a local run without the variable
-skips the private list with one notice line and checks the rest.
+Questions: hello@littlebearapps.com. Security reports: security@littlebearapps.com (see [SECURITY.md](SECURITY.md)).
 
-A name can also be stored as a keyed hash (HMAC-SHA256), so it never sits anywhere in plaintext. That's optional.
-The key comes from `PLAINSPOKEN_LEAK_KEY` or a git-ignored `.leak-guard-key`; without it, a run that meets keyed
-entries ends on `SKIPPED (no key)`, never a clean result. The guard doesn't scan git-ignored files, and
-`python3 -m scripts.dev.leak_guard --help` lists the options. To hash or convert a name, pass `-` for the term
-(`--convert -`): it's read from stdin, without echo at a terminal, so the name stays out of shell history and `ps`.
+## Licence
 
-Security problems: see [SECURITY.md](SECURITY.md). Licence: MIT ([LICENSE](LICENSE)); third-party notices are in
-[NOTICE.md](NOTICE.md).
-
-Acceptance runs and the report contract: see `docs/acceptance/` and `docs/report-contract.md`.
+[MIT](LICENSE) · made by [Little Bear Apps](https://littlebearapps.com) 🐶
