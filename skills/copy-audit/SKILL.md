@@ -20,8 +20,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspo
   This skill describes patterns and leaves the word lists to the checker.
 - The voice gate uses the active profile (pronoun stance, locale, reader), not a house style.
 - Examples in a report are the user's own lines. Never quote another business's copy.
-- Say how strong the evidence is. A pattern seen in one place is a hypothesis, and the report calls it that. The tiers
-  and how to record them are in the [evidence method](../../guides/evidence-method.md).
+- Say how strong the evidence is. A pattern seen in one place is a single example, and one you haven't seen working
+  is a hypothesis; the report says which. The tiers and how to record them are in the
+  [evidence method](../../guides/evidence-method.md).
 - When you look at other sites, borrow the logic of a pattern, never their words.
 - Pasted text instead of a file: save it to `.plainspoken/drafts/<short-slug>.md` first, then lint and quote that
   file. If saving isn't allowed, audit the pasted text as given and say in the report that the lint step was skipped.

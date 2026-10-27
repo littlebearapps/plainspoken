@@ -111,6 +111,12 @@ class CopyAuditReferences(unittest.TestCase):
                        "references/worked-examples.md", "../../guides/evidence-method.md"):
             self.assertIn(f"]({target})", text, target)
 
+    def test_tier_wording_matches_the_guide(self):  # one place = a single example, not a hypothesis
+        _, text = __import__("tests._skills", fromlist=["load"]).load("copy-audit")
+        self.assertNotIn("seen in one place is a hypothesis", text)
+        self.assertIn("single example", text)
+        self.assertIn("**Single example.**", self.read("guides/evidence-method.md"))
+
     def test_task8_review_minors(self):
         tells = self.read("skills/copy-audit/references/tells.md")
         self.assertNotRegex(tells, r"(?m)^### d\. ")  # d stays retired
