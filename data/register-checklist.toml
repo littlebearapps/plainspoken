@@ -52,15 +52,15 @@ applies_to = ["email", "message", "outreach", "follow-up"]
 [[items]]
 id = "R7"
 title = "First contact"
-ask = "Would this read as written to one person, with an easy no?"
-flag_when = "it could go to anyone unchanged, hides who is writing or where the details came from, has no easy no, or asks before giving one useful observation"
+ask = "Would this read as written to one person, and is no an easy answer because any ask is small, specific and optional, or there's no ask?"
+flag_when = "it could go to anyone unchanged; hides who is writing or where the details came from; makes declining awkward (a big or vague ask, a deadline, guilt) or stacks stock reassurance (\"no cost, no obligation, no reply needed\"; one plain \"no worries if not\" is fine); asks before giving one useful observation; follows an observation → credentials → offer → ask sequence even though each sentence passes; holds back the useful part to get a reply; or asks for more than it gives"
 applies_to = ["outreach"]
 
 [[items]]
 id = "R8"
 title = "Follow-up"
 ask = "Does it stand on its own and add something?"
-flag_when = "it only makes sense after the earlier note, escalates (a new deadline, discount or ask), or a closing note still asks"
+flag_when = "it only makes sense after the earlier note, escalates (a new deadline, discount or ask), holds back the useful part to get a reply, asks for more than it gives, or a closing note still asks"
 applies_to = ["follow-up"]
 
 [[items]]

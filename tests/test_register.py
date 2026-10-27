@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -12,6 +13,7 @@ from plainspoken import register
 REPO = Path(__file__).resolve().parents[1]
 FULL = REPO / "tests" / "fixtures" / "profiles" / "voice_full.toml"
 RUN = REPO / "lib" / "run.py"
+CHANGELOG = REPO / "data" / "RULESET-CHANGELOG.md"
 
 
 def cli(*args):
@@ -153,3 +155,78 @@ class Cli(unittest.TestCase):
         r = cli("register-checklist", "--kind", "email", "--register", "email", "--profile", str(FULL))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("R5 Formality: Does the tone fit the register (casual-professional)?", r.stdout)
+
+
+# Register-check items are judged by a model, so there's no deterministic verdict to assert. Every item changed in a
+# "## Register checklist change" section of data/RULESET-CHANGELOG.md needs at least one text it should flag and one
+# it shouldn't. Each fixture names the words of the item (its ask or flag_when, as rendered) that decide it, and the
+# tests below check those words are there and the item reaches the fixture's kind. Every name in them is invented.
+FIXTURES = (
+    {"item": "R7", "kind": "outreach", "flags": True, "clause": "makes declining awkward",
+     "text": "Hi Dana, I run a bookkeeping service nearby. I'd like an hour with you and your treasurer before the "
+             "end of the month, and I'd hate for the club to miss out."},
+    {"item": "R7", "kind": "outreach", "flags": True, "clause": "stacks stock reassurance",
+     "text": "Hi Dana, I noticed the club's fixtures page still lists last season's dates. Happy to help. No cost, "
+             "no obligation, no reply needed."},
+    {"item": "R7", "kind": "outreach", "flags": True, "clause": "observation → credentials → offer → ask",
+     "text": "Hi Dana, I noticed the fixtures page still lists last season's dates. I've built websites for local "
+             "clubs for eight years. I offer a fixtures-page update from $150. Could we book a call on Thursday?"},
+    {"item": "R7", "kind": "outreach", "flags": True, "clause": "holds back the useful part to get a reply",
+     "text": "Hi Dana, I spotted three problems on the club's website that could be turning families away. Reply "
+             "and I'll tell you what they are."},
+    {"item": "R7", "kind": "outreach", "flags": True, "clause": "asks for more than it gives",
+     "text": "Hi Dana, I love what the club does. Could you send me your membership numbers for the last three "
+             "years and set up a meeting with the committee?"},
+    {"item": "R7", "kind": "outreach", "flags": False, "clause": "one plain",
+     "text": "Hi Dana, I'm Sam, a web designer in town. The club's fixtures page still lists last season's dates (I "
+             "checked on Monday). Happy to show how I'd update it if that's useful; no worries if not."},
+    {"item": "R7", "kind": "outreach", "flags": False, "clause": "or there's no ask",
+     "text": "Hi Dana, I'm Sam, a parent in the under-10s. The fixtures page still lists last season's dates when I "
+             "checked this morning. Just letting you know."},
+    {"item": "R8", "kind": "follow-up", "flags": True, "clause": "holds back the useful part to get a reply",
+     "text": "Hi Dana, following my note about the fixtures page, I've now found two more issues. Happy to share "
+             "them on a call."},
+    {"item": "R8", "kind": "follow-up", "flags": True, "clause": "asks for more than it gives",
+     "text": "Hi Dana, a quick follow-up on the fixtures page. Could you send me the committee's contact list and "
+             "the website login so I can take a proper look?"},
+    {"item": "R8", "kind": "follow-up", "flags": False, "clause": "Does it stand on its own and add something?",
+     "text": "Hi Dana, the club's fixtures page now shows this season's dates. The results page still shows last "
+             "season's, and it's the same date field to change. Nothing needed from me."},
+)
+
+
+def changed_items() -> set[str]:
+    """The item ids named in bold in every "## Register checklist change" section of the ruleset changelog."""
+    text = CHANGELOG.read_text(encoding="utf-8")
+    ids: set[str] = set()
+    for section in re.split(r"(?m)^## ", text)[1:]:
+        if section.startswith("Register checklist change ("):
+            ids |= set(re.findall(r"\*\*(R\d+)\b", section))
+    return ids
+
+
+def rendered(item_id: str, kind: str) -> dict | None:
+    return next((i for i in register.checklist(kind, P.default()) if i["id"] == item_id), None)
+
+
+class Fixtures(unittest.TestCase):
+    def test_this_change_is_recorded(self):
+        text = CHANGELOG.read_text(encoding="utf-8")
+        self.assertIn("## Register checklist change (2026-10-27; ruleset version unchanged)", text)
+        self.assertLessEqual({"R7", "R8"}, changed_items())
+
+    def test_every_changed_item_has_a_flag_and_a_no_flag_fixture(self):
+        for iid in sorted(changed_items()):
+            got = {f["flags"] for f in FIXTURES if f["item"] == iid}
+            self.assertEqual(got, {True, False}, f"{iid} needs one should-flag and one shouldn't-flag fixture")
+
+    def test_each_fixture_names_words_the_item_has(self):
+        for f in FIXTURES:
+            item = rendered(f["item"], f["kind"])
+            self.assertIsNotNone(item, f"{f['item']} doesn't apply to {f['kind']}")
+            self.assertIn(f["clause"], item["ask"] + " " + item["flag_when"], f["item"])
+
+    def test_one_plain_easy_no_line_stays_fine(self):
+        r7 = rendered("R7", "outreach")["flag_when"]
+        self.assertIn('one plain "no worries if not" is fine', r7)
+        self.assertNotIn("has no easy no", r7)  # replaced by the shape test
