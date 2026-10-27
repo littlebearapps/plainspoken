@@ -1,7 +1,7 @@
 # Section design
 
-Use this when the task includes page or section layout. A section has to hang together before it can differ from the
-section next to it. Every example is invented.
+Use this when the task includes page or section layout, or spans two or more pages of one site. A section has to hang
+together before it can differ from the section next to it. Every example is invented.
 
 ## Section shapes vary
 
@@ -53,6 +53,24 @@ the copy into stop-start rhythm before anyone has written a word.
 The three within-section checks above (one axis, positives lead, a heading that fits) fail together more often than
 alone. When one changes, re-check the other two, because a new row of items often needs a new weight and a new title.
 
+## Order sections by the reader's decision
+
+On a page that asks the reader to decide, give each section one job, phrased as the question it answers ("What is
+this, and what changes for me?"). By default, run the block order from [outcomes-led copy](outcomes-led.md) at page
+scale, with proof after the how: what it is and what changes, how it works, proof, limits and fit, then the action.
+Assume the reader may land on this page first, from a search or a shared link, with none of the other pages behind
+them. Once a reasonable reader can decide, the next section is the action. More examples, background and long FAQs
+go after it, or fold their one essential line into an earlier section. Test any section placed before the action by
+asking "what worry does this answer that the earlier ones don't?" If the answer is none, move it below the action or
+cut it. Wherever the action appears, near the top or at the end, it's the same main action. Departing from the
+default is fine when the page needs it, so long as you say why. This order is house judgement, not a tested result.
+
+Example: a swim school's lessons page opens on what a term of lessons gives a child, then how a class runs (group
+size, length, who teaches), then a parent's comment as proof, then ages, the waitlist and what to bring, then "Book a
+trial lesson". The draft had a photo gallery between the proof and the button. It answers no worry the earlier
+sections don't, so it moves below the button with the long FAQ, apart from "Do I stay poolside?", which a first-time
+parent needs before booking, so its answer becomes one line in the fit section.
+
 ## One main action per page
 
 Every page resolves to one named action. If a second one exists, it is a text link beneath the main button, not a
@@ -70,3 +88,12 @@ free tasting box" keeps one path. "Two ways forward" splits it.
 Every call to action tells the reader what happens when they use it. "Learn more" and "Contact us" leave them
 guessing what's on the other side. "Book a 20-minute fitting" or "Order a cake for 10 days from now" names the thing
 about to happen, and often the time or cost, so the reader can picture the next step before committing to it.
+
+## One name per thing across a site
+
+When a task spans two or more pages of one site, each offer or thing keeps one plain name everywhere: headings,
+buttons, menus and body text. The check's synonym-cycling rule works inside one document, so it can't see that the
+home page says "trial lesson" while the booking page says "assessment swim". Where a page keeps a search term as its
+heading because that's what readers type, put the plain name beside it ("Learn to swim: our weekly lessons"). Once a
+name is settled, suggest it as an entry for the profile's glossary (the `glossary:` path that `profile --voice`
+prints), with the plain name as the gloss, and add it only when the user asks.
