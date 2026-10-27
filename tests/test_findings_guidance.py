@@ -1,4 +1,5 @@
-"""Explaining findings: shorthand that hides scope, assumed goals and the order a finding is explained in."""
+"""Explaining findings: shorthand that hides scope, assumed goals, exposure not ability, and the order a finding
+is explained in."""
 import unittest
 
 from tests._skills import REPO, flat, headings
@@ -44,8 +45,18 @@ class FindingsGuidance(unittest.TestCase):
         for name in ("Familiar shorthand", "Assumed goal", "Naming the part before its job", "Soft abstractions"):
             self.assertIn(name, h)
 
+    def test_a_reader_using_a_term_may_not_know_it(self):
+        spotting = flat(section(read(TERMS), "Spotting them"))
+        self.assertIn("in their own message", spotting)
+        self.assertIn("keep their word and add its plain meaning", spotting)
+
+    def test_persona_describes_exposure_not_ability(self):
+        persona = flat(read(FIELDS).split("- `persona`:", 1)[1].split("\n- `", 1)[0])
+        self.assertIn("hasn't been exposed to", persona)
+        self.assertIn("never their age or ability", persona)
+
     def test_touched_files_wrap_at_118(self):
-        for rel in (WATCH,):
+        for rel in (WATCH, TERMS, FIELDS):
             for n, line in enumerate(read(rel).splitlines(), start=1):
                 self.assertLessEqual(len(line), 118, f"{rel}:{n}")
 
