@@ -117,6 +117,14 @@ class CopyAuditReferences(unittest.TestCase):
         self.assertIn("single example", text)
         self.assertIn("**Single example.**", self.read("guides/evidence-method.md"))
 
+    def test_requested_assessment_keeps_its_finding(self):  # tell n doesn't soften a review the reader asked for
+        tells = self.read("skills/copy-audit/references/tells.md")
+        entry = tells.split("### n. ", 1)[1].split("\n### ", 1)[0]
+        self.assertIn("asked for the assessment", entry)
+        watch = self.read("skills/plain-language/references/watch-outs.md")
+        section = watch.split("## Negative framing", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("asked for the assessment", section)
+
     def test_task8_review_minors(self):
         tells = self.read("skills/copy-audit/references/tells.md")
         self.assertNotRegex(tells, r"(?m)^### d\. ")  # d stays retired
