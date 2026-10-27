@@ -171,6 +171,13 @@ class WriteSkill(SkillBasics, unittest.TestCase):
             for n, line in enumerate(f.splitlines(), start=1):
                 self.assertLessEqual(len(line), 118, f"line {n}")
 
+    def test_replies_answer_every_question(self):  # a reply's agenda is the incoming message
+        af = (REPO / "skills" / "write" / "references" / "answer-first.md").read_text(encoding="utf-8")
+        self.assertIn("## Replies", af)
+        section = af.split("## Replies", 1)[1].split("\n## ", 1)[0]
+        for phrase in ("each question", "acknowledge", "settle"):
+            self.assertIn(phrase, section.lower(), phrase)
+
     def test_blend_references(self):
         self.assertIn("references/answer-first.md", self.text)
         self.assertIn("references/narrative.md", self.text)
