@@ -178,6 +178,13 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         for phrase in ("each question", "acknowledge", "settle"):
             self.assertIn(phrase, section.lower(), phrase)
 
+    def test_a_decision_changing_limit_sits_beside_its_claim(self):
+        af = (REPO / "skills" / "write" / "references" / "answer-first.md").read_text(encoding="utf-8")
+        close = af.split("## Close with the next step", 1)[1]
+        self.assertIn("beside the claim", close)
+        for n, line in enumerate(af.splitlines(), start=1):
+            self.assertLessEqual(len(line), 118, f"line {n}")
+
     def test_blend_references(self):
         self.assertIn("references/answer-first.md", self.text)
         self.assertIn("references/narrative.md", self.text)
