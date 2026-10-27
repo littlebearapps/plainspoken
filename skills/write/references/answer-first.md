@@ -39,5 +39,7 @@ When the piece answers a message, that message sets the agenda. Before you draft
 
 ## Close with the next step
 
-End on the one thing the reader does next, and when. Don't restate the article. If there's a real limit (when this
-advice stops applying, or when to get a professional), say it plainly just before the close.
+End on the one thing the reader does next, and when, and don't restate the article.
+
+Put a real limit (when this advice stops applying, or when to get a professional) beside the claim it limits, because
+one that would change the reader's decision can't wait for the end. A general one can sit just before the close.
