@@ -188,6 +188,12 @@ FIXTURES = (
     {"item": "R7", "kind": "outreach", "flags": False, "clause": "or there's no ask",
      "text": "Hi Dana, I'm Sam, a parent in the under-10s. The fixtures page still lists last season's dates when I "
              "checked this morning. Just letting you know."},
+    {"item": "R7", "kind": "outreach", "flags": True, "clause": "states a preference as an error",
+     "text": "Hi Dana, the club's homepage says \"members\" where it should say \"players\". That's the wrong word "
+             "for a sports club, and it's probably costing you sign-ups."},
+    {"item": "R7", "kind": "outreach", "flags": False, "clause": "states a preference as an error",
+     "text": "Hi Dana, I'm Sam, a parent in the under-10s. The fixtures page gives the final as 14 September and the "
+             "newsletter says 21 September (both checked this morning). Thought you'd want to know."},
     {"item": "R8", "kind": "follow-up", "flags": True, "clause": "holds back the useful part to get a reply",
      "text": "Hi Dana, following my note about the fixtures page, I've now found two more issues. Happy to share "
              "them on a call."},
