@@ -41,13 +41,14 @@ doesn't print reaches no drafting skill.
 - `sentence_mean`, `sentence_sd`, `burstiness`, `long_share`, `short_share`: measured from the samples by
   `voice-stats`. Example: `sentence_mean = 14.2`. Who reads it: drafting and the voice check, as a guide. The checker
   ignores these.
-- `notes` (under `[rhythm]`): the pattern in words. Example: "Short answers, then one long walk-through." Who reads it:
-  drafting and the voice check.
+- `notes` (under `[rhythm]`): the pattern in words. Example: "Short answers, then one long walk-through." Who reads
+  it: drafting and the voice check.
 
 ## Reader
 
-- `persona`: who reads this writing, in a line. Example: "a neighbour who gardens on weekends". Who reads it:
-  drafting, `plain-language`, the voice check and register-check (its checklist names the reader).
+- `persona`: who reads this writing, in a line. Describe what the reader hasn't been exposed to, never their age or
+  ability. Example: "a neighbour who gardens on weekends". Who reads it: drafting, `plain-language`, the voice
+  check and register-check (its checklist names the reader).
 - `comprehension_floor`: the school year a reader needs to follow the text, 1 to 12. Example: `7`. Who reads it:
   drafting, `plain-language` and the voice check.
 - `glossary`: a file next to the profile with plain-word swaps. `profile --voice` prints its full path. Who reads
@@ -65,8 +66,8 @@ doesn't print reaches no drafting skill.
   for the one kind it's drafting (`profile --voice --type <kind>`). Start the line by naming what the slot covers
   ("Emails, texts and DMs. …"). A rule for every kind belongs in `principles` instead.
 - `topics` (under `[avoid]`): subjects to stay off. Who reads it: drafting and the voice check.
-- `moves` (under `[avoid]`): things the author never does. Example: "Opens with a dictionary definition." Who reads it:
-  the voice check. `profile --voice` prints them for every skill, but drafting is told not to steer by them.
+- `moves` (under `[avoid]`): things the author never does. Example: "Opens with a dictionary definition." Who reads
+  it: the voice check. `profile --voice` prints them for every skill, but drafting is told not to steer by them.
 - `starters`, `fillers`, `closers` (under `[lexicon]`): habits seen at least twice in the samples. Who reads it:
   drafting and the voice check.
 
