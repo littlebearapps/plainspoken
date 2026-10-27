@@ -41,6 +41,9 @@ class PlainLanguageSkill(SkillBasics, unittest.TestCase):
     def test_rewrite_runs_the_lint_once(self):
         self.assertRegex(self.text, r"(?:run\.py|RUN) check")
 
+    def test_rewrite_touches_only_flagged_lines(self):
+        self.assertIn("only the lines you flagged", self.text)
+
     def test_worked_examples_are_invented(self):
         ex = (REFS / "worked-examples.md").read_text(encoding="utf-8")
         self.assertGreaterEqual(ex.count("\n### Example "), 4)

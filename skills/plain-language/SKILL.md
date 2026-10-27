@@ -51,8 +51,8 @@ Reader-facing pages, emails, reports, posts and forms. Not code, commit messages
 3. For anything over about 600 words, or when the user asks, get a cold read: start one `plainspoken:cold-reader`
    agent whose whole prompt is two lines, `Reader: <the reader line>` and `File: <absolute path>`. Where no such
    agent exists, read the text yourself as that person, top to bottom, once.
-4. Audit: list the flags. Rewrite: edit, then run `RUN check FILE --plugin-profile '${user_config.profile}'` once and
-   fix any BLOCK your edit introduced.
+4. Audit: list the flags. Rewrite: edit only the lines you flagged and leave the ones that already land, then run
+   `RUN check FILE --plugin-profile '${user_config.profile}'` once and fix any BLOCK your edit introduced.
 5. Report.
 
 The patterns that most often stop a reader are in [`references/watch-outs.md`](references/watch-outs.md) and
