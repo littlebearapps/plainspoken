@@ -26,3 +26,14 @@ build, switch) need strong evidence. Never put a commit verb on public evidence 
 A label frames a judgement; it doesn't support one. In the claims ledger a labelled recommendation is usually
 `opinion_or_inference`. The evidence under a **Strong evidence** label still needs its own claim, verified or first
 hand, like any other figure.
+
+## Recommendations someone else carries out
+
+This applies to reports, audits and advice that will be handed on, where another person or a provider makes the
+change. For each material recommendation, name the item affected, the change or check, who usually does it (a role,
+never a person you'd have to invent), what confirmation should come back, and what's still unknown. Describe the
+change in plain terms and don't invent platform-specific steps, because the person doing it knows their own system.
+
+> **Strong evidence:** The opening hours on the club's map listing don't match its website. Whoever manages the
+> listing, often the secretary, changes it to match the site and sends a screenshot once it's live. Still unknown:
+> how long the listing has been wrong.
