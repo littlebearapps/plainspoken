@@ -46,7 +46,9 @@ Every top-layer line should pass all three.
 
 Promise the levers the writer controls: what is built, written, set up, configured or delivered. Report the signals
 the writer can observe, such as what is being measured and what changed. Never promise the outcome that depends on
-other people, on a market or on a platform's decisions.
+other people, on a market or on a platform's decisions. More evidence doesn't bring an outcome under the writer's
+control, so don't word the limit as if it's only waiting on data ("not until I've seen the numbers"): the numbers
+can show which lever to pull first, but the outcome still isn't the writer's to promise.
 
 In practice, that means the strong, direct verb goes with the writer's own work ("I'll set up", "I'll write",
 "designed to") and a softer one goes with anything that depends on someone else ("makes it easier for people to

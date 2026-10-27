@@ -18,6 +18,9 @@ should flag and one it shouldn't in `tests/test_register.py`. The owner approved
   reassurance.
 - **R8 Follow-up:** the same two clauses for a later note: it holds back the useful part to get a reply, or asks
   for more than it gives.
+- **R2 Outcome promises:** also flags an outcome outside the writer's control presented as waiting only on more
+  evidence ("not until I've seen the numbers"). The matching line is in the control principle,
+  `skills/copy-audit/references/principle.md` "Truth and control".
 
 ## Engine change (2026-10-21; ruleset version unchanged)
 

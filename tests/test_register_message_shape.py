@@ -5,6 +5,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 EXAMPLES = REPO / "skills" / "register-check" / "references" / "examples.md"
+PRINCIPLE = REPO / "skills" / "copy-audit" / "references" / "principle.md"
 
 
 class Examples(unittest.TestCase):
@@ -21,6 +22,14 @@ class Examples(unittest.TestCase):
     def test_one_plain_no_worries_line_is_still_the_fix(self):
         self.assertIn('a plain "no worries if not"', self.text)
         self.assertIn("stacks stock reassurance", self.text)
+
+
+class TemporaryLimit(unittest.TestCase):
+    def test_truth_and_control_says_more_evidence_doesnt_make_an_outcome_controllable(self):
+        text = PRINCIPLE.read_text(encoding="utf-8")
+        section = " ".join(text.split("## Truth and control", 1)[1].split())
+        self.assertIn("More evidence doesn't bring an outcome under the writer's control", section)
+        self.assertIn("not until I've seen the numbers", section)
 
 
 if __name__ == "__main__":
