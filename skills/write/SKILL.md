@@ -71,10 +71,12 @@ Keep the outline mode's `Claims to ledger` list for step 6.
 
 ### 3. Outline
 
-Write H2s from what each section will say, not from what it's about. Pick the blend for this content type from the
-`blend (<type>):` line of `profile --voice`: `answer-first` follows `references/answer-first.md` and `narrative`
-follows `references/narrative.md`. No blend set → answer-first. Give each section a type (`opening`, `explainer`,
-`opinion`, `story`, `list-intro`, `closing`) for the next step. When the contract asks the reader to do something,
+For a multi-section `--type page`, read `${CLAUDE_PLUGIN_ROOT}/skills/copy-audit/references/section-design.md`
+before writing H2s, for the section order, shapes and the one main action. Write H2s from what each section will
+say, not from what it's about. Pick the blend for this content type from the `blend (<type>):` line of
+`profile --voice`: `answer-first` follows `references/answer-first.md` and `narrative` follows
+`references/narrative.md`. No blend set → answer-first. Give each section a type (`opening`, `explainer`, `opinion`,
+`story`, `list-intro`, `closing`) for the next step. When the contract asks the reader to do something,
 plan where each step they can try goes: `references/try-this.md`.
 
 ### 4. Anchors
