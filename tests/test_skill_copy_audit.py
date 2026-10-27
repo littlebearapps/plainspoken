@@ -74,7 +74,8 @@ class CopyAuditReferences(unittest.TestCase):
                                                                 "Say what happens next",
                                                                 "Order sections by the reader's decision",
                                                                 "One name per thing across a site"),
-            "guides/evidence-method.md": ("Evidence tiers", "Capturing a site", "Quoting", "Retiring evidence"),
+            "guides/evidence-method.md": ("Evidence tiers", "Capturing a site", "Studying other organisations' pages",
+                                          "Quoting", "Retiring evidence"),
         }
         for rel, names in want.items():
             h = headings(self.read(rel))

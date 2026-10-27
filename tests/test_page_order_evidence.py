@@ -76,5 +76,35 @@ class WritePageReadsSectionDesign(unittest.TestCase):  # P2
         self.assertEqual(text.count("section-design.md"), 1)
 
 
+class StudyingOtherPages(unittest.TestCase):  # A2
+    def setUp(self):
+        self.guide = read(EVIDENCE)
+        self.body = flat(section(self.guide, "Studying other organisations' pages")).lower()
+
+    def test_one_question_first(self):
+        self.assertIn("one stated question", self.body)
+        self.assertIn("don't collect", self.body)
+
+    def test_fit_from_the_profile_with_one_honesty_bar(self):
+        for phrase in ("profile", "pronoun", "reader", "page's job", "intent fits but the mechanism doesn't"):
+            self.assertIn(phrase, self.body, phrase)
+        self.assertIn("control test", self.body)
+        self.assertNotRegex(self.body, r"\br3\b")
+
+    def test_say_what_you_took_and_did_not(self):
+        for phrase in ("light rewrite is still their line", "layout", "visual identity", "pressure",
+                       "unbacked claims", "what you did take"):
+            self.assertIn(phrase, self.body, phrase)
+        self.assertIn("no quota", self.body)
+
+    def test_prevalence_and_absence(self):
+        self.assertIn("prevalence isn't fit", self.body)
+        self.assertIn("absence proves nothing", self.body)
+        self.assertRegex(self.body, r"unique.*difference")
+
+    def test_old_solo_team_clause_replaced(self):
+        self.assertNotIn("a solo practice may not transfer to a team", flat(self.guide))
+
+
 if __name__ == "__main__":
     unittest.main()
