@@ -1,5 +1,6 @@
 """Batch 5: decision-page order, one name per thing across a site, write reading section design for pages,
 studying other organisations' pages, and intake forms. All conditional: each loads only for its job."""
+import re
 import unittest
 
 from tests._skills import REPO, flat
@@ -104,6 +105,15 @@ class StudyingOtherPages(unittest.TestCase):  # A2
 
     def test_old_solo_team_clause_replaced(self):
         self.assertNotIn("a solo practice may not transfer to a team", flat(self.guide))
+
+
+class IntakeForms(unittest.TestCase):  # H
+    def test_form_bullet(self):
+        text = read("skills/adapt/references/framing-by-surface.md")
+        micro = flat(section(text, "Microcopy")).lower()
+        self.assertIn("not sure where to start", micro)
+        self.assertIn("in the reader's words", micro)
+        self.assertEqual(len(re.findall(r"(?m)^- Intake questions:", text)), 1)
 
 
 if __name__ == "__main__":
