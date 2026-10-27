@@ -13,7 +13,7 @@ applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
 id = "R2"
 title = "Outcome promises"
 ask = "Does it promise only what the writer controls?"
-flag_when = "it promises an outcome that depends on someone else (a ranking, sales, sign-ups, a mention); name the lever and the signal to watch instead"
+flag_when = "it promises an outcome that depends on someone else (a ranking, sales, sign-ups, a mention), or presents an outcome outside the writer's control as waiting only on more evidence (\"not until I've seen the numbers\"); name the lever and the signal to watch instead"
 applies_to = ["email", "message", "post", "page", "outreach", "follow-up"]
 
 [[items]]

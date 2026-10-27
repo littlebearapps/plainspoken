@@ -162,6 +162,11 @@ class Cli(unittest.TestCase):
 # it shouldn't. Each fixture names the words of the item (its ask or flag_when, as rendered) that decide it, and the
 # tests below check those words are there and the item reaches the fixture's kind. Every name in them is invented.
 FIXTURES = (
+    {"item": "R2", "kind": "email", "flags": True, "clause": "as waiting only on more evidence",
+     "text": "I can't promise the shop will reach more customers until I've had a proper look at your figures."},
+    {"item": "R2", "kind": "email", "flags": False, "clause": "Does it promise only what the writer controls?",
+     "text": "I'll rewrite the three service pages by Friday and send you the enquiry count each month, so you can "
+             "see whether anything changes."},
     {"item": "R7", "kind": "outreach", "flags": True, "clause": "makes declining awkward",
      "text": "Hi Dana, I run a bookkeeping service nearby. I'd like an hour with you and your treasurer before the "
              "end of the month, and I'd hate for the club to miss out."},
@@ -213,7 +218,7 @@ class Fixtures(unittest.TestCase):
     def test_this_change_is_recorded(self):
         text = CHANGELOG.read_text(encoding="utf-8")
         self.assertIn("## Register checklist change (2026-10-27; ruleset version unchanged)", text)
-        self.assertLessEqual({"R7", "R8"}, changed_items())
+        self.assertLessEqual({"R2", "R7", "R8"}, changed_items())
 
     def test_every_changed_item_has_a_flag_and_a_no_flag_fixture(self):
         for iid in sorted(changed_items()):
