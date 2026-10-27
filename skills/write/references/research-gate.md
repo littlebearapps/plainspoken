@@ -33,6 +33,18 @@ block.
 Don't fill the gap with background from memory. A line explaining a term (what a tax form is, what a piece of
 software does) is a new fact like any other: it needs a source, or it stays out.
 
+## When the message is about the reader's own material
+
+Some messages exist because of something you noticed in the recipient's own material: a first approach, feedback on
+their work, a correction. Check that premise before you draft.
+
+- Look at the material live and note the date you checked it. A memory of it, or an old copy, isn't a check.
+- Compare your point with their own current wording, not an earlier version or a general rule.
+- Separate an error (a wrong date, two figures that disagree) from a preference (a word or layout you'd have
+  chosen differently). A preference is said as one, or left out.
+- Write any consequence as a condition on their goal ("if the aim is more bookings, …"), not as a fact about them.
+- If the premise fails, stop and tell the user. Don't swap in a different complaint to keep the message.
+
 ## When sources disagree
 
 Say so, in the draft or to the user. Give both figures with their sources and dates, and say which one the piece
