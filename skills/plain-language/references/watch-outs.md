@@ -87,6 +87,10 @@ puts them on the defensive. Describe your own way plainly and let them draw the 
 A short line that recognises the reader's own words is fine if it is a possibility they own ("if enquiries have gone
 quiet") and turns straight to the gain. A deficit verdict about their current work is not.
 
+The exception is a reader who asked for the assessment: a review, an audit, a reply to "what's wrong?". Then the
+finding is what they came for. Say the problem plainly, about the work rather than the person, and don't soften it
+into an after-state or leave it out.
+
 Before:
 
 > Unlike the usual firms, there are no handoffs. Your site is slow and out of date.

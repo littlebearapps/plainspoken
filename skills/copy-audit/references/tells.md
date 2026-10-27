@@ -135,6 +135,9 @@ Fix: name the after-state instead: "[Writer: what the reader's site and ads will
 brief, honest recognition ("if enquiries have gone quiet") works sparingly as a doorway, followed straight away by
 what changes.
 
+When the reader asked for the assessment (a review, an audit, a reply to "what's wrong?"), the verdict is the job: state
+the problem plainly, as a fact about the work and not the person, with its evidence beside it.
+
 ### o. Stop-start rhythm
 
 Body copy made of separate slogans ("No fuss. No jargon. Just results."). The plain-language skill covers it in full, in its rhythm guidance; here, flag three or more unconnected adjacent lines and send the fix there.
