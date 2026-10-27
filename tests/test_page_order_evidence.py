@@ -61,5 +61,20 @@ class OneNamePerThing(unittest.TestCase):  # I
         self.assertIn("layout, or spans two or more pages of one site", flat(read(DESIGN)))
 
 
+class WritePageReadsSectionDesign(unittest.TestCase):  # P2
+    def test_outline_step_points_at_section_design(self):
+        text = read("skills/write/SKILL.md")
+        outline = flat(text.split("### 3. Outline\n", 1)[1].split("\n### ", 1)[0])
+        target = "${CLAUDE_PLUGIN_ROOT}/skills/copy-audit/references/section-design.md"
+        self.assertIn(f"`{target}`", outline)
+        self.assertIn("--type page", outline)
+        self.assertIn("before writing H2s", outline)
+        self.assertTrue((REPO / target.replace("${CLAUDE_PLUGIN_ROOT}/", "")).is_file())
+
+    def test_only_pages_load_it(self):
+        text = flat(read("skills/write/SKILL.md"))
+        self.assertEqual(text.count("section-design.md"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
