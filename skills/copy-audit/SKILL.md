@@ -91,7 +91,8 @@ How to read the fail count is in the checklist.
 
 ## Presentation
 
-Only when the task includes section or page layout. Detail: [section design](references/section-design.md).
+Only when the task includes section or page layout, or spans two or more pages of one site. Detail:
+[section design](references/section-design.md).
 
 - **Section variety.** Three sections in a row with the same shape (heading, three bullets, link) read as a template.
 - **Concision.** Cut every clause that doesn't earn its place. A shorter flowing paragraph beats a long one and a

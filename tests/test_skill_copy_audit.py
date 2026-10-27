@@ -71,7 +71,9 @@ class CopyAuditReferences(unittest.TestCase):
                                                                 "The heading fits the section",
                                                                 "Don't build sections that force taglines",
                                                                 "One main action per page",
-                                                                "Say what happens next"),
+                                                                "Say what happens next",
+                                                                "Order sections by the reader's decision",
+                                                                "One name per thing across a site"),
             "guides/evidence-method.md": ("Evidence tiers", "Capturing a site", "Quoting", "Retiring evidence"),
         }
         for rel, names in want.items():
