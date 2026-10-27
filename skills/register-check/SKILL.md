@@ -56,7 +56,8 @@ condition is true of it, and say which item it failed.
 - Pressure and warmth (R3): a deadline, scarcity, guilt or familiarity the writer doesn't mean.
 - Pronouns, formality, spelling (R4, R5, R11): measured against the profile and register, not against taste.
 - Permission and first contact (R6 to R8): only on the kinds those items apply to. A found address or an old contact
-  is not permission.
+  is not permission. R7 and R8 judge the message's shape as well as each line: an easy no comes from a small,
+  optional ask (or none), not from stacked reassurance.
 - Advice and wording (R9, R10): unasked orders, and words the profile's reader wouldn't use. For the second, the
   `plain-language` skill is the next step.
 - Scope and private details (R12, R13): what's included and left out, and details the reader didn't share for this

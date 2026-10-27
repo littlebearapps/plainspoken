@@ -2,6 +2,23 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## Register checklist change (2026-10-27; ruleset version unchanged)
+
+`data/register-checklist.toml` isn't part of the ruleset, so `kaizen apply` doesn't govern it and the version stays.
+A checklist change goes in by ordinary pull request, with a line here per changed item and at least one text it
+should flag and one it shouldn't in `tests/test_register.py`. The owner approved these changes on 27 Oct 2026.
+
+- **R7 First contact, the easy no:** judged by the message's shape. It passes when any ask is small, specific and
+  optional, or there's no ask. It flags when declining is made awkward (a big or vague ask, a deadline, guilt) or
+  stock reassurance is stacked ("no cost, no obligation, no reply needed"). One plain "no worries if not" stays
+  fine. "Has no easy no" is gone from `flag_when`.
+- **R7 First contact, sales scaffolding:** also flags a message that runs observation → credentials → offer → ask
+  even though each sentence passes, holds back the useful part to get a reply, or asks for more than it gives.
+  New worked example 4 in `skills/register-check/references/examples.md`; example 2 now names its stacked
+  reassurance.
+- **R8 Follow-up:** the same two clauses for a later note: it holds back the useful part to get a reply, or asks
+  for more than it gives.
+
 ## Engine change (2026-10-21; ruleset version unchanged)
 
 - **Rule 12f, opening repetition scales with length (#25):** the limit is now `opening_top3_max` plus 3/n, where

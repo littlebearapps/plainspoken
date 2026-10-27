@@ -23,8 +23,8 @@ suggested fixes remove or restate; none adds a fact.
 > obligation, and 3 clubs in your league have already signed up.
 
 - **R7 First contact.** "all the clubs in the area" could go to anyone unchanged, and it says nothing about where the
-  address came from or how to say no. Fix: one named observation about this club, who is writing, and a plain "no
-  worries if not".
+  address came from. "free to look, no obligation" stacks stock reassurance where a small ask would do. Fix: one
+  named observation about this club, who is writing, and a plain "no worries if not".
 - **R1 Honesty.** "3 clubs in your league have already signed up" needs a source the writer can show. Fix: check the
   number and say which clubs may be named, or cut it.
 - **R6 Consent.** Nothing says the club asked to hear about hire. Fix: state the basis for writing to them.
@@ -40,3 +40,20 @@ suggested fixes remove or restate; none adds a fact.
   one line.
 - **R1 Honesty.** "endless savings" has no figure to support it. Fix: name one saving the writer can prove.
 - **R5 Formality.** The exclamation reads chummier than a casual-professional register. Fix: a full stop.
+
+## 4. A first email to a café about its menu board (kind: outreach)
+
+> Hi Priya, I walked past on Tuesday and spotted two things on your menu board that could be confusing customers.
+> I've painted shop signs for twelve years. I do full menu-board refreshes from $300. Could we find 30 minutes this
+> week to talk it through? Reply and I'll tell you what the two things are.
+
+- **R7 First contact.** Each sentence passes alone, but together they run observation → credentials → offer → ask.
+  Fix: send the observation and stop; the credentials and the price can wait until Priya asks.
+- **R7 First contact.** "Reply and I'll tell you what the two things are" holds back the useful part to get a
+  reply. Fix: name them, as the writer saw them: "[Writer: the two things on the board]".
+- **R7 First contact.** "30 minutes this week" asks for more than a message that has given nothing yet. Fix: a small
+  ask Priya can ignore, or none.
+
+What passes: "Hi Priya, I'm a sign-writer. Walking past on Tuesday I noticed [Writer: the two things on the board].
+Happy to say more if it's useful; no worries if not." It gives Priya the observation before anything else, and its
+only ask is small enough to ignore, with one plain line that makes saying no easy.
