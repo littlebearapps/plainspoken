@@ -398,3 +398,35 @@ only `{"sandbox": {"enabled": true}}`); not committed. One Bash call:
 - The round-7 eval smoke (2.1.308, `claude plugin eval`) saw `Read-only file system` on every Bash write in the
   run folder, `mkdir .plainspoken` in the cwd included, while the Write tool worked. Normal sandboxed use doesn't do
   that, so it's the eval runner. Run evals that need Bash writes on CLI 2.1.303, where round 6 saw no such failure.
+
+## 15. What the tool-call check relies on (#124), and what's still to probe
+
+Read on 2026-10-28 from the hooks references and source, not yet probed live; each line says where it came from.
+
+- Claude Code (`https://code.claude.com/docs/en/hooks`): a matcher with characters outside letters, digits, `_`, `-`,
+  space, `,` and `|` is an unanchored regex, so `mcp__.*` matches every MCP tool, including plugin-bundled servers
+  (`mcp__plugin_<plugin>_<server>__<tool>`) and claude.ai connectors (`mcp__claude_ai_<Name>__<tool>`).
+  `additionalContext` from `PreToolUse` reaches the model next to the tool's result, after the call has run; `deny`
+  shows its reason to the model and the call doesn't run; `ask` shows its reason to the person, prompts even in auto
+  mode, and in a `-p` run counts as a deny. A timed-out or failing command hook doesn't block the call without
+  `onFailure: "block"`, so the tool-call hook has none.
+- Codex (`https://developers.openai.com/codex/hooks.md`; `codex-rs/hooks/src/events/pre_tool_use.rs`): `PreToolUse`
+  fires for MCP and local function tools, never hosted tools. `ask` is parsed but unsupported: the hook run fails and
+  the call continues, so the hook never sends it. `allow` without `updatedInput` fails the hook and drops its
+  context, so the hook never sends `allow`. A callback error or timeout lets the call go ahead. Since 0.164.0, hook
+  trust is bound to a hash of every file in the plugin, so each update needs `/hooks` again.
+- Hermes (`https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks`; `tools/mcp_tool_schema.py` at
+  v0.22.5): `pre_tool_call` fires before every tool, MCP tools included, now named `mcp__<server>__<tool>` (older
+  docs say `mcp_`); the check matches both. A callback that raises or passes `plugins.hook_callback_timeout` (30 s
+  by default) blocks the tool, so the plugin catches everything and lints in a subprocess with a 10-second limit.
+  `block` needs a non-empty message, which becomes the tool's result.
+
+Still to probe on live hosts (a paid round, with a scratch MCP server that records the arguments it receives):
+
+- Claude Code, installed copy and `--plugin-dir`: the hook fires for `mcp__outbox__send`; a deny reaches the model,
+  which resends a fixed body; the same body resent passes; `ask` prompts interactively and denies in `-p`; the
+  recorded arguments always equal what the model sent.
+- Codex 0.164.0 or later, after `/hooks` trust and again after a plugin file change: the same checks, minus `ask`.
+- Hermes: the `mcp__` naming on a live install, `block`, the posted line, and whether `transform_tool_result`
+  carries the call's `tool_call_id` (the plugin falls back to the session and tool name when it doesn't).
+- Whether an `ask` prompt reaches the person through a bridge such as Untether.

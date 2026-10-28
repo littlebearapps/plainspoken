@@ -52,6 +52,15 @@ every file in the plugin, so each plainspoken update, even one that doesn't touc
 "needs review" (Codex reports "plugin contents changed; hook approval required"). Trust them again in `/hooks`. Even with them trusted, run the check skill yourself before
 anything goes out, because Codex calls its tool hooks a guardrail rather than a complete boundary.
 
+## The tool-call check never says anything
+
+It's off until you turn it on: `setup --host <host> --tool-call warn` (with `--scope user` for Hermes), or
+`[tool_call] mode` in a config file. `doctor` shows the mode and where it came from. Once on, it stays quiet for a
+clean text, a tool on the shipped skip list (search, memory, code hosts, task trackers, browser and data tools, and
+lookups such as `get_…` and `list_…`), an argument under 25 prose words, and anything it doesn't read as prose. Add
+a tool back with `[tool_call] include`. A config it can't read turns it off; `doctor` names the problem. In Codex,
+check that its hooks are trusted in `/hooks`.
+
 ## Hermes asks me to confirm the install, or wants `--force`
 
 Hermes scans a plugin before it installs or updates it, and a "caution" rating asks you to confirm, but over SSH or

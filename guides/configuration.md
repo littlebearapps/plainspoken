@@ -10,6 +10,7 @@ one lives, which one wins when two disagree, and the optional pieces you can swi
 - [How the profile is chosen](#how-the-profile-is-chosen)
 - [Which English the skills write in](#which-english-the-skills-write-in)
 - [Optional pieces](#optional-pieces)
+- [The tool-call check](#the-tool-call-check)
 - [The setup command](#the-setup-command)
 - [Host setup](#host-setup)
 - [Narrow what plainspoken does](#narrow-what-plainspoken-does)
@@ -22,7 +23,7 @@ Settings come from three places. When two set the same thing, the first one here
 1. **The project config**, `.plainspoken/config.toml` in the project. It wins everywhere: in the skills, the hooks
    and the command-line tool.
 2. **The user-wide file**, `~/.config/plainspoken/config.toml`. It holds only `[nudge]`, `[rule]`,
-   `[lint_watch]` and `[locale]`.
+   `[lint_watch]`, `[locale]` and `[tool_call]`.
 3. **The plugin options** you set when you install or enable the plugin in Claude Code. Codex and Hermes Agent have
    no plugin options, so there you use the two files.
 
@@ -43,6 +44,7 @@ Claude Code asks for these when you install or enable the plugin (`userConfig` i
 | `targets` | The globs the lint-watch hook checks after each Write or Edit | `**/*.md` | `[lint_watch] paths` |
 | `nudge` | On: when a prompt asks for an email, post, script or other writing, a one-line reminder names the plainspoken step that fits | off | `[nudge] mode` |
 | `rule` | On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read | off | `[rule] enabled` |
+| `tool_call` | The tool-call check's mode: `off`, `warn`, `block-once` or `ask` ([The tool-call check](#the-tool-call-check)) | `off` | `[tool_call] mode` |
 | `strictness` | What the publish gate does on `git push`: `watch` reports only, `warn` warns, `block` refuses a push unless every gated file has a current PASS | `watch` | `[gate] strictness` |
 | `ledger_excerpts` | Whether the kaizen ledger stores excerpts of your text. Off keeps raw text out of it (hashes only) | off | `[kaizen] excerpts` |
 | `kaizen_adapter` | Where kaizen proposals go: `file` (Markdown in `.plainspoken/`), `github` (issues) or `trello` (cards). The project config supplies the IDs | `file` | `[kaizen] adapter` |
@@ -93,13 +95,28 @@ option says `block`. In Codex and Hermes, `[gate] strictness` is the only source
 
 An empty `paths` list lints nothing.
 
+### `[tool_call]`: the tool-call check
+
+    [tool_call]
+    mode = "warn"              # off (the default) | warn | block-once | ask
+    min_words = 25             # prose words one argument needs before it's linted
+    skip = ["*mycrm*"]         # tool-name globs to leave out, on top of the shipped list
+    include = ["*trello*"]     # tool-name globs to check even when a list leaves them out; beats skip
+    skip_fields = ["notes"]    # argument names never read, on top of the shipped list
+    profile = "email"          # optional: the voice profile for this check
+
+The same section works in the user-wide file, key by key: a key the project's section sets beats the same key
+there, so a project can add `skip` globs and keep the user-wide `mode`. What each mode does:
+[The tool-call check](#the-tool-call-check).
+
 ### `[kaizen]`: capture sources
 
     [kaizen]
-    capture_sources = ["check", "merge", "judge"]   # drop lint-watch events; default all four
+    capture_sources = ["check", "merge", "judge"]   # drop lint-watch and tool-call events; default all five
 
-The four sources are `check`, `merge`, `judge` and `lint-watch`. `capture = false` turns them all off. The rest of
-`[kaizen]` (excerpts, adapter, approvers, folders, GitHub and Trello IDs) is in [guides/kaizen.md](kaizen.md).
+The five sources are `check`, `merge`, `judge`, `lint-watch` and `tool-call`. `capture = false` turns them all off.
+The rest of `[kaizen]` (excerpts, adapter, approvers, folders, GitHub and Trello IDs) is in
+[guides/kaizen.md](kaizen.md).
 
 ### `[brief]`, `[nudge]` and `[rule]`: the optional pieces
 
@@ -142,9 +159,9 @@ What these do: [guides/claims-and-reader-value.md](claims-and-reader-value.md).
 
 ## The user-wide file
 
-`~/.config/plainspoken/config.toml` holds only `[nudge]`, `[rule]`, `[lint_watch]` and `[locale]`, the settings that
-make sense outside a project. A project's own config wins over it, and it wins over the Claude Code options `nudge`,
-`rule` and `locale`.
+`~/.config/plainspoken/config.toml` holds only `[nudge]`, `[rule]`, `[lint_watch]`, `[locale]` and `[tool_call]`,
+the settings that make sense outside a project. A project's own config wins over it, and it wins over the Claude
+Code options `nudge`, `rule`, `locale` and `tool_call`.
 It can't choose a voice profile. Codex and Hermes, which have no plugin options, use it for these switches; Hermes
 reads it because it runs plugins outside the project folder.
 
@@ -163,6 +180,10 @@ With none of them, a command stops and tells you how to set one. To see the prof
 
 `check`, `merge`, `judge-input`, `justify`, the lint-watch hook and the publish gate all use the file's own profile,
 and the skills pass it to the calls that don't take a file.
+
+The tool-call check lints text that has no file, so `[engine] profiles` globs never apply to it. It takes
+`PLAINSPOKEN_PROFILE`, then `[tool_call] profile` (the project's, else the user-wide file's), then `[engine] profile`,
+then the `profile` plugin option, then `default`.
 
 ## Which English the skills write in
 
@@ -192,6 +213,7 @@ All of these are off by default and add 0 tokens until you switch them on, apart
 | Writing nudge (`[nudge] mode = "on"`) | When a prompt asks for an email, a text, a post, a script, a page or a rewrite that sounds like a person, one line names the plainspoken step that fits: lint a short piece on stdin (`check -`), use write (draft, full check, fix) for a long one, use humanize for a rewrite. Chat, code and slash commands don't trigger it | Claude Code and Cowork (`UserPromptSubmit`), Codex CLI, app and ChatGPT Work (`UserPromptSubmit`), Hermes (`pre_llm_call`) |
 | Drafting rule (`[rule] enabled = true`) | Every session starts with a short rule: whenever something people will read is drafted, use plainspoken. The plugin adds it with this install's paths, so it never goes stale after an update, and it only applies where plainspoken is installed | Claude Code and Cowork |
 | Lint after edits (`[lint_watch] mode`, on by default) | After a draft file is saved, the lint's findings come straight back | Claude Code, Cowork, Codex, Hermes |
+| Tool-call check (`[tool_call] mode`) | Before a tool call that sends writing (an email, a post, a message) runs, its text is linted ([below](#the-tool-call-check)) | Claude Code and Cowork, Codex (`PreToolUse` on MCP tools), Hermes (`pre_tool_call`) |
 | Paste-in text (`setup --host claude-ai` or `chatgpt`) | The same rule as text to paste into the app's personal preferences, custom instructions or a project's instructions | claude.ai chat, ChatGPT chat (neither runs hooks) |
 | Session brief (`[brief] enabled = true`) | A short writing brief (at most 800 characters) at session start and in each subagent, never in plainspoken's own agents | Claude Code and Cowork |
 | Output style (`/output-style plainspoken`) | The same guidance as an output style, for the main conversation only | Claude Code |
@@ -200,13 +222,71 @@ The session brief and the output style aren't on by default yet. The Phase 6 abl
 no lint evidence for either, and with 3 drafts per variant that's only a hint. The blind reader test decides
 ([guides/evals.md](evals.md)).
 
+## The tool-call check
+
+Writing often leaves through a tool rather than a file: an email sent or drafted through a mail tool, a post, a
+comment, a calendar invite. The tool-call check lints that text before the call runs. It's off until you turn it on,
+with `setup --tool-call warn`, `[tool_call] mode` or, in Claude Code, the `tool_call` plugin option.
+
+**What it reads.** In Claude Code and Codex, calls to MCP tools (`mcp__<server>__<tool>`). In Hermes, every tool but
+its core ones (the terminal, files, the browser, memory, the task board and the like), because Hermes' own Discord,
+Feishu and Yuanbao tools send messages too. Inside a call, a string argument counts when it has at least 25 prose
+words (`min_words`) once markup, a quoted reply thread, a signature, code, tables, links and email addresses are
+taken out. The lint sees that stripped text, so an old message quoted underneath never earns a finding. Arguments
+named like identifiers, addresses, searches, prompts for another model or code (`id`, `to`, `query`, `prompt`,
+`code` and others) are never read. A field over 10,000 prose words isn't linted.
+
+**What it leaves out.** The shipped list in `data/tool-call.toml` skips search and scrape tools, memory stores, code
+hosts (GitHub, GitLab, Bitbucket), task trackers (Trello, Linear, Jira, Asana, ClickUp), browser automation, data and
+analytics tools, and any tool whose own name starts with `search_`, `list_`, `get_`, `read_`, `find_` or `query_`.
+Code hosts and trackers are left out because most of what goes through them is code or status notes; to check
+issue text or card comments, add them back with `include = ["*github*"]` or `include = ["*trello*"]`.
+
+**What happens on findings.** A clean result says nothing. With a BLOCK or WARN finding:
+
+| Mode | Claude Code and Cowork | Codex | Hermes |
+|---|---|---|---|
+| `warn` | One line to you, and the findings to Claude | One line to you, and the findings to the model | One message to you, and the findings added to the tool's result |
+| `block-once` | The first try is held back with the findings; the same text sent again goes through | Same | Same, as Hermes' block |
+| `ask` | You see the finding and decide whether the call goes ahead | Works as `block-once` (Codex has no ask) | Works as `block-once` |
+
+Three rules hold in every mode. It never changes what the call sends. A tool whose own name holds `draft` (such as
+`create_draft`) is only ever warned, since a draft already waits for you. And it holds a tool back at most once per
+turn: a changed text that still has findings is warned, so it can't loop.
+
+In warn mode on Claude Code and Codex, the findings reach the model next to the tool's result, so after the call has
+run. For a send, that's a note for next time. To catch the text before it goes, use `block-once` or `ask`.
+
+**Records.** With a `.plainspoken` folder in the project, each linted field's findings go to the kaizen ledger as
+`tool-call` events (never with an excerpt, whatever `[kaizen] excerpts` says), and
+`.plainspoken/ledger/tool-calls.jsonl` gets one line per field it looked at: the tool's own name, a hash of the
+server's name, the word count, the outcome and the mode, never the text. `kaizen report` sums them and proposes a
+new `min_words` or a skip glob when the numbers say so. A person decides; nothing changes by itself.
+
+**Speed.** A call it skips costs about 35 to 50 ms (mostly starting Python); a call it lints, about 150 to 210 ms
+for up to 1,000 words. If the check fails or times out (after 10 seconds), the call goes ahead.
+
+**What it can't see.**
+
+- Text typed into a web page by a browser tool, since browser tools are skipped.
+- Text built over several calls (a document filled in piece by piece): each piece is judged on its own, and short
+  ones fall under the cut-off.
+- Encoded bodies, such as a mail tool's base64 `raw` message.
+- Shell commands and scripts that send text (`curl`, `gh issue create --body`), and Hermes' `terminal`.
+- Codex's hosted tools, which never reach a hook, and any app where the hooks aren't loaded or trusted.
+- A meta-tool that runs other tools for you: the text is read, but the tool name doesn't say where it goes, so a
+  skip glob can't target it.
+- Attachments named by path.
+- Short replies and texts under the cut-off.
+
 ## The setup command
 
 `/plainspoken:setup` turns the nudge, the drafting rule and lint after edits on or off for the app you're in, and
 shows what's on. Underneath it runs:
 
     python3 <plugin>/lib/run.py setup --host <host> [--scope project|user] [--nudge on|off] [--rule on|off]
-        [--lint-watch on|off] [--locale en-AU|en-GB|en-US] [--dry-run | --remove | --status]
+        [--lint-watch on|off] [--locale en-AU|en-GB|en-US] [--tool-call off|warn|block-once|ask]
+        [--dry-run | --remove | --status]
 
 | Flag | What it does |
 |---|---|
@@ -214,6 +294,7 @@ shows what's on. Underneath it runs:
 | `--scope` | `project` writes `.plainspoken/config.toml` here; `user` writes `~/.config/plainspoken/config.toml`. Use `user` for Hermes, because it runs plugins outside the project folder |
 | `--nudge`, `--rule`, `--lint-watch` | `on` or `off`; one you leave out stays as it is. `--rule` is for Claude Code |
 | `--locale` | Writes `[locale] variant`. For `claude-ai` and `chatgpt` it adds one line to the paste-in text instead, such as "Spell in American English (en-US)." |
+| `--tool-call` | Writes `[tool_call] mode`: `off`, `warn`, `block-once` or `ask` |
 | `--dry-run` | Print the change without writing it |
 | `--remove` | Delete every line setup wrote to the file, and nothing else |
 | `--status` | Print what's on now |
@@ -247,7 +328,7 @@ A project that already has its own checks can narrow what plainspoken does:
   `--profile` and `PLAINSPOKEN_PROFILE` still come first.
 - **Lint fewer files, or none.** Set `[lint_watch] paths` to the files you want linted after each edit, or
   `mode = "off"`.
-- **Record less.** Drop sources from `[kaizen] capture_sources`, for example `lint-watch`.
+- **Record less.** Drop sources from `[kaizen] capture_sources`, for example `lint-watch` or `tool-call`.
 - **Skills only when asked.** To stop Claude starting a skill by itself while keeping its slash command, deny the
   Skill tool for it in the project's `.claude/settings.json`:
 

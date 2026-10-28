@@ -67,6 +67,11 @@ the skills' rule that you don't award your own pass holds here too.
 - Re-trust after every update. Since Codex 0.164.0, the trust is tied to a hash of every file in the plugin, so any
   plainspoken update, not only a change to its hooks, puts all of them back to "needs review". Until the user opens
   `/hooks`, reviews them and trusts them again, Codex skips them: nothing blocks, but nothing lints either.
+- The tool-call check (off unless `[tool_call] mode` is set): before an MCP tool call, the writing in its arguments
+  is linted. `warn` shows the person one line and gives you the findings, which you read next to the tool's result,
+  after the call has run. `block-once` holds the first try back with the findings: remove what's flagged, never add
+  facts, and call again; the same text sent again goes through. `ask` works as `block-once` here. A tool named
+  `…draft…` is only warned.
 - The publish gate takes its strictness only from `[gate] strictness` in `.plainspoken/config.toml` (Codex has no
   plugin options): `block` denies the push, `warn` shows a message and lets it go, and with no file it does nothing.
   `warn` and `block` need `[gate] paths`; with none set, the gate only shows a message that nothing is gated.

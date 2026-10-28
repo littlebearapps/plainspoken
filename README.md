@@ -121,6 +121,8 @@ Reports go to `.plainspoken/reports/` in the project you run it from. More detai
 Checks run on your machine and post or send nothing. The judges are subagents of the app you already use. Kaizen
 proposals go to a GitHub issue or a Trello card only if you set that up, and the paid evals call outside models only
 when you run them. The kaizen ledger holds hashes and rule words, not your text, unless you switch excerpts on.
+The optional tool-call check, which lints the writing in a tool call (an email or a post) before it goes out, reads
+the call's arguments and never changes them ([guides/configuration.md](guides/configuration.md#the-tool-call-check)).
 
 ### What stays on disk
 
@@ -135,6 +137,9 @@ draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every pat
   draft's text).
 - `lint-watch-state.json` and `integrity-state.json`: the edit hooks' state, a hash of the last result for each
   session and project-relative path, in `$CLAUDE_PLUGIN_DATA`, or `.plainspoken/` when that isn't set.
+- With the tool-call check on: `tool-call-state.json` and `linted-texts.json` beside them (hashes of the text it
+  linted, so the same text sent again goes through), and `.plainspoken/ledger/tool-calls.jsonl` (one line per field
+  it looked at: counts and outcomes, a hash of the server's name, none of the text).
 - Sometimes, and none of them holds draft text: `.plainspoken/ledger/friction.jsonl` (a capture error, a refused
   judge reply, an incomplete merge, or a plainspoken agent finishing in Claude Code), `kaizen-backstop-state.json`
   (that agent's id, beside the hook state above), `kaizen-nudge-state.json` (once the kaizen Stop hook has said
