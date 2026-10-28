@@ -96,9 +96,10 @@ Four agents do the reviewing, each in a fresh context, read-only:
   reading is kept as a self-check, which can keep a FAIL but never makes a PASS.
 
 Hooks run alongside: lint after each edit of a draft file, a claims integrity check that flags unsourced numbers,
-a publish gate on `git push` (off until you set it), and an optional writing nudge and drafting rule you switch on
-with `/plainspoken:setup`. The kaizen loop records what the checks flagged and what you did, and proposes ruleset
-changes from that evidence ([guides/kaizen.md](guides/kaizen.md)).
+a publish gate on `git push` (off until you set it), a check at the end of a turn that sends back a write report
+asking you to check a line its `needs the owner` list doesn't hold, and an optional writing nudge and drafting rule
+you switch on with `/plainspoken:setup`. The kaizen loop records what the checks flagged and what you did, and
+proposes ruleset changes from that evidence ([guides/kaizen.md](guides/kaizen.md)).
 
 ## How a check works
 
@@ -136,8 +137,9 @@ draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every pat
   session and project-relative path, in `$CLAUDE_PLUGIN_DATA`, or `.plainspoken/` when that isn't set.
 - Sometimes, and none of them holds draft text: `.plainspoken/ledger/friction.jsonl` (a capture error, a refused
   judge reply, an incomplete merge, or a plainspoken agent finishing in Claude Code), `kaizen-backstop-state.json`
-  (that agent's id, beside the hook state above), `kaizen-nudge-state.json` (once the Stop hook has said proposals
-  wait or calibrate is due) and `.plainspoken/kaizen/capture-off.txt` (when check capture is off and a ledger exists).
+  (that agent's id, beside the hook state above), `kaizen-nudge-state.json` (once the kaizen Stop hook has said
+  proposals wait or calibrate is due) and `.plainspoken/kaizen/capture-off.txt` (when check capture is off and a
+  ledger exists).
 
 The full check adds the judge, justification and report files, and the claims and reader-value skills add theirs
 when you run them; each one is in [docs/report-contract.md](docs/report-contract.md). `check --no-record` saves no

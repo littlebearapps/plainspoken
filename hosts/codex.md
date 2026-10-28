@@ -59,8 +59,9 @@ the skills' rule that you don't award your own pass holds here too.
   patched files; the optional writing nudge names the right step when a prompt asks for writing. Before each shell
   command, the publish gate checks a `git push` and the write guard stops a shell write to a reply file or the claims
   ledger (write those with `apply_patch`). At the end of a turn, the kaizen nudge tells the person when proposals
-  wait or calibrate is due. Codex runs them only after the user trusts them (`/hooks`), and calls tool hooks a
-  guardrail, not a complete boundary, so still run `$plainspoken:check` yourself before anything goes out.
+  wait or calibrate is due; Claude Code's report guard (write's step 8 owner asks) isn't wired here. Codex runs
+  them only after the user trusts them (`/hooks`), and calls tool hooks a guardrail, not a complete boundary, so
+  still run `$plainspoken:check` yourself before anything goes out.
 - The publish gate takes its strictness only from `[gate] strictness` in `.plainspoken/config.toml` (Codex has no
   plugin options): `block` denies the push, `warn` shows a message and lets it go, and with no file it does nothing.
   `warn` and `block` need `[gate] paths`; with none set, the gate only shows a message that nothing is gated.

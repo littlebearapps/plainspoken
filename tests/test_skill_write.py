@@ -107,6 +107,11 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
         self.assertIn("Ask the owner to check nothing that the `needs the owner` lines don't list", flat)
         self.assertIn("hold it `blocking` or cut it, never only ask in the report", " ".join(self.step(6).split()))
+        # #75: invented warmth in the owner's voice is a new fact, and an ask goes back to step 6, not into the report
+        self.assertIn("A line the sources don't give that speaks for the owner (thanks, a reassurance, a promise, a "
+                      "feeling) is a new fact, however warm: cut it or hold it `blocking` too",
+                      " ".join(self.step(6).split()))
+        self.assertIn("for a line you'd want them to check, go back to step 6, cut it or hold it `blocking`", flat)
 
     def test_report_starts_with_the_block(self):  # #41: no prose before the block, and the shortfall comes after it
         flat = " ".join(self.text.split("### 8. Report", 1)[1].split())
