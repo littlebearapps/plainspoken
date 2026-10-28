@@ -5,6 +5,8 @@ version = "4.3.0"
 
 [thresholds."default"]
 em_dash_max = 3
+# Rule 1 also counts en dashes against en_dash_max; -1 (any negative value) means no limit.
+en_dash_max = -1
 claude_warn_total = 4
 conversational_warn = 3
 conversational_block = 6
