@@ -1,6 +1,7 @@
 """plainspoken for Hermes Agent: registers the plugin's skills, tells the model where the plugin lives, and runs the
 same hook scripts as Claude Code and Codex: the writing nudge, lint after each edit, the publish gate and write guard
-before each `terminal` command, and the kaizen nudge at the end of each turn.
+before each `terminal` command, the opt-in tool-call check before other tools, and the kaizen nudge at the end of each
+turn.
 
 Install: `hermes plugins install littlebearapps/plainspoken --enable`, then start a new session. Hermes ignores
 `.claude-plugin/`, so this folder is the Hermes entry point; the skills, agents and engine are the same files Claude
@@ -24,6 +25,8 @@ SHELL_TOOL = "terminal"  # Hermes' shell tool; the publish gate and the write gu
 HOOK_TIMEOUT = 15  # the gate's, as on Claude Code; Hermes blocks a pre_tool_call callback that passes 30 s
 GUARD_TIMEOUT = 5
 NUDGE_TIMEOUT = 10
+TOOL_CALL_TIMEOUT = 10  # the tool-call check's lint; well under Hermes' 30 s, after which it blocks the tool
+NOTES_LIMIT = 50  # tool-call notes waiting for their call's result
 logger = logging.getLogger(__name__)
 
 
@@ -143,6 +146,23 @@ def tell(ctx, text: str) -> bool:
     return False
 
 
+def _toolcall():
+    """`plainspoken.toolcall`, the tool-call check's cheap side (names, settings, the argument walk): stdlib only.
+    lib/ goes on sys.path, as loading hooks/_common.py already does."""
+    lib = str(ROOT / "lib")
+    if lib not in sys.path:
+        sys.path.insert(0, lib)
+    from plainspoken import toolcall
+    return toolcall
+
+
+def _note_keys(tool_call_id, session_id, tool_name) -> list[str]:
+    """Where a tool-call note is filed: the call's id, and the session and tool, for a result that comes back
+    without the id (not confirmed on a live Hermes)."""
+    fallback = f"{session_id}|{tool_name}"
+    return [f"id:{tool_call_id}", fallback] if tool_call_id else [fallback]
+
+
 def edit_paths(tool_name: str, args: dict) -> list[str]:
     """The files a write_file or patch call changed: its `path`, or the `*** Update/Add File:` headers of a V4A
     patch (mode "patch")."""
@@ -192,6 +212,7 @@ def register(ctx):
     text = bootstrap()
     nudge = _load("_plainspoken_nudge", ROOT / "hooks" / "nudge.py")
     guard_markers = _load("_plainspoken_write_guard", ROOT / "hooks" / "write_guard.py")._MARKERS
+    notes: dict[str, str] = {}  # tool-call check notes for the model, appended to their call's result
 
     def pre_llm_call(is_first_turn=None, user_message=None, session_id=None, **kwargs):
         # A pre_llm_call return is Hermes' documented way to add context; it's appended to this turn's user message.
@@ -210,12 +231,18 @@ def register(ctx):
 
     def transform_tool_result(tool_name=None, args=None, result=None, session_id=None, **kwargs):
         # After write_file or patch: the lint-watch and integrity hooks, appended to the tool result the model reads.
-        # A block-mode integrity reply comes back as a warning, and a hook that couldn't run says so. None keeps
-        # the result as it is.
-        if tool_name not in EDIT_TOOLS or not isinstance(result, str):
+        # A block-mode integrity reply comes back as a warning, and a hook that couldn't run says so. After any call
+        # the tool-call check warned on: its note (the model sees it after the call, as on Claude Code and Codex).
+        # None keeps the result as it is.
+        keys = _note_keys(kwargs.get("tool_call_id"), session_id, tool_name)
+        note = notes.pop(keys[0], None)
+        if note is not None:
+            for key in keys[1:]:
+                notes.pop(key, None)
+        if not isinstance(result, str) or (tool_name not in EDIT_TOOLS and not note):
             return None
-        lines = []
-        for path in edit_paths(tool_name, args):
+        lines = [note] if note else []
+        for path in (edit_paths(tool_name, args) if tool_name in EDIT_TOOLS else ()):
             # The project is found from the file's own folder (its nearest .plainspoken/config.toml or .git): the
             # plugin host's working folder isn't the user's.
             event = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": session_id or "hermes",
@@ -223,12 +250,47 @@ def register(ctx):
             lines += [line for script in ("lint_watch.py", "integrity.py") if (line := _run_hook(script, event))]
         return result + "\n\n" + "\n".join(lines) if lines else None
 
+    def tool_call_check(tool_name, args, session_id, kwargs) -> dict | None:
+        # The tool-call check (#124) on any tool but Hermes' core list: the cheap part (settings, the tool name, the
+        # argument walk) here, and the lint in a subprocess only when a field has enough prose. A timeout or any
+        # error lets the call go ahead. `ask` is block-once on Hermes (approve fails closed and may ask a model).
+        toolcall = _toolcall()
+        cwd = session_cwd(ctx)
+        settings = toolcall.settings(toolcall.project_root(cwd, {}), os.environ)
+        if settings["mode"] == "off" or toolcall.name_decision(tool_name, "hermes", settings) is not None:
+            return None
+        fields = toolcall.walk(args, settings["skip_fields"], settings["min_words"])
+        if not any(f.outcome == "candidate" for f in fields):
+            return None
+        env = {**os.environ}
+        env.setdefault("CLAUDE_PLUGIN_DATA", str(data_dir(ctx)))
+        event = {"hook_event_name": "PreToolUse", "tool_name": tool_name, "tool_input": args, "cwd": cwd,
+                 "session_id": session_id or "hermes", "turn_id": kwargs.get("turn_id"),
+                 "tool_call_id": kwargs.get("tool_call_id")}
+        out = _hook_output("tool_prose.py", event, "--host", "hermes", timeout=TOOL_CALL_TIMEOUT, env=env)
+        if reason := _deny_reason(out):
+            return {"action": "block", "message": reason}
+        if isinstance(out, dict) and isinstance(out.get("systemMessage"), str):
+            tell(ctx, out["systemMessage"])
+        note = (out or {}).get("hookSpecificOutput", {}).get("additionalContext")
+        if isinstance(note, str) and note:
+            while len(notes) >= NOTES_LIMIT:
+                notes.pop(next(iter(notes)))
+            for key in _note_keys(kwargs.get("tool_call_id"), session_id, tool_name):
+                notes[key] = note
+        return None
+
     def pre_tool_call(tool_name=None, args=None, session_id=None, **kwargs):
         # Before a terminal command: the publish gate (a git push needs a current PASS for each gated file) and the
         # write guard (reply files and the claims ledger are never written through the shell). A deny becomes
         # Hermes' block, whose message is the tool result the model reads. A warn goes to the person only and the
         # command runs (not "approve", which would turn every warned push into a prompt). Hermes blocks the call
         # when a callback raises, so nothing here may.
+        try:
+            if isinstance(tool_name, str) and tool_name != SHELL_TOOL and isinstance(args, dict):
+                return tool_call_check(tool_name, args, session_id, kwargs)
+        except Exception:
+            return None
         try:
             command = args.get("command") if tool_name == SHELL_TOOL and isinstance(args, dict) else None
             if not isinstance(command, str) or not command.strip():

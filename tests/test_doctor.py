@@ -154,6 +154,17 @@ class ShellChecks(Base):
         self.assertIn("unknown section [engine]", found["user-wide config"].detail)
         self.assertNotIn("\n", found["project config"].detail)
 
+    def test_tool_call_mode_and_where_it_came_from(self):
+        Fakes(self)
+        self.assertEqual(self.checks("codex")["tool-call check"].detail, "off (default)")
+        self.write_user_config('[tool_call]\nmode = "warn"\n')
+        found = self.checks("hermes")["tool-call check"]
+        self.assertEqual((found.status, found.detail), ("ok", "warn (user-wide config)"))
+        self.write_project_config('[tool_call]\nmode = "loud"\n')
+        found = self.checks("claude-code")["tool-call check"]
+        self.assertEqual(found.status, "WARN")
+        self.assertIn("[tool_call] mode", found.detail)
+
 
 class LocaleRow(Base):  # #121: the resolved locale and where it came from; the system locale is a hint only
     def row(self, env=None, plugin_locale=None, host="claude-code") -> doctor.Check:
@@ -634,7 +645,7 @@ class SetupPrintsWarnings(Base):
     def test_real_checks_through_the_cli(self):
         r = cli("setup", "--host", "codex", "--status", cwd=self.root, env={**self.env, "PATH": "/nowhere"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertRegex(r.stdout, r"lint after edits: on\n\nHost checks")
+        self.assertRegex(r.stdout, r"lint after edits: on\ntool-call check: off\n\nHost checks")
         self.assertRegex(r.stdout, r"WARN\s+python3: ")
         self.assertIn("doctor --host codex lists 4 things to confirm by hand", r.stdout)
 

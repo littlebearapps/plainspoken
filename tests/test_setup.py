@@ -58,6 +58,22 @@ class Command(unittest.TestCase):
         self.assertIn("/hooks", r.stdout)
         self.assertIn("after every plainspoken update", r.stdout)
 
+    def test_tool_call_mode_is_written_marked_shown_and_removable(self):
+        r = self.run_setup("--host", "codex", "--tool-call", "block-once")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        text = (self.project / ".plainspoken" / "config.toml").read_text(encoding="utf-8")
+        self.assertEqual(tomllib.loads(text)["tool_call"]["mode"], "block-once")
+        self.assertIn("# set by plainspoken setup", text)
+        self.assertIn("tool-call check: block-once", r.stdout)
+        r = self.run_setup("--host", "hermes", "--scope", "user", "--tool-call", "warn")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        user = self.home / ".config" / "plainspoken" / "config.toml"
+        self.assertEqual(tomllib.loads(user.read_text(encoding="utf-8"))["tool_call"]["mode"], "warn")
+        r = self.run_setup("--host", "codex", "--remove")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.project / ".plainspoken" / "config.toml").exists())
+        self.assertEqual(self.run_setup("--host", "codex", "--tool-call", "loud").returncode, 2)
+
     def test_idempotent_and_dry_run_writes_nothing(self):
         self.run_setup("--host", "codex", "--nudge", "on")
         r = self.run_setup("--host", "codex", "--nudge", "on")

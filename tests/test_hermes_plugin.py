@@ -454,5 +454,83 @@ class HermesHookResults(unittest.TestCase):
                                        user_message="Draft an email to the parents about Friday"), label)
 
 
+class HermesToolCall(unittest.TestCase):
+    """pre_tool_call on any tool but the core list: the tool-call check (#124). A block becomes Hermes' block; a warn
+    is posted to the person and its note is appended to that call's result. Nothing here may raise."""
+
+    STIFF = ("Additionally, we are delighted to announce our comprehensive new booking page. Moreover, it will "
+             "streamline everything for you. Furthermore, it leverages the latest tools to empower every customer "
+             "we serve across the region this year.")
+
+    def setUp(self):
+        self.project, self.home = temp_dir(self), temp_dir(self)
+        (self.project / ".plainspoken").mkdir()
+        clean_env(self, HOME=str(self.home), HERMES_HOME=str(self.home / ".hermes"))
+        self.ctx = FakeCtx(cwd=str(self.project))
+        load_shim().register(self.ctx)
+        self.pre, self.post = self.ctx.hooks["pre_tool_call"], self.ctx.hooks["transform_tool_result"]
+
+    def config(self, mode):
+        (self.project / ".plainspoken" / "config.toml").write_text(f'[tool_call]\nmode = "{mode}"\n',
+                                                                   encoding="utf-8")
+
+    def call(self, tool="mcp__outbox__send", text=None, call_id="c1"):
+        return self.pre(tool_name=tool, args={"to": "sam@example.com", "body": text or self.STIFF},
+                        session_id="h1", task_id="t", tool_call_id=call_id, turn_id="u1")
+
+    def test_off_and_core_tools_are_silent(self):
+        self.assertIsNone(self.call())
+        self.config("block-once")
+        self.assertIsNone(self.call(tool="read_file"))
+        self.assertIsNone(self.call(tool="kanban_comment"))
+        self.assertIsNone(self.call(text="Running late, see you soon."))
+        self.assertEqual(self.ctx.posted, [])
+
+    def test_block_once_blocks_then_lets_the_same_text_through(self):
+        self.config("block-once")
+        got = self.call()
+        self.assertEqual(got["action"], "block")
+        self.assertIn("hasn't run", got["message"])
+        self.assertIsNone(self.call(call_id="c2"))
+
+    def test_ask_is_block_once_here(self):
+        self.config("ask")
+        self.assertEqual(self.call(tool="discord")["action"], "block")
+
+    def test_warn_posts_and_appends_the_note_to_the_same_call_only(self):
+        self.config("warn")
+        self.assertIsNone(self.call(call_id="c7"))
+        self.assertEqual(len(self.ctx.posted), 1)
+        self.assertIn("BLOCK", self.ctx.posted[0])
+        self.assertIsNone(self.post(tool_name="mcp__outbox__send", args={}, result="sent", session_id="h1",
+                                    tool_call_id="other"))
+        got = self.post(tool_name="mcp__outbox__send", args={}, result="sent", session_id="h1", tool_call_id="c7")
+        self.assertTrue(got.startswith("sent\n\n"), got)
+        self.assertIn("plainspoken checked the text", got)
+        self.assertIsNone(self.post(tool_name="mcp__outbox__send", args={}, result="sent", session_id="h1",
+                                    tool_call_id="c7"))  # used once
+
+    def test_a_result_without_the_call_id_still_gets_its_note(self):
+        self.config("warn")
+        self.call(call_id="c8")
+        got = self.post(tool_name="mcp__outbox__send", args={}, result="sent", session_id="h1")
+        self.assertIn("plainspoken checked the text", got)
+
+    def test_a_raise_or_a_timeout_lets_the_call_through(self):
+        self.config("block-once")
+        shim = load_shim()
+        ctx = FakeCtx(cwd=str(self.project))
+        shim.register(ctx)
+        with unittest.mock.patch.object(shim.subprocess, "run", side_effect=shim.subprocess.TimeoutExpired("x", 10)):
+            self.assertIsNone(ctx.hooks["pre_tool_call"](tool_name="mcp__outbox__send", args={"body": self.STIFF},
+                                                         session_id="h1", tool_call_id="c1"))
+        def broken():
+            raise RuntimeError("no session")
+        ctx.session_cwd = broken
+        self.assertIsNone(ctx.hooks["pre_tool_call"](tool_name="mcp__outbox__send", args=object(),
+                                                     session_id="h1"))
+        self.assertIsNone(ctx.hooks["pre_tool_call"](tool_name=None, args=None))
+
+
 if __name__ == "__main__":
     unittest.main()

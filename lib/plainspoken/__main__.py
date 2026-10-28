@@ -35,7 +35,7 @@ from pathlib import Path
 
 from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, doctor, evalcli,
                          extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
-                         reader_value, register, report, setup, voice)
+                         reader_value, register, report, setup, toolcall, voice)
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
 from plainspoken.registry import load_config
@@ -120,12 +120,13 @@ def _setup_run(args: argparse.Namespace, root: Path) -> int:
     if args.status:
         print("\n".join(setup.status(root, os.environ)))
         return 0
-    if args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove:
+    if (args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove
+            and args.tool_call is None):
         _util.write_safe(setup.paste_text(args.host, args.locale), sys.stdout)  # its "→" mustn't crash ascii
         return 0
     try:
         path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove,
-                                         locale=args.locale)
+                                         locale=args.locale, tool_call=args.tool_call)
     except (setup.SetupError, OSError) as e:
         print(f"plainspoken: setup: {e}", file=sys.stderr)
         return 2
@@ -321,6 +322,8 @@ def _main(argv: list[str] | None) -> int:
     su.add_argument("--locale", choices=sorted(locales()),
                     help="the English variant to write in: sets [locale] variant, or for claude.ai and ChatGPT adds "
                          "one sentence to the paste-in text")
+    su.add_argument("--tool-call", choices=toolcall.MODES,
+                    help="the tool-call check: off, warn, block-once or ask (Claude Code); unset leaves it as it is")
     su.add_argument("--dry-run", action="store_true", help="print the change without writing it")
     su.add_argument("--remove", action="store_true", help="delete every setting setup wrote to this file first")
     su.add_argument("--status", action="store_true", help="print what is on now")
@@ -1230,11 +1233,19 @@ def _kaizen_report(args: argparse.Namespace, root: Path) -> int:
         return 0
     patterns = kaizen.pattern_metrics(events)
     friction = kaizen.friction_summary(rows, ledger.distinct(events))
+    calls, bad_calls = ledger.read_rows(settings, "tool-calls.jsonl", window["since"], window["until"])
+    try:
+        min_words = config.tool_call_settings(root, os.environ)["min_words"]
+    except (ValueError, OSError):
+        min_words = toolcall.MIN_WORDS
+    tool_calls = kaizen.tool_call_summary(calls, min_words)
     if args.json:
-        print(json.dumps({"window": window, "rules": metrics, "patterns": patterns, "bad_lines": bad + bad_friction,
-                          "friction": friction}, indent=2, ensure_ascii=False))
+        print(json.dumps({"window": window, "rules": metrics, "patterns": patterns,
+                          "bad_lines": bad + bad_friction + bad_calls, "friction": friction,
+                          "tool_calls": tool_calls}, indent=2, ensure_ascii=False))
         return 0
-    print("\n".join(kaizen.report_lines(metrics, bad + bad_friction, friction, patterns)))
+    print("\n".join(kaizen.report_lines(metrics, bad + bad_friction + bad_calls, friction, patterns)
+                    + kaizen.tool_call_lines(tool_calls)))
     return 0
 
 

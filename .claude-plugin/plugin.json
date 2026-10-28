@@ -58,6 +58,18 @@
       "description": "On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read. Off by default.",
       "default": false
     },
+    "tool_call": {
+      "type": "string",
+      "title": "Tool-call check",
+      "description": "Lint the writing in an MCP tool call (an email, a post, a message) before it goes out. off (default), warn = tell you and Claude, block-once = hold the first try back, ask = you decide. A project or user-wide [tool_call] mode wins.",
+      "options": [
+        "off",
+        "warn",
+        "block-once",
+        "ask"
+      ],
+      "default": "off"
+    },
     "strictness": {
       "type": "string",
       "title": "Gate strictness",
