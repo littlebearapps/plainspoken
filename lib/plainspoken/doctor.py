@@ -209,8 +209,9 @@ def _codex(env: Mapping[str, str]) -> list[Check]:
         return Check("codex CLI", NOT_CHECKED, "no codex on PATH (the Codex app or ChatGPT Work may still run "
                                                "plainspoken; codex exec for the judges needs it)", static=True)
     return [*_safe("codex CLI", cli),
-            Check("hooks trusted", NOT_CHECKED, "a script can't see whether Codex trusts the plugin's hooks",
-                  "run /hooks in Codex and trust plainspoken's hooks", static=True),
+            Check("hooks trusted", NOT_CHECKED, "a script can't see whether Codex trusts the plugin's hooks, and "
+                  "Codex 0.164.0 and later asks again after every plugin update",
+                  "run /hooks in Codex and trust plainspoken's hooks, again after each update", static=True),
             Check("sandbox writes", NOT_CHECKED, "the engine saves reports to .plainspoken/reports in the project",
                   "run Codex with workspace write access (sandbox workspace-write) in the project folder",
                   static=True),

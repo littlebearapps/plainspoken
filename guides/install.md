@@ -64,7 +64,8 @@ Then start a new session and call the skills with `$` instead of `/`: `$plainspo
 and the rest. ChatGPT Work runs the plugin the way Codex does, so pass `--host codex` to setup and doctor there.
 
 Codex runs a plugin's hooks only after you trust them: open `/hooks` in Codex and trust plainspoken's. Until you do,
-no lint, nudge or gate runs.
+no lint, nudge or gate runs. Since Codex 0.164.0 the trust covers every file in the plugin, so you trust them again
+after each plainspoken update.
 
 The skills are written for Claude Code, so Codex gets a short note on how to run them there, which each skill points
 to: [hosts/codex.md](../hosts/codex.md). The judges and checkers (the separate model runs that review a draft) start
@@ -118,7 +119,7 @@ read.
 ## Hooks outside Claude Code
 
 In Codex and Hermes, lint and the claims integrity check run after each edit, and so does the optional writing
-nudge. Codex runs them only after you trust them in `/hooks`.
+nudge. Codex runs them only after you trust them in `/hooks`, and again after each plainspoken update.
 
 Since 0.12.0, both also run the publish gate (taking its strictness from `[gate] strictness` only), the shell write
 guard and the kaizen nudge. An older installed copy has none of those three, so run the check yourself before

@@ -62,6 +62,9 @@ the skills' rule that you don't award your own pass holds here too.
   wait or calibrate is due; Claude Code's report guard (write's step 8 owner asks) isn't wired here. Codex runs
   them only after the user trusts them (`/hooks`), and calls tool hooks a guardrail, not a complete boundary, so
   still run `$plainspoken:check` yourself before anything goes out.
+- Re-trust after every update. Since Codex 0.164.0, the trust is tied to a hash of every file in the plugin, so any
+  plainspoken update, not only a change to its hooks, puts all of them back to "needs review". Until the user opens
+  `/hooks`, reviews them and trusts them again, Codex skips them: nothing blocks, but nothing lints either.
 - The publish gate takes its strictness only from `[gate] strictness` in `.plainspoken/config.toml` (Codex has no
   plugin options): `block` denies the push, `warn` shows a message and lets it go, and with no file it does nothing.
   `warn` and `block` need `[gate] paths`; with none set, the gate only shows a message that nothing is gated.

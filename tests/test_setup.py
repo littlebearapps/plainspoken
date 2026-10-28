@@ -52,6 +52,12 @@ class Command(unittest.TestCase):
         self.assertIn("drafting rule: on", r.stdout)
         self.assertIn("/reload-plugins", r.stdout)
 
+    def test_codex_says_hooks_need_trust_again_after_each_update(self):
+        r = self.run_setup("--host", "codex", "--nudge", "on")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("/hooks", r.stdout)
+        self.assertIn("after every plainspoken update", r.stdout)
+
     def test_idempotent_and_dry_run_writes_nothing(self):
         self.run_setup("--host", "codex", "--nudge", "on")
         r = self.run_setup("--host", "codex", "--nudge", "on")
