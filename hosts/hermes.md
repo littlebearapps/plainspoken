@@ -11,6 +11,9 @@ wins in Hermes; the skill still decides *what* to do.
   absolute path into every command. `RUN` in the skills is `python3 <root>/lib/run.py`, run with `terminal`.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
   literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
+  `--plugin-locale '${user_config.locale}'` works the same way: the literal counts as unset. To write in British or
+  American English, set `[locale] variant` in a config file (`RUN setup --host hermes --locale <variant>` with
+  `--scope user`).
 - Claude Code tool names map as: Read → `read_file`, Write → `write_file`, Edit → `patch`, Bash → `terminal`,
   Grep/Glob → `search_files`. `allowed-tools`, `argument-hint` and `disable-model-invocation` are Claude Code
   settings; the nine manual-only skills (`adapt`, `claims`, `copy-audit`, `doctor`, `kaizen`, `reader-value`,

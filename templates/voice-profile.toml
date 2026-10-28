@@ -9,7 +9,7 @@
 
 [profile]
 name = "my-voice"          # checker: names the profile in reports. Lowercase letters, digits, - and _.
-locale = "en-AU"           # checker: spelling and date conventions. Must match a file in data/locales.
+# locale = "en-AU"         # drafting, register-check: only if you always spell one way. The project's [locale] wins.
 flags = []                 # checker: "narrative" relaxes the sentence-rhythm rules for story writing.
 
 [identity]
