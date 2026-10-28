@@ -9,6 +9,15 @@ contact_links:
   - name: Troubleshooting
     url: https://github.com/littlebearapps/plainspoken/blob/main/guides/troubleshooting.md
     about: What to do when a skill, hook or check doesn't behave
+  - name: Ask a question (Q&A)
+    url: https://github.com/littlebearapps/plainspoken/discussions/categories/q-a
+    about: Setup, configuration and how-to questions get answered in Discussions
+  - name: Suggest an idea
+    url: https://github.com/littlebearapps/plainspoken/discussions/categories/ideas
+    about: Talk an idea through in Discussions first; ideas that hold up become tracked issues
+  - name: Release announcements
+    url: https://github.com/littlebearapps/plainspoken/discussions/categories/announcements
+    about: What each release changes, in plain English
   - name: Report a vulnerability
     url: https://github.com/littlebearapps/plainspoken/security/advisories/new
     about: Report security problems privately, never in a public issue
