@@ -9,8 +9,8 @@ doesn't print reaches no drafting skill.
 ## Profile and checker settings
 
 - `[profile]` `name`, `locale`, `flags`: the profile's name, its spelling conventions and any extra switches
-  (`narrative` relaxes the sentence-rhythm rules). Example: `name = "my-voice"`. Who reads it: the checker
-  (register-check's checklist also names the locale).
+  (`narrative` relaxes the sentence-rhythm rules). Example: `name = "my-voice"`. Who reads it: the checker, except
+  `locale`, which only drafting and register-check read. Leave `locale` out unless the writer always spells one way.
 - `[thresholds]`: numeric limits that replace the ruleset's defaults, by the name the ruleset uses. Example: a higher
   em-dash cap (`em_dash_max = 5`) for a writer who uses them, or `em_dash_max = 0` and `en_dash_max = 0` for one who
   never does. `en_dash_max` defaults to -1, no limit; once set, every en dash counts, number ranges like `9am–6pm`

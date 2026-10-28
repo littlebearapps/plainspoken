@@ -74,9 +74,12 @@ habits that hold everywhere in its shared sections and a slot each for email, so
 
 ## Which English does it check?
 
-Australian English by default. The `locale` line in a profile's `[profile]` section sets the spelling and the word
-lists the checker uses, and it can be Australian, British or American English (`en-AU`, `en-GB` or `en-US`). For
-Australian wording beyond spelling, see the [Australian English guide](locale-en-AU.md).
+The checker doesn't depend on one. Its word lists catch both -ise and -ize spellings, so the lint and the judges give
+the same result whichever English you write. The locale steers the drafting skills and the register check's spelling
+item instead. It's Australian English unless you choose British or American (`en-AU`, `en-GB` or `en-US`) with the
+`locale` plugin option, `[locale] variant` in a config file or a voice profile's `locale`
+([configuration](configuration.md#which-english-the-skills-write-in)). For Australian wording beyond spelling, see
+the [Australian English guide](locale-en-AU.md).
 
 ## Can I lint something without it counting toward kaizen?
 

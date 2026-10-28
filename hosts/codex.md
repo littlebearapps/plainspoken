@@ -11,6 +11,8 @@ Codex; the skill still decides *what* to do.
   command. `RUN` in the skills is `python3 <root>/lib/run.py`.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
   literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
+  `--plugin-locale '${user_config.locale}'` works the same way: the literal counts as unset. To write in British or
+  American English, set `[locale] variant` in a config file (`RUN setup --host codex --locale <variant>`).
 - `allowed-tools`, `argument-hint` and `disable-model-invocation` in the frontmatter are Claude Code settings. Codex
   ignores them. The nine manual-only skills (`adapt`, `claims`, `copy-audit`, `doctor`, `kaizen`, `reader-value`,
   `register-check`, `setup`, `voice`) still start only when the user asks.

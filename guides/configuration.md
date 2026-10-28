@@ -8,6 +8,7 @@ one lives, which one wins when two disagree, and the optional pieces you can swi
 - [The project config](#the-project-config)
 - [The user-wide file](#the-user-wide-file)
 - [How the profile is chosen](#how-the-profile-is-chosen)
+- [Which English the skills write in](#which-english-the-skills-write-in)
 - [Optional pieces](#optional-pieces)
 - [The setup command](#the-setup-command)
 - [Host setup](#host-setup)
@@ -20,10 +21,13 @@ Settings come from three places. When two set the same thing, the first one here
 
 1. **The project config**, `.plainspoken/config.toml` in the project. It wins everywhere: in the skills, the hooks
    and the command-line tool.
-2. **The user-wide file**, `~/.config/plainspoken/config.toml`. It holds only `[nudge]`, `[rule]` and
-   `[lint_watch]`.
+2. **The user-wide file**, `~/.config/plainspoken/config.toml`. It holds only `[nudge]`, `[rule]`,
+   `[lint_watch]` and `[locale]`.
 3. **The plugin options** you set when you install or enable the plugin in Claude Code. Codex and Hermes Agent have
    no plugin options, so there you use the two files.
+
+The spelling locale has one more source, your voice profile, which sits between the two files: see
+[Which English the skills write in](#which-english-the-skills-write-in).
 
 The project is the nearest folder, from where you run a command upwards, that holds `.plainspoken/config.toml` or
 `.git`. So you can run the CLI from anywhere inside it. Report files are keyed to that folder.
@@ -35,7 +39,7 @@ Claude Code asks for these when you install or enable the plugin (`userConfig` i
 | Option | What it sets | Default | Beaten by |
 |---|---|---|---|
 | `profile` | The voice profile: a name, or a path to a profile TOML. `default` uses the shipped default profile | `default` | `[engine] profile` |
-| `locale` | Listed in the manifest, but nothing reads it yet. The spelling variant (`en-AU`, `en-GB` or `en-US`) comes from `locale` under `[profile]` in your voice profile | `en-AU` | the profile's `locale` |
+| `locale` | The English variant the skills write in: `en-AU`, `en-GB` or `en-US`. The drafting skills and the register check read it; no lint rule or judge does | `en-AU` | `[locale] variant` in either file, or the voice profile's `locale` |
 | `targets` | The globs the lint-watch hook checks after each Write or Edit | `**/*.md` | `[lint_watch] paths` |
 | `nudge` | On: when a prompt asks for an email, post, script or other writing, a one-line reminder names the plainspoken step that fits | off | `[nudge] mode` |
 | `rule` | On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read | off | `[rule] enabled` |
@@ -111,6 +115,14 @@ The four sources are `check`, `merge`, `judge` and `lint-watch`. `capture = fals
 What each does: [Optional pieces](#optional-pieces). `/plainspoken:setup` writes `[nudge]`, `[rule]` and
 `[lint_watch]` for you.
 
+### `[locale]`: which English the skills write in
+
+    [locale]
+    variant = "en-US"   # en-AU, en-GB or en-US
+
+The same section works in the user-wide file. Who wins:
+[Which English the skills write in](#which-english-the-skills-write-in).
+
 ### `[claims]`, `[reader_value]` and `[integrity]`
 
     [claims]
@@ -130,8 +142,9 @@ What these do: [guides/claims-and-reader-value.md](claims-and-reader-value.md).
 
 ## The user-wide file
 
-`~/.config/plainspoken/config.toml` holds only `[nudge]`, `[rule]` and `[lint_watch]`, the settings that make sense
-outside a project. A project's own config wins over it, and it wins over the Claude Code options `nudge` and `rule`.
+`~/.config/plainspoken/config.toml` holds only `[nudge]`, `[rule]`, `[lint_watch]` and `[locale]`, the settings that
+make sense outside a project. A project's own config wins over it, and it wins over the Claude Code options `nudge`,
+`rule` and `locale`.
 It can't choose a voice profile. Codex and Hermes, which have no plugin options, use it for these switches; Hermes
 reads it because it runs plugins outside the project folder.
 
@@ -150,6 +163,25 @@ With none of them, a command stops and tells you how to set one. To see the prof
 
 `check`, `merge`, `judge-input`, `justify`, the lint-watch hook and the publish gate all use the file's own profile,
 and the skills pass it to the calls that don't take a file.
+
+## Which English the skills write in
+
+The drafting skills (write, adapt, humanize, voice) and the register check's spelling item follow one English
+variant: `en-AU`, `en-GB` or `en-US`. The lint and the judges don't read it, so changing it never changes a check
+result or makes a saved report out of date. The first of these that is set wins:
+
+1. `[locale] variant` in the project config: the audience of this body of writing, such as a US client's site
+   written in your own voice;
+2. `locale` under `[profile]` in the voice profile, when the profile sets one: the writer's own habit;
+3. `[locale] variant` in the user-wide file;
+4. the `locale` plugin option (Claude Code and Cowork);
+5. `en-AU`.
+
+The shipped default profile sets no locale, so the plugin option or a file decides it. A profile you copied from an
+older default profile may still say `locale = "en-AU"`: delete that line if you'd rather follow the plugin option.
+`python3 <plugin>/lib/run.py profile` prints the result and where it came from, as in `locale en-US (plugin option)`.
+`doctor` shows it too, and when your system locale (`LANG`) names a different variant it says how to switch. It
+never switches for you.
 
 ## Optional pieces
 
@@ -174,13 +206,14 @@ no lint evidence for either, and with 3 drafts per variant that's only a hint. T
 shows what's on. Underneath it runs:
 
     python3 <plugin>/lib/run.py setup --host <host> [--scope project|user] [--nudge on|off] [--rule on|off]
-        [--lint-watch on|off] [--dry-run | --remove | --status]
+        [--lint-watch on|off] [--locale en-AU|en-GB|en-US] [--dry-run | --remove | --status]
 
 | Flag | What it does |
 |---|---|
 | `--host` | The app: `claude-code`, `codex` (also ChatGPT Work), `hermes`, `claude-ai` or `chatgpt`. The last two print the paste-in text and write nothing |
 | `--scope` | `project` writes `.plainspoken/config.toml` here; `user` writes `~/.config/plainspoken/config.toml`. Use `user` for Hermes, because it runs plugins outside the project folder |
 | `--nudge`, `--rule`, `--lint-watch` | `on` or `off`; one you leave out stays as it is. `--rule` is for Claude Code |
+| `--locale` | Writes `[locale] variant`. For `claude-ai` and `chatgpt` it adds one line to the paste-in text instead, such as "Spell in American English (en-US)." |
 | `--dry-run` | Print the change without writing it |
 | `--remove` | Delete every line setup wrote to the file, and nothing else |
 | `--status` | Print what's on now |
