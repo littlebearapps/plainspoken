@@ -45,7 +45,11 @@ The gate is a guardrail against pushing unchecked writing by accident, not a sec
 ## Codex hooks don't run
 
 Codex runs a plugin's hooks only after you trust them, and until you do, nothing lints your edits or checks a push.
-Open `/hooks` in Codex and trust plainspoken's hooks. Even with them trusted, run the check skill yourself before
+Open `/hooks` in Codex, review plainspoken's hooks and trust them.
+
+If they ran before and stopped after an update, that's expected. Since Codex 0.164.0, the trust is tied to a hash of
+every file in the plugin, so each plainspoken update, even one that doesn't touch the hooks, puts them back to
+"needs review" (Codex reports "plugin contents changed; hook approval required"). Trust them again in `/hooks`. Even with them trusted, run the check skill yourself before
 anything goes out, because Codex calls its tool hooks a guardrail rather than a complete boundary.
 
 ## Hermes asks me to confirm the install, or wants `--force`

@@ -60,7 +60,8 @@ The same skills, agents and engine run there, with a short host note the skills 
 ([Codex](../hosts/codex.md), [Hermes Agent](../hosts/hermes.md)). The main differences:
 - There's no kaizen backstop, so `kaizen report` shows 0 judge replies returned.
 - There are no install-time settings: pick a profile with `[engine] profile` in `.plainspoken/config.toml`.
-- Codex runs plugin hooks only after you trust them in `/hooks`.
+- Codex runs plugin hooks only after you trust them in `/hooks`, and since Codex 0.164.0 it asks again after every
+  plainspoken update.
 - In Hermes, the agents' read-only rule is an instruction they follow, not a sandbox.
 
 ## Can it write in my own voice?

@@ -1,5 +1,5 @@
 {
-  "description": "plainspoken hooks for Codex: the optional prompt nudge, lint + claims integrity after each apply_patch edit, the opt-in publish gate and write guard before shell commands, and the kaizen nudge at the end of a turn. Codex asks you to trust them once (/hooks).",
+  "description": "plainspoken hooks for Codex: the optional prompt nudge, lint + claims integrity after each apply_patch edit, the opt-in publish gate and write guard before shell commands, and the kaizen nudge at the end of a turn. Codex asks you to trust them in /hooks, and again after every plainspoken update.",
   "hooks": {
     "UserPromptSubmit": [
       {

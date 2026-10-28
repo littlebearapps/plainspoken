@@ -194,8 +194,8 @@ class HostChecks(Base):
         self.assertEqual(found["codex CLI"].status, "ok")
         self.assertIn("/opt/bin/codex", found["codex CLI"].detail)
         self.assertEqual(f.calls, [[PY, "--version"]])
-        for name, needle in (("hooks trusted", "/hooks"), ("sandbox writes", ".plainspoken/reports"),
-                             ("judges", "spawn_agent")):
+        for name, needle in (("hooks trusted", "/hooks"), ("hooks trusted", "every plugin update"),
+                             ("sandbox writes", ".plainspoken/reports"), ("judges", "spawn_agent")):
             self.assertEqual(found[name].status, "not checked", name)
             self.assertIn(needle, found[name].detail + found[name].fix, name)
         Fakes(self)

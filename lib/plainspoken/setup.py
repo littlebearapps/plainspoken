@@ -33,8 +33,8 @@ PASTE = {
                 "or a Project's instructions. Paste:"),
 }
 AFTER = {
-    "codex": ("Codex runs plugin hooks only after you trust them: run /hooks in Codex and trust plainspoken's. "
-              "ChatGPT Work uses the same hooks."),
+    "codex": ("Codex runs plugin hooks only after you trust them, and asks again after every plainspoken update: "
+              "run /hooks in Codex and trust plainspoken's. ChatGPT Work uses the same hooks."),
     "hermes": "Start a new Hermes session (or reload the gateway) so the change takes effect.",
     "claude-code": "Start a new Claude Code session (or run /reload-plugins) so the change takes effect.",
 }
