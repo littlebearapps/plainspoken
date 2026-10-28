@@ -394,6 +394,18 @@ def for_lint(lint: dict, path: Path, profile, cfg, root: Path, source: str) -> N
     record(build, root, source)
 
 
+def for_text(lint: dict, text: str, label: str, profile, cfg, root: Path, source: str) -> None:
+    """Record `lint_events` for a lint of text that has no file (a tool call's arguments, a chat reply), made with
+    `textlint.lint_text`. The document id is `ledger.label_id(label)`, and the events never carry an excerpt, whatever
+    `[kaizen] excerpts` says: this is writing to real people, and the ledger may be committed. Never raises."""
+    def build() -> list[dict]:
+        body = text if text.endswith("\n") else text + "\n"
+        doc = parse(body, path=label, profile=profile, content_type=lint.get("content_type", "article"))
+        events = lint_events(lint, doc, cfg, root, doc_id=ledger.label_id(label))
+        return [{k: v for k, v in e.items() if k != "excerpt"} for e in events]
+    record(build, root, source)
+
+
 CAPTURE_OFF = "capture-off.txt"  # in `proposals_dir`: when `check` last ran with check capture off
 SNAPSHOT_SUFFIX = ".checked.md"
 PREV_LINT_SUFFIX = ".prev.lint.json"
