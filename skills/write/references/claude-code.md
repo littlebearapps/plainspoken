@@ -15,6 +15,9 @@
   `.plainspoken/reader-value/`, the ledger, saved sources and the checker reply asks for permission, because this
   skill's allowed tools cover the CLI only. The claims checker is the `plainspoken:claims-checker` subagent, started
   with the Agent tool exactly as the claims skill's step 6 says.
+- Step 8: a Stop hook reads the report when the turn ends. If its `needs the owner` line lists nothing and the
+  prose still asks the owner to check something, the hook sends the report back once, quoting the ask: cut the line
+  or hold it `blocking` as step 6 says, then report again.
 - `${CLAUDE_PLUGIN_ROOT}` is the plugin's folder, the one holding `lib/run.py`. The other skills' files are there,
   not in the project.
 - `${user_config.profile}` may stay as the literal text when the plugin loads with `--plugin-dir`. The CLI treats the

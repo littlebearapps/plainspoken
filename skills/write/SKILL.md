@@ -112,8 +112,9 @@ passage in a saved source, closes the gaps and has the isolated claims checker r
 premises from step 2's `Claims to ledger` go in the ledger too. Its fixes soften, attribute, qualify or cut; they
 never add a fact. A claim that needs the owner stays open: leave it `blocking` with a `resolution` naming what they
 must confirm, never settle it yourself. So does any phrase you'd ask them to check: hold it `blocking` or cut it,
-never only ask in the report. Never skip this step; if it can't run, the report keeps `claims: INCOMPLETE` and says
-which step stopped and why.
+never only ask in the report. A line the sources don't give that speaks for the owner (thanks, a reassurance, a
+promise, a feeling) is a new fact, however warm: cut it or hold it `blocking` too. Never skip this step; if it can't
+run, the report keeps `claims: INCOMPLETE` and says which step stopped and why.
 
 ### 7. Check
 
@@ -145,7 +146,8 @@ printed, never from memory or in other words:
 
 Then give any length shortfall (step 1) and whatever else the user needs, in plain words. Any length you give is
 the `words:` line's, never an estimate, and you say it counts body text only. Ask the owner to check nothing that
-the `needs the owner` lines don't list. A check or claims result that isn't PASS is never described as passed. The
+the `needs the owner` lines don't list: for a line you'd want them to check, go back to step 6, cut it or hold it
+`blocking`, and carry on from there. A check or claims result that isn't PASS is never described as passed. The
 person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
 
 A piece step 2 parked, or left INCOMPLETE, gets only `Reader value (outline): PARKED (<contract path>)` (or

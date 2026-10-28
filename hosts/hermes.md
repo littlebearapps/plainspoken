@@ -66,8 +66,8 @@ here too.
   don't work around it. The gate's strictness comes only from `[gate] strictness` in `.plainspoken/config.toml`; a
   warn goes to the person and the command runs. Warn and block need `[gate] paths`; with none set, the gate only
   tells the person that nothing is gated. At the end of a turn, the kaizen nudge tells the person when proposals wait
-  or calibrate is due. Still run the check skill yourself before anything goes out: the gate covers
-  `terminal` only.
+  or calibrate is due; Claude Code's report guard (write's step 8 owner asks) isn't wired here. Still run the
+  check skill yourself before anything goes out: the gate covers `terminal` only.
 - `[integrity] mode = "block"` works as a warning here: the finding reaches you after the edit, but Hermes can't hold
   the edit back, so fix it before going on. A lint or integrity hook that can't start, times out or prints something
   unreadable says so in one line, and that check didn't run on the file.
