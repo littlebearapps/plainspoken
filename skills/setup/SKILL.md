@@ -28,7 +28,8 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
    session runs in: `claude-code` here, `codex` in Codex or ChatGPT Work, `hermes` in Hermes Agent. If the person
    named a host in the arguments, use that one.
 2. **For claude.ai or ChatGPT chat**, run `RUN setup --host claude-ai` (or `chatgpt`), show the printed text and
-   where to paste it, and stop. Nothing is written.
+   where to paste it, and stop. Nothing is written. Add `--locale en-GB` or `--locale en-US` if the person writes in
+   British or American English: the text gains one line saying so.
 3. **Ask once.** Recommend: nudge on, drafting rule on (Claude Code only), lint after edits on, scope `project`
    (Hermes: scope `user`, because Hermes runs plugins outside the project folder and reads the user-wide file).
    Scope `user` applies in every project on this machine, but only where plainspoken is installed. Ask the person to
@@ -38,6 +39,9 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
 5. **Apply.** Run the same command without `--dry-run`. Show the status it prints and the line after it (start a new
    session; in Codex, trust the plugin's hooks with `/hooks`).
 6. **Undo,** when asked: `RUN setup --host <host> --scope <scope> --remove`. It deletes only the lines setup wrote.
+
+To change which English the skills write in, add `--locale en-AU|en-GB|en-US` to steps 4 and 5 when the person
+asks. It writes `[locale] variant`; a project's file beats the voice profile, and the user-wide one doesn't.
 
 Any setup call can end with host-check warnings (under `Host checks`; nothing at all on a healthy machine). Pass
 each on to the person with its fix, in one line, and don't act on them: the person decides. A last line saying

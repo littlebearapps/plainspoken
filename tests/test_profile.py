@@ -21,7 +21,7 @@ class Loading(unittest.TestCase):
 
     def test_default_ships_and_is_neutral(self):
         d = P.default()
-        self.assertEqual((d.name, d.locale, d.flags, d.extra_bans), ("default", "en-AU", frozenset(), ()))
+        self.assertEqual((d.name, d.locale, d.flags, d.extra_bans), ("default", None, frozenset(), ()))
         self.assertEqual(d.visible_frontmatter_keys, ("title", "description"))
         self.assertEqual(len(d.sha256), 64)
 
@@ -92,6 +92,10 @@ class FailsClosed(unittest.TestCase):
     def test_unknown_section_and_key(self):
         self.assertFails('[profile]\nname = "x"\n[style]\n', "[style]")  # [voice] is a real section since Phase 3
         self.assertFails('[profile]\nname = "x"\nlocal = "en-AU"\n', "[profile] local")
+
+    def test_locale_unset_loads_as_none_and_set_is_kept(self):  # #121: "unset" and "en-AU" stay apart
+        self.assertIsNone(P.load(write(self.tmp, '[profile]\nname = "x"\n')).locale)
+        self.assertEqual(P.load(write(self.tmp, '[profile]\nname = "x"\nlocale = "en-GB"\n')).locale, "en-GB")
 
     def test_default_profile_sets_no_locale(self):  # so the plugin option and the config files reach it (#121)
         import tomllib

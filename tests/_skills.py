@@ -12,7 +12,8 @@ AUTO = {"check", "humanize", "write", "plain-language"}
 MARK = "<!-- plainspoken: quotes tells on purpose -->"
 # #12: no load-time command; the skill's first step runs the profile call explicitly (same command, same flags).
 FIRST_STEP = "**First, before any other step:** run"
-PROFILE_CALL = "`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}'`"
+PROFILE_CALL = ("`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}' "
+                "--plugin-locale '${user_config.locale}'`")
 # The load-time form Hermes rates high (`inline_shell_exec`), written with \x60 so this file never matches it.
 LOAD_LINE = re.compile("!\x60[^\x60\\s][^\x60\\n]*\x60")
 TOOL_NAMES = re.compile(r"\b(Agent|Task|Bash|Read|Write|Edit|Grep|Glob) tool\b")

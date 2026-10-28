@@ -155,6 +155,80 @@ class ShellChecks(Base):
         self.assertNotIn("\n", found["project config"].detail)
 
 
+class LocaleRow(Base):  # #121: the resolved locale and where it came from; the system locale is a hint only
+    def row(self, env=None, plugin_locale=None, host="claude-code") -> doctor.Check:
+        Fakes(self)
+        found = {c.name: c for c in doctor.run_checks(host, self.root, {**self.env, **(env or {})},
+                                                      plugin_locale=plugin_locale)}
+        return found["locale"]
+
+    def test_each_source(self):
+        self.assertTrue(self.row(plugin_locale="en-US").detail.startswith("en-US (plugin option)"))
+        self.assertTrue(self.row().detail.startswith("en-AU (default)"))
+        self.write_user_config('[locale]\nvariant = "en-GB"\n')
+        self.assertTrue(self.row(plugin_locale="en-US").detail.startswith("en-GB (user-wide config, "))
+        self.write_project_config('[locale]\nvariant = "en-US"\n')
+        self.assertTrue(self.row().detail.startswith("en-US (project config, .plainspoken/config.toml)"))
+        (self.root / ".plainspoken" / "profiles").mkdir()
+        (self.root / ".plainspoken" / "profiles" / "mine.toml").write_text(
+            '[profile]\nname = "mine"\nlocale = "en-GB"\n', encoding="utf-8")
+        self.write_project_config('[engine]\nprofile = "mine"\n')
+        self.assertTrue(self.row().detail.startswith("en-GB (profile)"))
+
+    def test_hint_when_the_system_suggests_another_variant(self):
+        c = self.row(env={"LANG": "en_US.UTF-8"})
+        self.assertEqual(c.status, "ok")
+        self.assertIn("en_US.UTF-8", c.detail)
+        self.assertIn("suggests en-US", c.detail)
+        self.assertIn('[locale] variant = "en-US"', c.fix)
+        self.assertIn(str(self.home / ".config" / "plainspoken" / "config.toml"), c.fix)
+
+    def test_lc_all_beats_lc_messages_beats_lang(self):
+        self.assertIn("suggests en-GB", self.row(env={"LC_ALL": "en_GB.UTF-8", "LANG": "en_US.UTF-8"}).detail)
+        self.assertIn("suggests en-US", self.row(env={"LC_MESSAGES": "en_US", "LANG": "en_GB.UTF-8"}).detail)
+        self.assertIn("suggests en-US", self.row(env={"LC_ALL": "", "LANG": "en_US.utf8@euro"}).detail)
+
+    def test_matching_system_locale_has_no_fix(self):
+        c = self.row(env={"LANG": "en_AU.UTF-8"})
+        self.assertEqual((c.status, c.fix), ("ok", ""))
+        self.assertNotIn("suggests", c.detail)
+
+    def test_no_suggestion_for_other_or_unset_locales(self):
+        for value in ("C.UTF-8", "POSIX", "C", "en_NZ.UTF-8", "fr_FR.UTF-8"):
+            with self.subTest(lang=value):
+                c = self.row(env={"LANG": value})
+                self.assertNotIn("suggests", c.detail)
+                self.assertEqual(c.fix, "")
+        c = self.row()
+        self.assertEqual(c.status, "not checked")
+        self.assertIn("isn't set", c.detail)
+
+    def test_the_fix_names_the_file_that_wins(self):
+        self.write_project_config('[locale]\nvariant = "en-AU"\n')
+        self.assertIn(".plainspoken/config.toml", self.row(env={"LANG": "en_GB.UTF-8"}).fix)
+
+    def test_never_warn(self):
+        for env in ({}, {"LANG": "en_US.UTF-8"}, {"LANG": "C.UTF-8"}, {"LC_ALL": "en_GB.UTF-8"}):
+            for plugin in (None, "en-US", "en-NZ", "${user_config.locale}"):
+                with self.subTest(env=env, plugin=plugin):
+                    self.assertNotEqual(self.row(env=env, plugin_locale=plugin).status, "WARN")
+
+    def test_every_shell_host_has_the_row_and_chat_hosts_none(self):
+        for host in ("codex", "hermes"):
+            self.assertEqual(self.row(host=host).name, "locale")
+        self.assertNotIn("locale", {c.name for c in doctor.run_checks("claude-ai", self.root, self.env)})
+
+    def test_setup_never_shows_the_row(self):
+        checks = [doctor.Check("locale", "not checked", "en-AU (default); the system locale isn't set")]
+        self.assertEqual(doctor.setup_lines("codex", checks), [])
+
+    def test_cli_passes_the_plugin_locale(self):
+        r = cli("doctor", "--host", "claude-code", "--plugin-profile", "default", "--plugin-locale", "en-GB",
+                cwd=self.root, env={**self.env, "PATH": os.environ.get("PATH", "")})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertRegex(r.stdout, r"\n  (ok|not checked)\s+locale: en-GB \(plugin option\)")
+
+
 STATIC = {
     "claude-code": {"Bash permission"},
     "codex": {"hooks trusted", "sandbox writes", "judges"},

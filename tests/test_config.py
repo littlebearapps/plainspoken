@@ -518,3 +518,109 @@ class CaptureSources(unittest.TestCase):
                 self.project(f"[kaizen]\n{body}\n")
                 with self.assertRaisesRegex(config.ConfigError, msg):
                     config.kaizen_settings(self.cwd, {})
+
+
+class LocaleResolve(unittest.TestCase):  # #121: project config → profile → user-wide → plugin option → en-AU
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+        self.env = {"HOME": str(self.home), "XDG_CONFIG_HOME": str(self.home / ".config")}
+
+    def project(self, toml: str) -> Path:
+        (self.cwd / ".plainspoken").mkdir(exist_ok=True)
+        path = self.cwd / ".plainspoken" / "config.toml"
+        path.write_text(toml, encoding="utf-8")
+        return path
+
+    def user(self, toml: str) -> Path:
+        path = self.home / ".config" / "plainspoken" / "config.toml"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(toml, encoding="utf-8")
+        return path
+
+    def prof(self, locale: str | None = None):
+        path = self.cwd / "p.toml"
+        path.write_text('[profile]\nname = "p"\n' + (f'locale = "{locale}"\n' if locale else ""), encoding="utf-8")
+        return config.load(path)
+
+    def resolve(self, prof=None, env=None, plugin=None):
+        return config.resolve_locale(prof if prof is not None else self.prof(), self.cwd,
+                                     {**self.env, **(env or {})}, plugin)
+
+    def test_default_when_nothing_sets_it(self):
+        got = self.resolve()
+        self.assertEqual((got.variant, got.source, got.label), ("en-AU", "default", "default"))
+
+    def test_plugin_option_flag(self):
+        got = self.resolve(plugin="en-US")
+        self.assertEqual((got.variant, got.label), ("en-US", "plugin option"))
+
+    def test_env_beats_the_flag(self):
+        got = self.resolve(env={"CLAUDE_PLUGIN_OPTION_LOCALE": "en-GB"}, plugin="en-US")
+        self.assertEqual((got.variant, got.source), ("en-GB", "plugin option"))
+
+    def test_empty_or_placeholder_counts_as_unset(self):
+        for env_value in ("", "${user_config.locale}", "  "):
+            with self.subTest(env=env_value):
+                got = self.resolve(env={"CLAUDE_PLUGIN_OPTION_LOCALE": env_value}, plugin="en-US")
+                self.assertEqual((got.variant, got.source), ("en-US", "plugin option"))
+        for flag in ("", "${user_config.locale}", None):
+            with self.subTest(flag=flag):
+                got = self.resolve(plugin=flag)
+                self.assertEqual((got.variant, got.label), ("en-AU", "default"))
+
+    def test_unknown_option_falls_through_with_a_note(self):
+        got = self.resolve(plugin="en-NZ")
+        self.assertEqual((got.variant, got.source), ("en-AU", "default"))
+        self.assertEqual(got.label, "default; plugin option 'en-NZ' isn't a known variant")
+        self.user('[locale]\nvariant = "en-GB"\n')  # the note is only for the level the answer came from
+        self.assertEqual(self.resolve(plugin="en-NZ").label.count("en-NZ"), 0)
+
+    def test_user_wide_beats_the_plugin_option(self):
+        path = self.user('[locale]\nvariant = "en-GB"\n')
+        got = self.resolve(env={"CLAUDE_PLUGIN_OPTION_LOCALE": "en-US"}, plugin="en-US")
+        self.assertEqual((got.variant, got.source), ("en-GB", "user-wide config"))
+        self.assertEqual(got.label, f"user-wide config, {path}")
+
+    def test_profile_beats_user_wide(self):
+        self.user('[locale]\nvariant = "en-GB"\n')
+        got = self.resolve(prof=self.prof("en-US"), plugin="en-GB")
+        self.assertEqual((got.variant, got.label), ("en-US", "profile"))
+
+    def test_project_beats_profile(self):
+        self.project('[locale]\nvariant = "en-GB"\n')
+        self.user('[locale]\nvariant = "en-AU"\n')
+        got = self.resolve(prof=self.prof("en-US"), plugin="en-US")
+        self.assertEqual((got.variant, got.source), ("en-GB", "project config"))
+        self.assertEqual(got.label, "project config, .plainspoken/config.toml")
+
+    def test_no_profile_skips_that_level(self):
+        self.user('[locale]\nvariant = "en-US"\n')
+        got = config.resolve_locale(None, self.cwd, self.env, None)
+        self.assertEqual((got.variant, got.source), ("en-US", "user-wide config"))
+
+    def test_bad_variant_is_a_config_error_naming_file_and_key(self):
+        for writer in (self.project, self.user):
+            with self.subTest(file=writer.__name__):
+                path = writer('[locale]\nvariant = "en-NZ"\n')
+                with self.assertRaises(config.ConfigError) as cm:
+                    self.resolve()
+                self.assertIn(str(path), str(cm.exception))
+                self.assertIn("[locale] variant", str(cm.exception))
+                self.assertIn("en-NZ", str(cm.exception))
+                path.unlink()
+
+    def test_unknown_key_and_wrong_type(self):
+        self.project('[locale]\nspelling = "en-GB"\n')
+        with self.assertRaisesRegex(config.ConfigError, r"unknown key \[locale\] spelling"):
+            self.resolve()
+        self.project('[locale]\nvariant = 1\n')
+        with self.assertRaisesRegex(config.ConfigError, r"\[locale\] variant"):
+            self.resolve()
+
+    def test_locale_never_reaches_the_profile_stamp(self):  # it isn't in profile_sha256, so no report goes stale
+        before = self.prof().sha256
+        self.project('[locale]\nvariant = "en-US"\n')
+        self.assertEqual(config.resolve_profile(str(self.cwd / "p.toml"), self.cwd, self.env).sha256, before)

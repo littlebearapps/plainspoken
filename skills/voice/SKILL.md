@@ -30,7 +30,7 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspo
   nothing.
 
 **First, before any other step:** run
-`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}'` and read what it prints.
+`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'` and read what it prints.
 That's the active profile the steps below use. If the call fails, carry on without it.
 
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. Calls that read the active profile take
@@ -62,7 +62,7 @@ of writing, variants and where to switch it on: [`guides/voice-profiles.md`](../
    `lines` when the sample is a file in the project, and `text` otherwise.
 6. Show the whole profile. When the user agrees, write `.plainspoken/profiles/<name>.toml`. Then, from the project
    root (a relative `--profile` path resolves against the current folder), run
-   `RUN profile --profile .plainspoken/profiles/<name>.toml`. Exit 2 names the file and the key to fix: fix it and rerun.
+   `RUN profile --profile .plainspoken/profiles/<name>.toml --plugin-locale '${user_config.locale}'`. Exit 2 names the file and the key to fix: fix it and rerun.
 7. Tell the user how to switch it on: `[engine] profile = "<name>"` in `.plainspoken/config.toml`, in each folder
    the writing happens in (in Hermes Agent, each Hermes profile's working folder), and point to
    `guides/voice-profiles.md` for variants by folder.
@@ -71,7 +71,7 @@ of writing, variants and where to switch it on: [`guides/voice-profiles.md`](../
 
 Rewrite a draft toward the active profile.
 
-1. Read the profile with `RUN profile --voice --plugin-profile '${user_config.profile}'`. It prints the writer,
+1. Read the profile with `RUN profile --voice --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'`. It prints the writer,
    principles, tone notes, rhythm, habits and avoid moves. Never open the TOML yourself.
 2. For each section type in the draft, pull 2 to 3 anchors with
    `RUN anchors --tag <type> --limit 3 --skip-missing --plugin-profile '${user_config.profile}'`.
@@ -86,7 +86,7 @@ Rewrite a draft toward the active profile.
 
 Compare a draft with the profile. Don't edit it.
 
-1. Read `RUN profile --voice --plugin-profile '${user_config.profile}'` as in Apply. The `avoid moves:` lines are
+1. Read `RUN profile --voice --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'` as in Apply. The `avoid moves:` lines are
    read here and nowhere in drafting.
 2. For each H2 section (the whole text if there are none), ask the question in `references/check.md` and compare the
    section with 2 to 3 anchors of the matching type:

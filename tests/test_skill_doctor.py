@@ -26,7 +26,8 @@ class DoctorSkill(unittest.TestCase):
         self.assertTrue(note(self.text))
 
     def test_steps(self):
-        self.assertIn("`RUN doctor --host <host>`", self.flat)
+        self.assertIn("`RUN doctor --host <host> --plugin-profile '${user_config.profile}' "
+                      "--plugin-locale '${user_config.locale}'`", self.flat)
         self.assertIn("not checked", self.flat)
         self.assertIn("WARN", self.flat)
         self.assertRegex(self.flat, r"(?i)never fix, install, enable or edit anything")

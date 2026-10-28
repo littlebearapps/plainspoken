@@ -29,7 +29,7 @@ Core rules (these hold for the whole run):
 - Run every call from the same working directory (the project root); report files are keyed to it.
 
 **First, before any other step:** run
-`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}'` and read what it prints.
+`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'` and read what it prints.
 That's the active profile the steps below use. If the call fails, carry on without it.
 
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. These calls take

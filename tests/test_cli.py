@@ -413,3 +413,58 @@ class ConfigCli(unittest.TestCase):  # `config profile-for`
         other.write_text("We delve into it.\n", encoding="utf-8")
         r = cli("check", "post.md", "--no-save", cwd=self.cwd)
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+
+class LocaleCli(unittest.TestCase):  # #121: the locale option is read, and shown with where it came from
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+        (self.cwd / ".git").mkdir()
+        self.env = {"HOME": str(self.home), "XDG_CONFIG_HOME": str(self.home / ".config")}
+
+    def run_cli(self, *args, env=None):
+        return cli(*args, cwd=self.cwd, env={**self.env, **(env or {})})
+
+    def test_summary_names_the_locale_and_its_source(self):
+        r = self.run_cli("profile", "--plugin-profile", "default", "--plugin-locale", "en-US")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("locale en-US (plugin option) · flags: none", r.stdout)
+        r = self.run_cli("profile", "--plugin-profile", "default", "--plugin-locale", "${user_config.locale}")
+        self.assertIn("locale en-AU (default) · flags", r.stdout)
+
+    def test_env_beats_the_flag(self):  # hooks get CLAUDE_PLUGIN_OPTION_LOCALE; skills pass the flag
+        r = self.run_cli("profile", "--profile", "default", "--plugin-locale", "en-US",
+                         env={"CLAUDE_PLUGIN_OPTION_LOCALE": "en-GB"})
+        self.assertIn("locale en-GB (plugin option)", r.stdout)
+
+    def test_project_config_names_the_file(self):
+        (self.cwd / ".plainspoken").mkdir()
+        (self.cwd / ".plainspoken" / "config.toml").write_text('[locale]\nvariant = "en-GB"\n', encoding="utf-8")
+        r = self.run_cli("profile", "--profile", "default", "--plugin-locale", "en-US")
+        self.assertIn("locale en-GB (project config, .plainspoken/config.toml)", r.stdout)
+
+    def test_bad_config_value_exits_2_naming_file_and_key(self):
+        (self.cwd / ".plainspoken").mkdir()
+        (self.cwd / ".plainspoken" / "config.toml").write_text('[locale]\nvariant = "en-NZ"\n', encoding="utf-8")
+        r = self.run_cli("profile", "--profile", "default")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("[locale] variant", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_voice_prints_the_locale_line(self):
+        r = self.run_cli("profile", "--voice", "--plugin-profile", "default", "--plugin-locale", "en-GB")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("locale: en-GB (plugin option)", r.stdout.splitlines())
+
+    def test_json_stamps_unchanged(self):
+        r = self.run_cli("profile", "--json", "--plugin-profile", "default", "--plugin-locale", "en-US")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(set(json.loads(r.stdout)), {"name", "path", "profile_sha256", "ruleset_version", "root"})
+
+    def test_register_checklist_uses_the_resolved_locale(self):
+        r = self.run_cli("register-checklist", "--kind", "email", "--profile", "default", "--plugin-locale", "en-US")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r11 = next(line for line in r.stdout.splitlines() if line.startswith("R11 "))
+        self.assertIn("Is it consistently en-US?", r11)

@@ -37,7 +37,7 @@ from plainspoken import (_util, adapters, calibrate, capture, checker, claims, c
                          extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
                          reader_value, register, report, setup, voice)
 from plainspoken.doc import CONTENT_TYPES
-from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError
+from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
 from plainspoken.registry import load_config
 
 # Bad input (a bad profile, unreadable or non-UTF-8 file, a directory, malformed frontmatter YAML) exits 2 with one
@@ -105,7 +105,8 @@ def _setup(args: argparse.Namespace, root: Path) -> int:
 
 
 def _doctor(args: argparse.Namespace, root: Path) -> int:
-    checks = doctor.run_checks(args.host, root, os.environ)
+    checks = doctor.run_checks(args.host, root, os.environ, plugin_profile=args.plugin_profile,
+                               plugin_locale=args.plugin_locale)
     if args.json:
         doctor.write_lines([json.dumps([c.as_dict() for c in checks], indent=2)], sys.stdout)
         return 0
@@ -120,10 +121,11 @@ def _setup_run(args: argparse.Namespace, root: Path) -> int:
         print("\n".join(setup.status(root, os.environ)))
         return 0
     if args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove:
-        _util.write_safe(setup.paste_text(args.host), sys.stdout)  # its "→" mustn't crash an ascii console
+        _util.write_safe(setup.paste_text(args.host, args.locale), sys.stdout)  # its "→" mustn't crash ascii
         return 0
     try:
-        path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove)
+        path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove,
+                                         locale=args.locale)
     except (setup.SetupError, OSError) as e:
         print(f"plainspoken: setup: {e}", file=sys.stderr)
         return 2
@@ -174,19 +176,29 @@ def _profile(args: argparse.Namespace, root: Path) -> Profile:
     return _profile_ex(args, root)[0]
 
 
-def _profile_summary(p: Profile, cfg, plugin_default: bool = False) -> str:
+def _locale(args: argparse.Namespace, prof: Profile, root: Path) -> config.Locale:
+    return config.resolve_locale(prof, root, os.environ, getattr(args, "plugin_locale", None))
+
+
+def _profile_summary(p: Profile, cfg, plugin_default: bool = False, locale: config.Locale | None = None) -> str:
     over = ", ".join(f"{k}={v}" for k, v in sorted(p.thresholds.items())) or "none"
     tag = " (plugin default)" if plugin_default else ""
     deprecated = sorted(r.id for r in cfg.rules.values() if r.status == "deprecated" and r.applies_to(p))
     return "\n".join([
         f"plainspoken profile: {p.name}{tag} ({p.source})",
-        f"locale {p.locale} · flags: {', '.join(sorted(p.flags)) or 'none'} · ruleset {cfg.version}",
+        f"locale {_locale_text(p, locale)} · flags: {', '.join(sorted(p.flags)) or 'none'} · ruleset {cfg.version}",
         f"threshold overrides: {over}",
         f"extra bans: {len(p.extra_bans)} · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
         f" · deprecated rules: {', '.join(deprecated) or 'none'}",
         f"calibration notes: {p.calibration_notes or 'none'}",
         *voice.summary_lines(p),
     ])
+
+
+def _locale_text(p: Profile, locale: config.Locale | None) -> str:
+    if locale is None:
+        return p.locale or "not set"
+    return f"{locale.variant} ({locale.label})"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -216,6 +228,7 @@ def _main(argv: list[str] | None) -> int:
     pr.add_argument("path", nargs="?", type=Path, help="the article the profile is for (its [engine] profiles entry)")
     pr.add_argument("--profile")
     pr.add_argument("--plugin-profile")
+    pr.add_argument("--plugin-locale", help="the Claude Code locale option (skills pass ${user_config.locale})")
     pr.add_argument("--voice", action="store_true", help="print the voice sections the skills draft and check from")
     pr.add_argument("--type", help="with --voice: only this content type's blend and formatting "
                                    f"({', '.join(CONTENT_KINDS)})")
@@ -238,6 +251,7 @@ def _main(argv: list[str] | None) -> int:
     rc.add_argument("--register")
     rc.add_argument("--profile")
     rc.add_argument("--plugin-profile")
+    rc.add_argument("--plugin-locale")
     vs = sub.add_parser("voice-stats", help="measure sentence rhythm in samples; prints a [rhythm] table")
     vs.add_argument("paths", nargs="+", type=Path)
     ln = sub.add_parser("length", help="count characters (as a reader sees them), words and lines in a draft")
@@ -304,6 +318,9 @@ def _main(argv: list[str] | None) -> int:
     for name, what in (("nudge", "the writing nudge"), ("rule", "the drafting rule (Claude Code)"),
                        ("lint-watch", "lint after each edit")):
         su.add_argument(f"--{name}", choices=("on", "off"), help=f"{what}; unset leaves it as it is")
+    su.add_argument("--locale", choices=sorted(locales()),
+                    help="the English variant to write in: sets [locale] variant, or for claude.ai and ChatGPT adds "
+                         "one sentence to the paste-in text")
     su.add_argument("--dry-run", action="store_true", help="print the change without writing it")
     su.add_argument("--remove", action="store_true", help="delete every setting setup wrote to this file first")
     su.add_argument("--status", action="store_true", help="print what is on now")
@@ -311,6 +328,8 @@ def _main(argv: list[str] | None) -> int:
                                        "checked for each (changes nothing; exit 0 with warnings)")
     dr.add_argument("--host", required=True, choices=setup.HOSTS)
     dr.add_argument("--json", action="store_true", help="print the checks as a JSON list")
+    dr.add_argument("--plugin-profile")
+    dr.add_argument("--plugin-locale")
     _claims_parser(sub)
     _reader_value_parser(sub)
     _kaizen_parser(sub)
@@ -374,10 +393,7 @@ def _main(argv: list[str] | None) -> int:
         except _INPUT_ERRORS as e:
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2
-        if args.voice:
-            print("\n".join(voice.voice_lines(prof, args.type)))
-            return 0
-        if args.json:  # the stamps `check` and `merge` bind a report to (docs/report-contract.md)
+        if args.json:  # the stamps `check` and `merge` bind a report to (docs/report-contract.md); never the locale
             try:
                 version = load_config().version
             except _INPUT_ERRORS as e:
@@ -387,10 +403,18 @@ def _main(argv: list[str] | None) -> int:
                               "ruleset_version": version, "root": str(root)}, indent=2))
             return 0
         try:
+            locale = _locale(args, prof, root)
+        except _INPUT_ERRORS as e:  # ConfigError: a bad [locale] variant, named by file and key
+            print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
+            return 2
+        if args.voice:
+            print("\n".join(voice.voice_lines(prof, args.type, f"{locale.variant} ({locale.label})")))
+            return 0
+        try:
             gate = "{} ({})".format(*config.gate_strictness(root, os.environ))
         except _INPUT_ERRORS as e:
             gate = f"can't read ({_first_line(e)})"
-        print(_profile_summary(prof, load_config(), plugin_default) + f"\ngate: {gate}")
+        print(_profile_summary(prof, load_config(), plugin_default, locale) + f"\ngate: {gate}")
         return 0
     if args.cmd == "config":
         try:
@@ -528,7 +552,8 @@ def _main(argv: list[str] | None) -> int:
         return 0
     if args.cmd == "register-checklist":
         try:
-            items = register.checklist(args.kind, _profile(args, root), args.register)
+            prof = _profile(args, root)
+            items = register.checklist(args.kind, prof, args.register, _locale(args, prof, root).variant)
         except _INPUT_ERRORS as e:  # ProfileError is a ValueError
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2

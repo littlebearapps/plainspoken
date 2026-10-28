@@ -8,6 +8,10 @@ either runs is `<python3 on PATH> --version`, in its own process group with a 10
 or calls a model. What a script can't see (the agent's own tools and permissions, Codex's hook trust, the Hermes
 flags) is `not checked`, never `ok`, and such a row is marked `static`: it's the same on every machine.
 Output is ASCII (`->`, `|`), so a console that can't print UTF-8 still shows it.
+
+The `locale` row is information, never a fault: it shows the spelling locale and where it came from, and when the
+system locale (LC_ALL, then LC_MESSAGES, then LANG) names a different English variant, how to switch. It never
+changes the locale, is never WARN, and setup doesn't print it.
 """
 from __future__ import annotations
 
@@ -22,8 +26,8 @@ from pathlib import Path
 
 from plainspoken import _util, config, hosts
 
-__all__ = ["Check", "HERMES_FLAGS", "STATUSES", "format", "heading", "plugin_root", "run_checks", "setup_lines",
-           "summary", "write_lines"]
+__all__ = ["Check", "HERMES_FLAGS", "INFO_ROWS", "STATUSES", "format", "heading", "plugin_root", "run_checks",
+           "setup_lines", "summary", "system_locale", "write_lines"]
 
 OK, WARN, NOT_CHECKED = "ok", "WARN", "not checked"
 STATUSES = (OK, WARN, NOT_CHECKED)
@@ -36,6 +40,9 @@ PLUGIN_FILES = ("lib/run.py", "data/rules.toml", "skills/")
 SHELL_HOSTS = ("claude-code", "codex", "hermes")
 CHAT_NAMES = {"claude-ai": "claude.ai", "chatgpt": "ChatGPT"}
 _VERSION = re.compile(r"Python (\d+)\.(\d+)(?:\.(\d+))?")
+# System locale names (encoding and @modifier stripped) that suggest a variant; anything else suggests nothing.
+_SYSTEM_LOCALES = {"en_AU": "en-AU", "en_GB": "en-GB", "en_US": "en-US"}
+INFO_ROWS = ("locale",)  # rows that inform and never warn: setup leaves them to doctor
 _WIDTH = len(NOT_CHECKED) + 2
 
 
@@ -172,12 +179,46 @@ def _user_config(host: str, env: Mapping[str, str]) -> Check:
     return Check("user-wide config", OK, "none (defaults apply)")
 
 
-def _shell(host: str, root: Path, env: Mapping[str, str]) -> list[Check]:
+def system_locale(env: Mapping[str, str]) -> str:
+    """The locale the messages category uses (POSIX order: LC_ALL, LC_MESSAGES, LANG), or "" when none is set. Read
+    from the environment, never the `locale` module, which a hook shouldn't switch."""
+    for name in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        value = (env.get(name) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _locale(root: Path, env: Mapping[str, str], plugin_profile: str | None, plugin_locale: str | None) -> Check:
+    # The profile as `profile` resolves it; with no --plugin-profile and nothing else naming one, the plugin's default.
+    prof = config.resolve_profile(None, root, env, "" if plugin_profile is None else plugin_profile)
+    got = config.resolve_locale(prof, root, env, plugin_locale)
+    shown = f"{got.variant} ({got.label})"
+    system = system_locale(env)
+    if not system:
+        return Check("locale", NOT_CHECKED, f"{shown}; the system locale isn't set (LC_ALL, LC_MESSAGES and LANG are empty), so "
+                                            "there's nothing to compare")
+    suggested = _SYSTEM_LOCALES.get(re.split(r"[.@]", system, maxsplit=1)[0])
+    if suggested is None or suggested == got.variant:
+        return Check("locale", OK, shown)
+    if got.source == "project config":
+        where = f'change [locale] variant to "{suggested}" in {root / ".plainspoken" / "config.toml"}'
+    elif got.source == "profile":
+        where = f'change [profile] locale to "{suggested}" in {prof.source}'
+    else:
+        where = f'set [locale] variant = "{suggested}" in {config.user_config_path(env)}'
+    return Check("locale", OK, f"{shown}; the system locale is {system}, which suggests {suggested}",
+                 f"to use it, {where}")
+
+
+def _shell(host: str, root: Path, env: Mapping[str, str], plugin_profile: str | None = None,
+           plugin_locale: str | None = None) -> list[Check]:
     out: list[Check] = []
     for name, fn in (("python3", lambda: _python(env)), ("plugin files", _plugin_files),
                      ("reports folder", lambda: _reports(root)), ("git", lambda: _git(root, env)),
                      ("project config", lambda: _project_config(root)),
-                     ("user-wide config", lambda: _user_config(host, env))):
+                     ("user-wide config", lambda: _user_config(host, env)),
+                     ("locale", lambda: _locale(root, env, plugin_profile, plugin_locale))):
         out += _safe(name, fn)
     return out
 
@@ -266,14 +307,16 @@ def _chat(host: str) -> list[Check]:
                                                 "a \"check\" in chat is the model's own read", static=True)]
 
 
-def run_checks(host: str, root: Path, env: Mapping[str, str]) -> list[Check]:
-    """Every check for `host`, in order. Never raises for a check; an unknown host is a ValueError."""
+def run_checks(host: str, root: Path, env: Mapping[str, str], plugin_profile: str | None = None,
+               plugin_locale: str | None = None) -> list[Check]:
+    """Every check for `host`, in order. Never raises for a check; an unknown host is a ValueError. `plugin_profile`
+    and `plugin_locale` are the Claude Code options a skill passes (the Bash tool doesn't see them)."""
     if host in CHAT_NAMES:
         return _chat(host)
     if host not in SHELL_HOSTS:
         raise ValueError(f"unknown host {host!r}")
     root = Path(root)
-    out = _shell(host, root, env)
+    out = _shell(host, root, env, plugin_profile, plugin_locale)
     if host == "claude-code":
         out += _claude_code()
     elif host == "codex":
@@ -299,13 +342,14 @@ def summary(checks: list[Check]) -> str:
 
 def setup_lines(host: str, checks: list[Check]) -> list[str]:
     """What `setup` adds after its own output. Shell hosts: the WARN rows and any check that couldn't run (failed
-    or timed out), then, when there are by-design `not checked` rows, one line pointing at doctor for them. Empty when
+    or timed out), never an INFO_ROWS row, then, when there are by-design `not checked` rows, one line pointing at doctor for them. Empty when
     there's nothing wrong, so a healthy machine sees no block. Chat hosts: their no-shell rows (the caller sends
     those to stderr, away from the paste-in text)."""
     if host in CHAT_NAMES:
         shown, static = checks, 0
     else:
-        shown = [c for c in checks if c.status == WARN or (c.status == NOT_CHECKED and not c.static)]
+        shown = [c for c in checks if c.name not in INFO_ROWS
+                 and (c.status == WARN or (c.status == NOT_CHECKED and not c.static))]
         static = sum(1 for c in checks if c.status == NOT_CHECKED and c.static)
     if not shown:
         return []

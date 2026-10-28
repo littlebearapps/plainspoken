@@ -47,6 +47,12 @@ class Items(unittest.TestCase):
             for item in register.checklist(kind, P.load(FULL)):
                 self.assertNotIn("{", item["ask"] + item["flag_when"], item["id"])
 
+    def test_r11_says_the_resolved_locale(self):  # #121: the caller resolves it; the profile's is the fallback
+        r11 = next(i for i in register.checklist("email", P.default(), locale="en-US") if i["id"] == "R11")
+        self.assertEqual(r11["ask"], "Is it consistently en-US?")
+        r11 = next(i for i in register.checklist("email", P.default()) if i["id"] == "R11")
+        self.assertEqual(r11["ask"], "Is it consistently en-AU?")
+
     def test_unknown_register(self):
         with self.assertRaises(ValueError) as cm:
             register.checklist("email", P.load(FULL), "linkedin")
