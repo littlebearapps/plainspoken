@@ -92,22 +92,29 @@ def lint_doc(doc, profile: Profile, content_type: str, cfg) -> tuple[list[str], 
 def run_lint(path: Path, profile: Profile, content_type: str = "article", cfg=None) -> dict:
     """Lint one article. `cfg` is the ruleset to use (the caller's, so capture sees the same lists); None loads the
     default ruleset as before."""
+    return lint_text(path.read_text(encoding="utf-8"), profile, content_type, cfg, label=str(path), sha=sha256(path))
+
+
+def lint_text(text: str, profile: Profile, content_type: str = "article", cfg=None, *, label: str = "<text>",
+              sha: str | None = None) -> dict:
+    """Lint text that may have no file (a tool call's arguments, a chat reply): the same lint shape as `run_lint`,
+    with `article` set to `label` and `article_sha256` to `sha`, else the sha256 of the text's UTF-8 bytes."""
     cfg = load_config() if cfg is None else cfg
     cfg.check_profile(profile)
-    doc = parse(path.read_text(encoding="utf-8"), path=str(path), profile=profile, content_type=content_type)
+    doc = parse(text, path=label, profile=profile, content_type=content_type)
     lint_rules, findings = lint_doc(doc, profile, content_type, cfg)
     metrics_out = metrics.compute(doc, cfg)
     words = max(metrics_out["words"], 1)
     counts = Counter(f["rule"] for f in findings)
     rates = {rid: round(n * 1000 / words, 2) for rid, n in sorted(counts.items())}
     return {
-        "article": str(path),
+        "article": label,
         "profile": profile.name,
         "profile_sha256": profile.sha256,
         "ruleset_version": cfg.version,
         "content_type": content_type,
         "fields_read": doc.fields_read(),  # #110: what was in scope (additive; older lint files lack it)
-        "article_sha256": sha256(path),
+        "article_sha256": sha or hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "lint_rules": lint_rules,
         "findings": findings,

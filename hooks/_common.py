@@ -216,3 +216,29 @@ def record_state(data: Path, name: str, slot: str, key: str) -> str | None:
             last.pop(next(iter(last)))
         _write_state(data, name, last)
     return previous if isinstance(previous, str) else None
+
+
+# --- text already linted this session (#124 records, #125 reads) --------------------------------------------------
+# One slot per linted text: `<session>|<text hash>` → its sentence fingerprints (hashes only, never the text), so a
+# later check can skip a reply draft that a tool-call check already linted, whole or mostly.
+LINTED_STATE = "linted-texts.json"
+LINTED_OVERLAP = 0.8
+
+
+def remember_linted(data: Path, session: str, texts: list[str]) -> None:
+    from plainspoken import prose
+    for text in texts:
+        record_state(data, LINTED_STATE, f"{session}|{prose.text_hash(text)}", ",".join(prose.fingerprint(text)))
+
+
+def linted_before(data: Path, session: str, text: str, share: float = LINTED_OVERLAP) -> bool:
+    """The same text (by `prose.text_hash`), or one whose sentences are at least `share` already linted, was
+    linted in this session."""
+    from plainspoken import prose
+    last = read_state(data, LINTED_STATE)
+    if f"{session}|{prose.text_hash(text)}" in last:
+        return True
+    prefix = f"{session}|"
+    seen = {h for slot, fp in last.items() if slot.startswith(prefix) and isinstance(fp, str)
+            for h in fp.split(",") if h}
+    return prose.overlap(prose.fingerprint(text), seen) >= share
