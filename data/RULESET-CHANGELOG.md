@@ -2,6 +2,22 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## Engine change (2026-10-28; ruleset version unchanged)
+
+- **Social caps merge as the stricter value (#104):** a cap (a `*_max` key) in a content type's layer, such as
+  `[thresholds.social]`, now merges with the profile's value as the stricter of the two. Before, it replaced it, so
+  a profile with `em_dash_max = 0` got the social cap of 1 in every short post, including every draft under 300
+  words piped to `check -`. A profile that loosens a cap still never lifts a social one. Social keys that aren't
+  caps (`conversational_block`, `uniform_sentence_run`, `staccato_short_run`, `staccato_short_len`) still replace
+  the profile's value, and no `*_min` floor is in a content-type layer. Default-profile results don't change.
+- **New threshold `en_dash_max` (#104):** rule 1 also counts en dashes against their own cap, separately from
+  `em_dash_max`. The default is -1 (any negative value means no limit), so no result changes until a profile sets
+  it. Once set, every en dash counts, number ranges included (`9am–6pm`, `2020–2026`): a writer who caps en dashes
+  at 0 doesn't use them, and the issue asks for `9am–6pm` to be flagged then. A profile that keeps en-dash ranges
+  sets a cap with room for them. The key is added to `[thresholds."default"]` by hand, not through `kaizen apply`,
+  because it starts at no limit and changes no result; the owner approves by merging the fix PR. The file's bytes
+  change, so a pending proposal's `base_sha256` no longer matches and `kaizen apply` rebases it.
+
 ## Register checklist change (2026-10-27; ruleset version unchanged)
 
 `data/register-checklist.toml` isn't part of the ruleset, so `kaizen apply` doesn't govern it and the version stays.

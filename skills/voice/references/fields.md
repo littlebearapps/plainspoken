@@ -11,8 +11,14 @@ doesn't print reaches no drafting skill.
 - `[profile]` `name`, `locale`, `flags`: the profile's name, its spelling conventions and any extra switches
   (`narrative` relaxes the sentence-rhythm rules). Example: `name = "my-voice"`. Who reads it: the checker
   (register-check's checklist also names the locale).
-- `[thresholds]`: numeric limits that replace the ruleset's defaults, by rule name. Example: a higher em-dash cap for
-  a writer who uses them. Who reads it: the checker.
+- `[thresholds]`: numeric limits that replace the ruleset's defaults, by the name the ruleset uses. Example: a higher
+  em-dash cap (`em_dash_max = 5`) for a writer who uses them, or `em_dash_max = 0` and `en_dash_max = 0` for one who
+  never does. `en_dash_max` defaults to -1, no limit; once set, every en dash counts, number ranges like `9am–6pm`
+  included, so a writer who keeps ranges sets a cap with room for them. The values apply to every content type. Text
+  checked as `social` (any draft under 300 words piped to `check -`) also has the ruleset's social caps: for a cap
+  (a key ending in `_max`), the stricter of your value and the social one applies, so a profile can tighten a social
+  cap but never loosen it. The other social values (run and sentence lengths) replace yours. Who reads it: the
+  checker.
 - `[lexicon]` `extra_bans`: words or names you never want in print. Example: `["Acme"]`, a former employer's name.
   Who reads it: the checker.
 - `[document]`: how a file is read (visible frontmatter keys, the FAQ key, headings that hold lists, headings that

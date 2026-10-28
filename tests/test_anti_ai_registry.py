@@ -95,6 +95,44 @@ class ProfileScoping(unittest.TestCase):
             art.write_text("I tried it — once — twice — then again — and it worked — mostly.\n", encoding="utf-8")
             self.assertEqual([f for f in run_lint(art, NARRATIVE)["findings"] if f["rule"] == "1"], [])
 
+    def test_stricter_profile_cap_holds_on_social(self):  # #104: the social layer never loosens a profile cap
+        import dataclasses
+        strict = dataclasses.replace(PRODUCT, thresholds={"em_dash_max": 0, "transition_total_max": 1,
+                                                          "transition_single_max": 0})
+        social = self.cfg.thresholds(strict, "social")
+        self.assertEqual((social["em_dash_max"], social["transition_total_max"], social["transition_single_max"]),
+                         (0, 1, 0))
+        loose = dataclasses.replace(PRODUCT, thresholds={"em_dash_max": 5, "transition_total_max": 20})
+        social = self.cfg.thresholds(loose, "social")
+        self.assertEqual((social["em_dash_max"], social["transition_total_max"]), (1, 3))
+
+    def test_only_caps_merge_as_the_stricter_value(self):  # floors and run lengths keep the replace rule
+        import dataclasses
+        layer = self.cfg._thresholds["social"]
+        others = {k: v for k, v in layer.items() if not k.endswith("_max")}
+        self.assertTrue(others, "the social layer is expected to hold non-cap keys too")
+        bumped = {k: (v * 3 if isinstance(v, int) else v) for k, v in others.items()}
+        shrunk = {k: (max(1, v // 3) if isinstance(v, int) else v) for k, v in others.items()}
+        for override in (bumped, shrunk):
+            got = self.cfg.thresholds(dataclasses.replace(PRODUCT, thresholds=override), "social")
+            self.assertEqual({k: got[k] for k in others}, others)
+        self.assertFalse([k for k in layer if k.endswith("_min")], "a floor in the social layer needs its own merge rule")
+
+    def test_en_dash_cap_defaults_to_no_limit_and_survives_social(self):
+        import dataclasses
+        self.assertLess(self.cfg.thresholds()["en_dash_max"], 0)
+        self.assertLess(self.cfg.thresholds(PRODUCT, "social")["en_dash_max"], 0)
+        strict = dataclasses.replace(PRODUCT, thresholds={"en_dash_max": 0})
+        self.assertEqual(self.cfg.thresholds(strict, "social")["en_dash_max"], 0)
+
+    def test_stricter_of_two_caps_treats_negative_as_no_limit(self):
+        from plainspoken.registry import stricter_cap
+        self.assertEqual(stricter_cap(5, 1), 1)
+        self.assertEqual(stricter_cap(0, 1), 0)
+        self.assertEqual(stricter_cap(-1, 2), 2)
+        self.assertEqual(stricter_cap(2, -1), 2)
+        self.assertEqual(stricter_cap(-1, -1), -1)
+
     def test_disabled_rules_drop_out(self):
         import dataclasses
         quiet = dataclasses.replace(PRODUCT, rules_disabled=frozenset({"7d"}))

@@ -33,9 +33,6 @@ v1.0 waits on evidence that plainspoken does what it says on real, long pieces. 
 - **Open issue [#75](https://github.com/littlebearapps/plainspoken/issues/75).** In one long-form run of nine,
   write's report asked the owner to check lines the engine didn't list as needing them. The round above counts how
   often it happens; it's fixed when the count is zero or those lines are recorded so the engine lists them.
-- **Open issue [#104](https://github.com/littlebearapps/plainspoken/issues/104).** A voice profile that allows no
-  em dashes still lets one through in a short post, because the social cap replaces the profile's stricter one, and
-  en dashes aren't counted at all.
 - **More evidence on rewrite quality.** A blind reader test that puts plainspoken's drafts beside the author's own
   unassisted writing, read by a model panel, alongside the existing blind reads of rewrites.
 

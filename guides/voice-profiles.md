@@ -97,9 +97,12 @@ lint-after-edits switches (`/plainspoken:setup`).
 
 ## Limits to know
 
-- `[thresholds]` set the checker's limits for files checked as articles. Anything checked as `social`, which
-  includes every draft under 300 words piped to `check -`, gets the social limits instead (issue #104). To ban a
-  character outright in short pieces too, add it to `[lexicon] extra_bans`.
+- `[thresholds]` set the checker's limits for every content type. Anything checked as `social`, which includes
+  every draft under 300 words piped to `check -`, also has the social caps, and the stricter value wins: a profile
+  with `em_dash_max = 0` allows no em dash anywhere, while one with `em_dash_max = 5` still gets the social cap of 1
+  in a short post. Other social values (run and sentence lengths) replace the profile's.
+- En dashes aren't capped unless the profile sets `en_dash_max`. Once it's set, every en dash counts, ranges like
+  `9am–6pm` included, so a writer who uses en-dash ranges needs a cap with room for them.
 - `[[registers]]` reach only `register-check`; drafting never sees them. Put anything drafting must follow in
   `formatting` as well.
 - `knows` under `[reader]` isn't read by any skill yet.

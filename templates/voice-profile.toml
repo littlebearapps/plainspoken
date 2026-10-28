@@ -108,6 +108,9 @@ source = "newsletter, May"
 
 # [thresholds]
 # checker: override a numeric limit for this profile, by the name the ruleset uses. Leave empty to keep the defaults.
+# Applies to every content type; on social posts the stricter of this and the social cap wins for any *_max key.
+# em_dash_max = 0
+# en_dash_max = 0     # default -1, no limit; once set, every en dash counts, ranges like 9am–6pm included
 
 # [document]
 # checker: how documents are read. These are the defaults.

@@ -31,6 +31,38 @@ class EmDashes(unittest.TestCase):
         self.assertEqual(len(run("1", "Plain body — here.", fm=fm)), 1)
 
 
+class EnDashes(unittest.TestCase):  # #104: en dashes count against en_dash_max, which defaults to no limit
+    def strict(self, cap=0):
+        return dataclasses.replace(PRODUCT, thresholds={"en_dash_max": cap})
+
+    def test_untouched_by_default(self):
+        self.assertEqual(run("1", "Open 9am–6pm, 2020–2026, word – word – word – word – word."), [])
+
+    def test_range_and_spaced_dash_flagged_at_cap_zero(self):
+        for body in ("We're open 9am–6pm on weekdays.", "Thanks for checking – good catch.",
+                     "It ran 2020–2026.", "Thanks–good."):
+            with self.subTest(body=body):
+                f = run("1", body, profile=self.strict())
+                self.assertEqual([x.severity for x in f], ["BLOCK"])
+                self.assertIn("en dash", f[0].message)
+                self.assertIn("limit 0", f[0].message)
+
+    def test_cap_counts_every_en_dash(self):
+        self.assertEqual(run("1", "Open 9am–6pm.", profile=self.strict(1)), [])
+        self.assertEqual(len(run("1", "Open 9am–6pm, 2020–2026.", profile=self.strict(1))), 1)
+
+    def test_en_and_em_dashes_have_separate_caps(self):
+        both = dataclasses.replace(PRODUCT, thresholds={"en_dash_max": 0, "em_dash_max": 0})
+        f = run("1", "A — b, open 9am–6pm.", profile=both)
+        self.assertEqual(len(f), 2)
+        self.assertEqual(sorted("en dash" in x.message for x in f), [False, True])
+        self.assertEqual(run("1", "A — b — c, open 9am–6pm.", profile=self.strict(1)), [])
+
+    def test_social_keeps_the_profile_en_dash_cap(self):
+        doc = parse("---\n---\n\nOpen 9am–6pm.\n", profile=self.strict(), content_type="social")
+        self.assertEqual([x.severity for x in CHECKS["1"](doc, CFG)], ["BLOCK"])
+
+
 class BanList(unittest.TestCase):
     def test_literal_word_and_inflection_block(self):
         f = run("2", "We utilised a robust approach.")
