@@ -184,6 +184,8 @@ in [CHANGELOG.md](CHANGELOG.md); what's planned next is in [ROADMAP.md](ROADMAP.
 Found a bug or want a feature? [Open an issue](https://github.com/littlebearapps/plainspoken/issues/new/choose).
 Three forms there feed the kaizen loop directly: **False positive** (a finding that's wrong), **Missed tell** (one
 it didn't flag) and **Pattern proposal** (a new tell to catch).
+Questions and ideas that aren't a bug yet go to
+[Discussions](https://github.com/littlebearapps/plainspoken/discussions).
 
 To contribute code or docs, read [CONTRIBUTING.md](CONTRIBUTING.md). Report a vulnerability privately through
 [SECURITY.md](SECURITY.md), and find help in [SUPPORT.md](SUPPORT.md).
