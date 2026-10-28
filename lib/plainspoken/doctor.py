@@ -221,6 +221,16 @@ def _tool_call(root: Path, env: Mapping[str, str]) -> Check:
     return Check("tool-call check", OK, f"{found['mode']} ({found['source']})")
 
 
+def _chat_reply(root: Path, env: Mapping[str, str]) -> Check:
+    """The chat-reply check's mode and where it came from. Off is the default and says so."""
+    try:
+        found = config.chat_reply_settings(root, env)
+    except config.ConfigError as e:
+        return Check("chat-reply check", WARN, f"off, because the config can't be read: {_first_line(e)}",
+                     "fix the [chat_reply] section by hand")
+    return Check("chat-reply check", OK, f"{found['mode']} ({found['source']})")
+
+
 def _shell(host: str, root: Path, env: Mapping[str, str], plugin_profile: str | None = None,
            plugin_locale: str | None = None) -> list[Check]:
     out: list[Check] = []
@@ -229,7 +239,8 @@ def _shell(host: str, root: Path, env: Mapping[str, str], plugin_profile: str | 
                      ("project config", lambda: _project_config(root)),
                      ("user-wide config", lambda: _user_config(host, env)),
                      ("locale", lambda: _locale(root, env, plugin_profile, plugin_locale)),
-                     ("tool-call check", lambda: _tool_call(root, env))):
+                     ("tool-call check", lambda: _tool_call(root, env)),
+                     ("chat-reply check", lambda: _chat_reply(root, env))):
         out += _safe(name, fn)
     return out
 

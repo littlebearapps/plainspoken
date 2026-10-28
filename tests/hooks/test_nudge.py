@@ -227,12 +227,15 @@ class Hook(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
         self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
 
-    def run_hook(self, prompt: str, env: dict | None = None, args: tuple = ()):
-        e = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_"))}
-        e.update({"HOME": str(self.home), "CLAUDE_PROJECT_DIR": str(self.project)})
+    def run_hook(self, prompt: str, env: dict | None = None, args: tuple = (), **ids):
+        e = {k: v for k, v in os.environ.items()
+             if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_", "CLAUDE_PLUGIN_DATA", "PLUGIN_DATA"))}
+        e.update({"HOME": str(self.home), "CLAUDE_PROJECT_DIR": str(self.project),
+                  "CLAUDE_PLUGIN_DATA": str(self.home / "data")})
         e.pop("XDG_CONFIG_HOME", None)
         e.update(env or {})
-        event = {"hook_event_name": "UserPromptSubmit", "prompt": prompt, "cwd": str(self.project), "session_id": "s"}
+        event = {"hook_event_name": "UserPromptSubmit", "prompt": prompt, "cwd": str(self.project), "session_id": "s",
+                 **ids}
         return subprocess.run([sys.executable, str(HOOK), *args], input=json.dumps(event), capture_output=True,
                               text=True, env=e)
 
@@ -259,6 +262,29 @@ class Hook(unittest.TestCase):
     def test_subagent_hand_back_prints_nothing_even_when_on(self):  # #55
         r = self.run_hook(HANDBACK, {"CLAUDE_PLUGIN_OPTION_NUDGE": "true"})
         self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
+
+    def flags(self) -> dict:
+        path = self.home / "data" / "writing-ask-state.json"
+        return json.loads(path.read_text(encoding="utf-8"))["last"] if path.exists() else {}
+
+    def test_writing_ask_flag_only_when_the_chat_reply_check_is_on(self):  # #125
+        on = {"CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "true"}
+        r = self.run_hook(DRAFT[0], prompt_id="p1")
+        self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
+        self.assertEqual(self.flags(), {})
+        r = self.run_hook(DRAFT[0], on, prompt_id="p1")
+        self.assertEqual(r.stdout, "")  # the nudge itself is still off: nothing for the model
+        self.run_hook(REWRITE[0], on, ("--host", "codex"), turn_id="t9")
+        self.run_hook(DRAFT[1], on)
+        self.run_hook(QUIET[0], on, prompt_id="p2")
+        self.assertEqual(self.flags(), {"s|p1": "draft", "s|t9": "rewrite", "s|latest": "draft"})
+        self.assertNotIn("excursion", (self.home / "data" / "writing-ask-state.json").read_text(encoding="utf-8"))
+
+    def test_flag_and_nudge_together(self):
+        r = self.run_hook(DRAFT[0], {"CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "true", "CLAUDE_PLUGIN_OPTION_NUDGE": "true"},
+                          prompt_id="p1")
+        self.assertIn("/plainspoken:write", json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"])
+        self.assertEqual(self.flags(), {"s|p1": "draft"})
 
     def test_bad_config_or_stdin_never_blocks(self):
         (self.project / ".plainspoken").mkdir()

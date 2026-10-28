@@ -74,6 +74,18 @@ class Command(unittest.TestCase):
         self.assertFalse((self.project / ".plainspoken" / "config.toml").exists())
         self.assertEqual(self.run_setup("--host", "codex", "--tool-call", "loud").returncode, 2)
 
+    def test_chat_reply_check_is_written_as_warn_and_shown(self):  # #125
+        r = self.run_setup("--host", "hermes", "--scope", "user", "--chat-reply", "on")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        user = self.home / ".config" / "plainspoken" / "config.toml"
+        self.assertEqual(tomllib.loads(user.read_text(encoding="utf-8"))["chat_reply"]["mode"], "warn")
+        self.assertIn("chat-reply check: warn", r.stdout)
+        r = self.run_setup("--host", "codex", "--chat-reply", "off")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        text = (self.project / ".plainspoken" / "config.toml").read_text(encoding="utf-8")
+        self.assertEqual(tomllib.loads(text)["chat_reply"]["mode"], "off")
+        self.assertIn("chat-reply check: off", r.stdout)
+
     def test_idempotent_and_dry_run_writes_nothing(self):
         self.run_setup("--host", "codex", "--nudge", "on")
         r = self.run_setup("--host", "codex", "--nudge", "on")

@@ -77,6 +77,13 @@ here too.
   which works the same here) blocks the first try with the findings as the result: remove what's flagged, never add
   facts, and call again; the same text sent again goes through. A tool named `…draft…` is only warned. If the lint
   fails or takes over 10 seconds, the call goes ahead.
+- The chat-reply check (off unless `[chat_reply] mode = "warn"`, usually in the user-wide file): after a turn whose
+  prompt asked for writing, `post_llm_call` lints a draft in the final reply in a separate process and posts one
+  plain-text message to the person, never to you, and the reply is never changed. Over Telegram, Discord, Slack or
+  Matrix it's a separate bot message; on the desktop app and the terminal app, a notice. In the classic CLI
+  (`hermes chat`) it's printed at the end of the next turn, a turn late. Cron turns are skipped. Where Hermes refuses
+  the post (no conversation, `plugins.isolation: host`), the message goes to Hermes' log instead, with the few words
+  of the draft each finding quotes, as the kaizen nudge's fallback does.
 - `[integrity] mode = "block"` works as a warning here: the finding reaches you after the edit, but Hermes can't hold
   the edit back, so fix it before going on. A lint or integrity hook that can't start, times out or prints something
   unreadable says so in one line, and that check didn't run on the file.

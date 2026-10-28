@@ -61,7 +61,8 @@ class HermesShim(unittest.TestCase):
 
     def test_registers_the_gate_and_the_kaizen_nudge(self):
         self.assertEqual(set(self.ctx.hooks), {"pre_llm_call", "transform_tool_result", "pre_tool_call",
-                                               "on_session_end"})
+                                               "on_session_end", "post_llm_call"})
+        self.assertNotIn("transform_llm_output", self.ctx.hooks)  # #125: the reply is never changed
 
 
 class HermesHooks(unittest.TestCase):
@@ -530,6 +531,81 @@ class HermesToolCall(unittest.TestCase):
         self.assertIsNone(ctx.hooks["pre_tool_call"](tool_name="mcp__outbox__send", args=object(),
                                                      session_id="h1"))
         self.assertIsNone(ctx.hooks["pre_tool_call"](tool_name=None, args=None))
+
+
+class HermesChatReply(unittest.TestCase):
+    """post_llm_call: the chat-reply check (#125). The message is posted to the person (never returned), a refused
+    post goes to the log, cron turns are skipped, and nothing here may raise."""
+
+    STIFF = ("Hi Jo,\n\nAdditionally, we are delighted to announce our comprehensive new roster. Moreover, it will "
+             "streamline the working bee for everyone. Furthermore, it leverages the spare rakes and empowers every "
+             "volunteer we have this year.\n\nCheers,\nSam")
+    ASK = "Can you draft an email to Jo about the working bee?"
+
+    def setUp(self):
+        self.project, self.home = temp_dir(self), temp_dir(self)
+        (self.project / ".git").mkdir()
+        (self.project / ".plainspoken").mkdir()
+        (self.project / ".plainspoken" / "config.toml").write_text('[chat_reply]\nmode = "warn"\n', encoding="utf-8")
+        clean_env(self, HOME=str(self.home), HERMES_HOME=str(self.home / ".hermes"))
+        self.ctx = FakeCtx(cwd=str(self.project))
+        load_shim().register(self.ctx)
+        self.end = self.ctx.hooks["post_llm_call"]
+
+    def turn(self, reply, prompt=None, platform="telegram", session="h1", ctx=None):
+        hook = (ctx or self.ctx).hooks["post_llm_call"]
+        return hook(session_id=session, task_id="t", turn_id="u1", user_message=prompt or self.ASK,
+                    assistant_response=reply, conversation_history=[], model="m", platform=platform,
+                    side_question_token=None)
+
+    def draft(self, body=None):
+        return "Here's a draft:\n\n```\n" + (body or self.STIFF) + "\n```"
+
+    def test_posts_once_and_returns_nothing(self):
+        self.assertIsNone(self.turn(self.draft()))
+        self.assertEqual(len(self.ctx.posted), 1)
+        self.assertTrue(self.ctx.posted[0].startswith("plainspoken: the draft in this reply (email, "))
+        self.assertIn("plainspoken:check", self.ctx.posted[0])
+        self.assertNotIn("/plainspoken:check", self.ctx.posted[0])
+        self.assertIsNone(self.turn(self.draft()))
+        self.assertEqual(len(self.ctx.posted), 1)  # the same draft isn't reported twice
+
+    def test_no_writing_ask_cron_or_off_posts_nothing(self):
+        self.turn(self.draft(), prompt="What does the hook do with replies?")
+        self.turn(self.draft(), platform="cron")
+        self.turn(self.draft(), platform="")
+        (self.project / ".plainspoken" / "config.toml").write_text("", encoding="utf-8")
+        self.turn(self.draft(), session="h2")
+        self.assertEqual(self.ctx.posted, [])
+
+    def test_a_refused_post_is_logged_not_raised(self):
+        ctx = FakeCtx(cwd=str(self.project), post_ok=False)
+        load_shim().register(ctx)
+        with self.assertLogs(level="WARNING") as logs:
+            self.assertIsNone(self.turn(self.draft(), ctx=ctx))
+        self.assertIn("no_conversation", "\n".join(logs.output))
+
+    def test_a_timeout_or_a_broken_session_never_raises(self):
+        shim = load_shim()
+        ctx = FakeCtx(cwd=str(self.project))
+        shim.register(ctx)
+        with unittest.mock.patch.object(shim.subprocess, "run", side_effect=shim.subprocess.TimeoutExpired("x", 10)):
+            self.assertIsNone(self.turn(self.draft(), ctx=ctx))
+        def broken():
+            raise RuntimeError("no session")
+        ctx.session_cwd = broken
+        self.assertIsNone(self.turn(self.draft(), ctx=ctx))
+        self.assertIsNone(ctx.hooks["post_llm_call"]())
+        self.assertEqual(ctx.posted, [])
+
+    def test_a_file_lint_after_edits_already_spoke_on_is_skipped(self):
+        body = self.STIFF.split("\n\n")[1]
+        path = self.project / "email.md"
+        path.write_text(body + "\n", encoding="utf-8")
+        self.ctx.hooks["transform_tool_result"](tool_name="write_file", args={"path": str(path)}, result="ok",
+                                                session_id="h1")
+        self.assertIsNone(self.turn("Here's what I saved to email.md:\n\n> " + body))
+        self.assertEqual(self.ctx.posted, [])
 
 
 if __name__ == "__main__":

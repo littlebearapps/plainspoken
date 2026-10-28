@@ -98,8 +98,10 @@ Four agents do the reviewing, each in a fresh context, read-only:
 Hooks run alongside: lint after each edit of a draft file, a claims integrity check that flags unsourced numbers,
 a publish gate on `git push` (off until you set it), a check at the end of a turn that sends back a write report
 asking you to check a line its `needs the owner` list doesn't hold, and an optional writing nudge and drafting rule
-you switch on with `/plainspoken:setup`. The kaizen loop records what the checks flagged and what you did, and
-proposes ruleset changes from that evidence ([guides/kaizen.md](guides/kaizen.md)).
+you switch on with `/plainspoken:setup`. Also optional: the chat-reply check, which lints a draft written into the
+reply when you asked for writing and tells you, never the model, what it found at the end of the turn. The kaizen
+loop records what the checks flagged and what you did, and proposes ruleset changes from that evidence
+([guides/kaizen.md](guides/kaizen.md)).
 
 ## How a check works
 
@@ -123,6 +125,8 @@ proposals go to a GitHub issue or a Trello card only if you set that up, and the
 when you run them. The kaizen ledger holds hashes and rule words, not your text, unless you switch excerpts on.
 The optional tool-call check, which lints the writing in a tool call (an email or a post) before it goes out, reads
 the call's arguments and never changes them ([guides/configuration.md](guides/configuration.md#the-tool-call-check)).
+The optional chat-reply check reads the reply and never changes it
+([guides/configuration.md](guides/configuration.md#the-chat-reply-check)).
 
 ### What stays on disk
 
@@ -140,6 +144,10 @@ draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every pat
 - With the tool-call check on: `tool-call-state.json` and `linted-texts.json` beside them (hashes of the text it
   linted, so the same text sent again goes through), and `.plainspoken/ledger/tool-calls.jsonl` (one line per field
   it looked at: counts and outcomes, a hash of the server's name, none of the text).
+- With the chat-reply check on: `writing-ask-state.json` (the kind of writing each turn asked for, never the prompt)
+  and `chat-reply-state.json` (hashes of the drafts it told you about) beside them, `linted-texts.json` also holding
+  hashes of the files lint after edits read, and `.plainspoken/ledger/chat-replies.jsonl` (one line per draft: its
+  shape, size and outcome, none of the text).
 - Sometimes, and none of them holds draft text: `.plainspoken/ledger/friction.jsonl` (a capture error, a refused
   judge reply, an incomplete merge, or a plainspoken agent finishing in Claude Code), `kaizen-backstop-state.json`
   (that agent's id, beside the hook state above), `kaizen-nudge-state.json` (once the kaizen Stop hook has said

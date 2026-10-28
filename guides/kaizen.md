@@ -42,10 +42,10 @@ reasons, the judges' replies, and file paths. Friction lines hold an engine mess
 taken out. The report files do hold your text: [What stays on disk](../README.md#what-stays-on-disk).
 
 `[kaizen] capture = false` in `.plainspoken/config.toml` turns capture off. To keep some sources and drop others, list
-the ones to keep in `[kaizen] capture_sources` (default all five: `check`, `merge`, `judge`, `lint-watch` and
-`tool-call`; `judge` covers `judge-record`'s rejected replies and the agent-run count). For example,
+the ones to keep in `[kaizen] capture_sources` (default all six: `check`, `merge`, `judge`, `lint-watch`,
+`tool-call` and `chat-reply`; `judge` covers `judge-record`'s rejected replies and the agent-run count). For example,
 `capture_sources = ["check", "merge", "judge"]` stops the lint-watch hook recording `fired` events for every Markdown
-file you save, and the tool-call check recording its findings. A capture
+file you save, and the tool-call and chat-reply checks recording their findings. A capture
 problem never changes what a command prints or its exit code: it adds one `plainspoken: kaizen capture skipped: …`
 line on stderr.
 

@@ -68,6 +68,7 @@ def _one(event: dict) -> int:
         return _skipped(e)
     quiet = not any(f["severity"] in ("BLOCK", "WARN") for f in lint["findings"])
     data = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or project / ".plainspoken")
+    _remember(event, Path(path), project)
     slot = f"{event.get('session_id')}|{rel}"
     key = "QUIET" if quiet else hashlib.sha256(text.encode("utf-8")).hexdigest()
     previous = _common.record_state(data, "lint-watch-state.json", slot, key)
@@ -88,6 +89,18 @@ def _one(event: dict) -> int:
         return 0
     _common.emit_context("PostToolUse", text)
     return 0
+
+
+def _remember(event: dict, path: Path, project: Path) -> None:
+    """When the chat-reply check (#125) is on, note this file's text as linted this session (hashes only), so a reply
+    that repeats it isn't linted a second time. Never raises."""
+    try:
+        from plainspoken import config
+        if config.chat_reply_settings(project)["mode"] != "off":
+            _common.remember_linted(_common.state_dir(project), str(event.get("session_id")),
+                                    [path.read_text(encoding="utf-8")])
+    except Exception:
+        return
 
 
 if __name__ == "__main__":

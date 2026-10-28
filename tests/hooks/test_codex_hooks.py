@@ -47,8 +47,9 @@ class Registration(unittest.TestCase):
                          ['python3 "$PLUGIN_ROOT/hooks/publish_gate.py" --host codex',
                           'python3 "$PLUGIN_ROOT/hooks/write_guard.py" --host codex'])
 
-    def test_stop_runs_the_kaizen_nudge(self):
-        self.assertEqual(commands("Stop"), ['python3 "$PLUGIN_ROOT/hooks/kaizen_nudge.py" --host codex'])
+    def test_stop_runs_the_kaizen_nudge_and_the_chat_reply_check(self):
+        self.assertEqual(commands("Stop"), ['python3 "$PLUGIN_ROOT/hooks/kaizen_nudge.py" --host codex',
+                                            'python3 "$PLUGIN_ROOT/hooks/reply_lint.py" --host codex'])
 
     def test_no_backstop(self):  # judges run via spawn_agent or codex exec; no plainspoken agent type to count
         self.assertNotIn("kaizen_backstop", json.dumps(HOOKS))

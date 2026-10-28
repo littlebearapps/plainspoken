@@ -161,6 +161,18 @@ def nudge_text(kind: str, host: str, root: str | Path, profile: str) -> str:
     return text[:LIMIT]
 
 
+def _record_ask(event: dict, kind: str, project: Path, config) -> None:
+    """For the chat-reply check (#125), when it's on: this turn asked for writing, and which kind. Only the kind is
+    stored, never the prompt. Independent of the nudge's own mode; a config it can't read records nothing."""
+    try:
+        if config.chat_reply_settings(project, os.environ)["mode"] == "off":
+            return
+    except (ValueError, OSError):
+        return
+    import _common
+    _common.record_state(_common.state_dir(project), _common.ASK_STATE, _common.turn_slot(event), kind)
+
+
 def main(argv: list[str]) -> int:
     host = argv[argv.index("--host") + 1] if "--host" in argv[:-1] else "claude-code"
     try:
@@ -176,6 +188,7 @@ def main(argv: list[str]) -> int:
     from plainspoken import config
     project = (Path(os.environ["CLAUDE_PROJECT_DIR"]) if os.environ.get("CLAUDE_PROJECT_DIR")
                else config.project_root(Path(event.get("cwd") or ".")))
+    _record_ask(event, kind, project, config)
     if config.nudge_mode(project, os.environ) != "on":
         return 0
     profile = os.environ.get("CLAUDE_PLUGIN_OPTION_PROFILE") or "default"

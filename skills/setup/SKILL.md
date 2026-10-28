@@ -21,6 +21,7 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
 | Drafting rule | Every session starts with a short rule: use plainspoken whenever something people will read is drafted | Claude Code, Cowork | off |
 | Lint after edits | After a draft file is saved, the lint's findings come straight back | Claude Code, Cowork, Codex, Hermes | on |
 | Tool-call check | Before a tool call sends writing (an email, a post, a message), its text is linted: `warn`, `block-once` or `ask` | Claude Code, Cowork, Codex, Hermes | off |
+| Chat-reply check | When the person asked for writing and the reply holds a draft, its lint findings are shown to them at the end of the turn, never to the model | Claude Code, Cowork, Codex, Hermes | off |
 | Paste-in text | The same rule, for apps that can't run hooks | claude.ai chat, ChatGPT chat | — |
 
 ## Steps
@@ -32,12 +33,13 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)
    where to paste it, and stop. Nothing is written. Add `--locale en-GB` or `--locale en-US` if the person writes in
    British or American English: the text gains one line saying so.
 3. **Ask once.** Recommend: nudge on, drafting rule on (Claude Code only), lint after edits on, the tool-call check
-   left as it is unless the person asks for it (then `warn`; `block-once` holds a send back first), scope `project`
+   left as it is unless the person asks for it (then `warn`; `block-once` holds a send back first), the chat-reply
+   check left as it is unless they ask for it, scope `project`
    (Hermes: scope `user`, because Hermes runs plugins outside the project folder and reads the user-wide file).
    Scope `user` applies in every project on this machine, but only where plainspoken is installed. Ask the person to
    confirm or change these in one message. Don't change anything they didn't agree to.
 4. **Preview.** Run `RUN setup --host <host> --scope <scope> --nudge on|off [--rule on|off] --lint-watch on|off
-   [--tool-call off|warn|block-once|ask] --dry-run` and show the file it would write.
+   [--chat-reply on|off] [--tool-call off|warn|block-once|ask] --dry-run` and show the file it would write.
 5. **Apply.** Run the same command without `--dry-run`. Show the status it prints and the line after it (start a new
    session; in Codex, trust the plugin's hooks with `/hooks`).
 6. **Undo,** when asked: `RUN setup --host <host> --scope <scope> --remove`. It deletes only the lines setup wrote.

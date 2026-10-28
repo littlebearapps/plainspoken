@@ -151,6 +151,17 @@ class Hook(unittest.TestCase):
         self.assertIn("· default ·", ctx)
         self.assertIn("delve", ctx)
 
+    def test_linted_text_is_remembered_for_the_chat_reply_check(self):  # #125
+        text = ("We delve into a robust tapestry of rosters. The working bee is on Saturday and everyone is "
+                "welcome to come along.\n")
+        self.art.write_text(text, encoding="utf-8")
+        run_hook(self.event(self.art), self.project)
+        self.assertFalse(_common.linted_before(self.project / ".data", "s1", text))  # the check is off
+        (self.project / ".plainspoken").mkdir(exist_ok=True)
+        (self.project / ".plainspoken" / "config.toml").write_text('[chat_reply]\nmode = "warn"\n', encoding="utf-8")
+        run_hook(self.event(self.art), self.project)
+        self.assertTrue(_common.linted_before(self.project / ".data", "s1", text))
+
     def test_hooks_json_registers_all_four_events(self):
         cfg = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
         post = cfg["PostToolUse"][0]

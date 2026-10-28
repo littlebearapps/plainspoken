@@ -267,7 +267,7 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
     def test_defaults(self):
         s = config.kaizen_settings(self.cwd, {})
         self.assertEqual(s, {"capture": True, "excerpts": False, "adapter": "file", "root": self.cwd,
-                             "capture_sources": ["check", "merge", "judge", "lint-watch", "tool-call"],
+                             "capture_sources": ["check", "merge", "judge", "lint-watch", "tool-call", "chat-reply"],
                              "ledger_dir": self.cwd / ".plainspoken" / "ledger",
                              "proposals_dir": self.cwd / ".plainspoken" / "kaizen",
                              "corpus": [], "human_corpus": [], "approvers": [],
@@ -489,6 +489,52 @@ class LintWatchSection(unittest.TestCase):
                     config.lint_watch(self.cwd)
 
 
+class ChatReplySection(unittest.TestCase):  # #125
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+        self.env = {"HOME": str(self.home)}
+
+    def project(self, toml: str) -> None:
+        (self.cwd / ".plainspoken").mkdir(exist_ok=True)
+        (self.cwd / ".plainspoken" / "config.toml").write_text(toml, encoding="utf-8")
+
+    def user(self, toml: str) -> None:
+        folder = self.home / ".config" / "plainspoken"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "config.toml").write_text(toml, encoding="utf-8")
+
+    def test_off_by_default(self):
+        self.assertEqual(config.chat_reply_settings(self.cwd, self.env),
+                         {"mode": "off", "min_words": 25, "source": "default"})
+
+    def test_project_then_user_wide_then_plugin_option(self):
+        option = {**self.env, "CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "true"}
+        self.assertEqual(config.chat_reply_settings(self.cwd, option)["mode"], "warn")
+        self.assertEqual(config.chat_reply_settings(self.cwd, option)["source"], "plugin option")
+        self.assertEqual(config.chat_reply_settings(self.cwd, {**self.env, "CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "${x}"})
+                         ["mode"], "off")
+        self.user('[chat_reply]\nmode = "warn"\nmin_words = 30\n')
+        self.assertEqual(config.chat_reply_settings(self.cwd, self.env),
+                         {"mode": "warn", "min_words": 30, "source": "user-wide config"})
+        self.project('[chat_reply]\nmode = "off"\n')
+        self.assertEqual(config.chat_reply_settings(self.cwd, option),
+                         {"mode": "off", "min_words": 25, "source": "project config"})
+
+    def test_bad_values_fail_closed(self):
+        for toml, msg in (('[chat_reply]\nmode = "on"\n', r"\[chat_reply\] mode must be one of off, warn"),
+                          ('[chat_reply]\nmode = "block-once"\n', r"\[chat_reply\] mode must be one of off, warn"),
+                          ('[chat_reply]\nmin_words = 0\n', r"\[chat_reply\] min_words must be a whole number"),
+                          ('[chat_reply]\nmin_words = true\n', r"\[chat_reply\] min_words must be a whole number"),
+                          ('[chat_reply]\nprofile = "x"\n', r"unknown key \[chat_reply\] profile")):
+            with self.subTest(toml=toml):
+                self.project(toml)
+                with self.assertRaisesRegex(config.ConfigError, msg):
+                    config.chat_reply_settings(self.cwd, self.env)
+
+
 class CaptureSources(unittest.TestCase):
     def setUp(self):
         self.cwd = Path(tempfile.mkdtemp()).resolve()
@@ -498,9 +544,9 @@ class CaptureSources(unittest.TestCase):
         (self.cwd / ".plainspoken").mkdir(exist_ok=True)
         (self.cwd / ".plainspoken" / "config.toml").write_text(toml, encoding="utf-8")
 
-    def test_default_is_all_five(self):
+    def test_default_is_all_six(self):
         self.assertEqual(config.kaizen_settings(self.cwd, {})["capture_sources"],
-                         ["check", "merge", "judge", "lint-watch", "tool-call"])
+                         ["check", "merge", "judge", "lint-watch", "tool-call", "chat-reply"])
 
     def test_section_loads(self):
         self.project('[kaizen]\ncapture_sources = ["check", "merge"]\n')
@@ -511,7 +557,7 @@ class CaptureSources(unittest.TestCase):
     def test_unknown_capture_source_errors(self):
         for body, msg in (('capture_sources = ["check", "lint"]',
                            r"\[kaizen\] capture_sources: unknown source 'lint' \(expected check, merge, judge, "
-                           r"lint-watch or tool-call\)"),
+                           r"lint-watch, tool-call or chat-reply\)"),
                           ('capture_sources = "check"', r"\[kaizen\] capture_sources must be a list"),
                           ('capture_sources = [1]', r"\[kaizen\] capture_sources must be a list")):
             with self.subTest(body=body):

@@ -204,6 +204,14 @@ def _write_state(data: Path, name: str, last: dict) -> None:
             pass
 
 
+def state_dir(root: Path, env=None) -> Path:
+    """Where a hook keeps its per-session state: the host's plugin data folder (CLAUDE_PLUGIN_DATA on Claude Code and
+    from the Hermes plugin, PLUGIN_DATA on Codex), else the project's `.plainspoken` folder."""
+    env = os.environ if env is None else env
+    given = env.get("CLAUDE_PLUGIN_DATA") or env.get("PLUGIN_DATA")
+    return Path(given) if given else Path(root) / ".plainspoken"
+
+
 def record_state(data: Path, name: str, slot: str, key: str) -> str | None:
     """Store `key` as `slot`'s latest result and return the previous one (None when there wasn't one). Only the last
     result per slot is kept, so A→B→A reports A again; the oldest slots go past STATE_LIMIT."""
@@ -216,6 +224,17 @@ def record_state(data: Path, name: str, slot: str, key: str) -> str | None:
             last.pop(next(iter(last)))
         _write_state(data, name, last)
     return previous if isinstance(previous, str) else None
+
+
+# --- the writing ask of a turn (#125): nudge.py records it, the chat-reply check reads it --------------------------
+ASK_STATE = "writing-ask-state.json"
+
+
+def turn_slot(event: dict) -> str:
+    """`<session>|<turn>` for this event: Claude Code's `prompt_id`, else Codex's `turn_id`, else `latest` (the next
+    prompt overwrites it), so UserPromptSubmit and Stop of one turn name the same slot."""
+    turn = event.get("prompt_id") or event.get("turn_id")
+    return f"{event.get('session_id') or '-'}|{turn if isinstance(turn, str) and turn else 'latest'}"
 
 
 # --- text already linted this session (#124 records, #125 reads) --------------------------------------------------
