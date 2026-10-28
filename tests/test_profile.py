@@ -93,6 +93,11 @@ class FailsClosed(unittest.TestCase):
         self.assertFails('[profile]\nname = "x"\n[style]\n', "[style]")  # [voice] is a real section since Phase 3
         self.assertFails('[profile]\nname = "x"\nlocal = "en-AU"\n', "[profile] local")
 
+    def test_default_profile_sets_no_locale(self):  # so the plugin option and the config files reach it (#121)
+        import tomllib
+        raw = tomllib.loads((P.PROFILES_DIR / "default.toml").read_text(encoding="utf-8"))
+        self.assertNotIn("locale", raw["profile"])
+
     def test_unknown_flag_and_locale(self):
         self.assertFails('[profile]\nname = "x"\nflags = ["poetry"]\n', "flags", "poetry")
         self.assertFails('[profile]\nname = "x"\nlocale = "en-NZ"\n', "locale", "en-NZ")
