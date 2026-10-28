@@ -8,6 +8,10 @@ default.
 `--plugin-profile` carries the Claude Code userConfig value when the environment doesn't (skills pass
 `${user_config.profile}`). An installed-from-directory plugin can leave that string unsubstituted, or substitute it
 empty; either way it means the manifest's default profile, `default`. Only `--plugin-profile` gets that treatment.
+
+The spelling locale (resolve_locale) has its own order: project `[locale] variant` → the voice profile's own
+`[profile] locale` → user-wide `[locale] variant` → the plugin option (CLAUDE_PLUGIN_OPTION_LOCALE, else
+`--plugin-locale`) → en-AU. No check reads it, so it never joins a report's stamps.
 """
 from __future__ import annotations
 
@@ -16,9 +20,10 @@ import re
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from typing import NamedTuple
 
 from plainspoken import _util
-from plainspoken.profile import Profile, ProfileError, load
+from plainspoken.profile import DEFAULT_LOCALE, Profile, ProfileError, load, locales
 
 _ENGINE_KEYS = {"profile", "profiles"}
 _PROFILES_ENTRY_KEYS = {"glob", "profile"}
@@ -30,17 +35,18 @@ _INTEGRITY_KEYS = {"mode", "paths"}
 _LINT_WATCH_KEYS = {"mode", "paths"}
 _NUDGE_KEYS = {"mode"}
 _RULE_KEYS = {"enabled"}
+_LOCALE_KEYS = {"variant"}
 _KAIZEN_KEYS = {"capture", "capture_sources", "excerpts", "adapter", "ledger_dir", "proposals_dir", "corpus",
                 "human_corpus", "approvers", "github", "trello"}
 _KAIZEN_GITHUB_KEYS = {"repo", "labels"}
 _KAIZEN_TRELLO_KEYS = {"list_id", "label_ids", "key_env", "token_env"}
 _SECTIONS = {"engine": _ENGINE_KEYS, "gate": _GATE_KEYS, "brief": _BRIEF_KEYS, "claims": _CLAIMS_KEYS,
              "reader_value": _READER_VALUE_KEYS, "integrity": _INTEGRITY_KEYS, "lint_watch": _LINT_WATCH_KEYS,
-             "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS, "rule": _RULE_KEYS}
+             "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS, "rule": _RULE_KEYS, "locale": _LOCALE_KEYS}
 # The user-wide file (~/.config/plainspoken/config.toml) holds only the settings that make sense outside a project:
-# the nudge, the drafting rule and lint-watch (hosts without install options, Codex and Hermes, set them there). A
-# project's own config wins over it.
-_USER_SECTIONS = ("nudge", "rule", "lint_watch")
+# the nudge, the drafting rule, lint-watch and the spelling locale (hosts without install options, Codex and Hermes,
+# set them there). A project's own config wins over it.
+_USER_SECTIONS = ("nudge", "rule", "lint_watch", "locale")
 STRICTNESS = ("watch", "warn", "block")
 INTEGRITY_MODES = ("off", "warn", "block")
 LINT_WATCH_MODES = ("on", "off")
@@ -129,6 +135,11 @@ def _read_config(path: Path, sections: tuple[str, ...]) -> tuple[Path, dict] | N
         elif section == "nudge":
             if "mode" in body and body["mode"] not in NUDGE_MODES:
                 raise ConfigError(f"{path}: [nudge] mode must be one of {', '.join(NUDGE_MODES)}, got {body['mode']!r}")
+        elif section == "locale":
+            known = sorted(locales())
+            if "variant" in body and body["variant"] not in known:
+                raise ConfigError(f"{path}: [locale] variant must be one of {', '.join(known)}, got "
+                                  f"{body['variant']!r}")
         else:
             paths = body.get("paths", [])
             if not isinstance(paths, list) or not all(isinstance(g, str) and g.strip() for g in paths):
@@ -344,6 +355,49 @@ def lint_watch(root: Path, env: Mapping[str, str] | None = None) -> dict:
     body = _project_or_user(root, "lint_watch", env)
     paths = body.get("paths")
     return {"mode": body.get("mode", "on"), "paths": None if paths is None else list(paths)}
+
+
+class Locale(NamedTuple):
+    """The spelling locale and where it came from. `source` is one of `project config`, `profile`, `user-wide
+    config`, `plugin option` or `default`; `where` is the config file for a config source; `note` explains a plugin
+    option that was ignored."""
+    variant: str
+    source: str
+    where: str = ""
+    note: str = ""
+
+    @property
+    def label(self) -> str:
+        """What `profile` prints in brackets: `plugin option`, `project config, .plainspoken/config.toml`, …"""
+        return "; ".join(x for x in (", ".join(x for x in (self.source, self.where) if x), self.note) if x)
+
+
+def _plugin_locale(value: str | None) -> str | None:
+    """A plugin option value, or None when it's unset: empty, blank or an unsubstituted `${…}`."""
+    value = (value or "").strip()
+    return None if not value or is_placeholder(value) else value
+
+
+def resolve_locale(prof: Profile | None, root: Path, env: Mapping[str, str],
+                   plugin_locale: str | None = None) -> Locale:
+    """The spelling locale the skills write in, first set wins: the project's `[locale] variant` (this body of
+    writing's audience) → the voice profile's own `[profile] locale` (the writer's habit; skipped when `prof` is
+    None) → the user-wide `[locale] variant` → the Claude Code option (CLAUDE_PLUGIN_OPTION_LOCALE in hooks, else
+    `--plugin-locale` from a skill) → en-AU. A bad config value is a ConfigError naming the file and key; a plugin
+    option that isn't a known variant is skipped, with a note. Only the drafting skills and register-check read it."""
+    found = _project_config(Path(root))
+    if found and "variant" in found[1].get("locale", {}):
+        return Locale(found[1]["locale"]["variant"], "project config", ".plainspoken/config.toml")
+    if prof is not None and prof.locale:
+        return Locale(prof.locale, "profile")
+    user = _user_config(env)
+    if user and "variant" in user[1].get("locale", {}):
+        return Locale(user[1]["locale"]["variant"], "user-wide config", str(user[0]))
+    option = _plugin_locale(env.get("CLAUDE_PLUGIN_OPTION_LOCALE")) or _plugin_locale(plugin_locale)
+    if option in locales():
+        return Locale(option, "plugin option")
+    note = f"plugin option {option!r} isn't a known variant" if option else ""
+    return Locale(DEFAULT_LOCALE, "default", note=note)
 
 
 def kaizen_settings(root: Path, env: Mapping[str, str]) -> dict:

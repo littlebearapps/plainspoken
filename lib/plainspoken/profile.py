@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PROFILES_DIR = ROOT / "data" / "profiles"
 LOCALES_DIR = ROOT / "data" / "locales"
 KNOWN_FLAGS = frozenset({"narrative"})
+DEFAULT_LOCALE = "en-AU"  # when no project config, profile, user-wide file or plugin option sets one (config.py)
 _NAME = re.compile(r"[a-z0-9][a-z0-9_-]*")
 CONTENT_KINDS = ("article", "page", "email", "social")
 PRONOUNS = ("I", "we", "either")
@@ -91,7 +92,7 @@ class Register:
 @dataclass(frozen=True, eq=False)
 class Profile:
     name: str
-    locale: str = "en-AU"
+    locale: str | None = None  # None: the profile doesn't set one, so config.resolve_locale looks further
     flags: frozenset[str] = frozenset()
     thresholds: dict = field(default_factory=dict)
     extra_bans: tuple[str, ...] = ()
@@ -111,7 +112,8 @@ class Profile:
     voice: dict = field(default_factory=dict)  # the validated voice tables, as loaded (skills read them via the CLI)
 
 
-def _locales() -> set[str]:
+def locales() -> set[str]:
+    """The English variants plainspoken knows: one data/locales/<variant>.toml each."""
     return {p.stem for p in LOCALES_DIR.glob("*.toml")}
 
 
@@ -233,9 +235,9 @@ def _validate(path: Path, raw: dict) -> None:
     name = prof.get("name")
     if not isinstance(name, str) or not _NAME.fullmatch(name):
         raise ProfileError(f"{path}: [profile] name is required (lowercase letters, digits, - and _)")
-    locale = prof.get("locale", "en-AU")
-    if locale not in _locales():
-        raise ProfileError(f"{path}: [profile] locale {locale!r} unknown (expected one of {sorted(_locales())})")
+    locale = prof.get("locale")
+    if locale is not None and locale not in locales():
+        raise ProfileError(f"{path}: [profile] locale {locale!r} unknown (expected one of {sorted(locales())})")
     unknown = sorted(set(prof.get("flags", [])) - KNOWN_FLAGS)
     if unknown:
         raise ProfileError(f"{path}: [profile] flags: unknown flag(s) {unknown} (expected some of {sorted(KNOWN_FLAGS)})")
@@ -271,7 +273,7 @@ def load(ref: str | Path, search: tuple[Path, ...] = ()) -> Profile:
     voice["lexicon"] = {k: lex[k] for k in _LEXICON_HABITS if k in lex}
     return Profile(
         name=prof["name"],
-        locale=prof.get("locale", "en-AU"),
+        locale=prof.get("locale"),
         flags=frozenset(prof.get("flags", [])),
         thresholds=dict(raw.get("thresholds", {})),
         extra_bans=tuple(lex.get("extra_bans", [])),

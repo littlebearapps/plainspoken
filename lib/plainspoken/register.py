@@ -1,11 +1,13 @@
-"""register-check items as data (data/register-checklist.toml), filtered by message kind and filled from the profile."""
+"""register-check items as data (data/register-checklist.toml), filtered by message kind and filled from the profile.
+
+`{locale}` is the resolved spelling locale (config.resolve_locale), which the caller passes in."""
 from __future__ import annotations
 
 import string
 import tomllib
 from pathlib import Path
 
-from plainspoken.profile import PRONOUNS, Profile
+from plainspoken.profile import DEFAULT_LOCALE, PRONOUNS, Profile
 
 DATA = Path(__file__).resolve().parents[2] / "data" / "register-checklist.toml"
 KINDS = ("email", "message", "post", "page", "outreach", "follow-up")
@@ -57,7 +59,8 @@ def load_items(path: Path = DATA) -> list[dict]:
     return items
 
 
-def checklist(kind: str, prof: Profile, register_name: str | None = None) -> list[dict]:
+def checklist(kind: str, prof: Profile, register_name: str | None = None, locale: str | None = None) -> list[dict]:
+    """The items for `kind`. `locale` is the resolved one; without it, the profile's own, else en-AU."""
     if kind not in KINDS:
         raise ValueError(f"unknown kind {kind!r} (expected one of {', '.join(KINDS)})")
     reg = None
@@ -70,7 +73,7 @@ def checklist(kind: str, prof: Profile, register_name: str | None = None) -> lis
     fill = {
         "formality": (reg.formality if reg and reg.formality else "the profile's usual register"),
         "reader": prof.reader_persona or "the reader",
-        "locale": prof.locale,
+        "locale": locale or prof.locale or DEFAULT_LOCALE,
     }
     out = []
     for item in load_items():

@@ -29,7 +29,7 @@
     "locale": {
       "type": "string",
       "title": "Spelling locale",
-      "description": "English variant used for spelling and word lists.",
+      "description": "English variant the skills write in (en-AU, en-GB or en-US). A project config or a voice profile that sets one wins.",
       "options": [
         "en-AU",
         "en-GB",

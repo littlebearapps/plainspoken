@@ -150,7 +150,7 @@ class HumanizeSkill(unittest.TestCase):
     def test_used_on_its_own_it_reads_the_voice_profile(self):  # #98: item 4 named notes it never loaded
         body = " ".join(self.text.split())
         self.assertIn("Used on its own, first run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --voice --type "
-                      "<type> --plugin-profile '${user_config.profile}'`", body)
+                      "<type> --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'`", body)
         self.assertIn("If the call fails, carry on without it.", body)
         self.assertIn("the profile's voice notes for replacements", body)
         self.assertNotIn("calibration notes", body)
@@ -168,8 +168,19 @@ class HumanizeSkill(unittest.TestCase):
 
 
 PROFILE_SUBCOMMANDS = {"check", "profile", "anchors", "register-checklist", "merge", "justify", "judge-input",
-                       "status"}
+                       "status", "doctor"}
+LOCALE_SUBCOMMANDS = {"profile", "register-checklist", "doctor"}  # #121: the commands that print the locale
 CLI_SPAN = re.compile(r"`([^`\n]*\b(?:RUN|run\.py) ([a-z-]+)\b[^`\n]*)`")
+
+
+def cli_spans(path: Path):
+    """(line, span, subcommand) for each CLI call in a file, paragraph by paragraph, so a call wrapped onto a second
+    line (to keep a skill inside its line width) is still seen whole."""
+    line = 1
+    for para in path.read_text(encoding="utf-8").split("\n\n"):
+        for span, sub in CLI_SPAN.findall(" ".join(para.split())):
+            yield line, span, sub
+        line += para.count("\n") + 2
 
 
 class ProfileFlagEverywhere(unittest.TestCase):  # without the flag, a settings-only profile is lost
@@ -182,13 +193,31 @@ class ProfileFlagEverywhere(unittest.TestCase):  # without the flag, a settings-
     def test_every_profile_loading_call_passes_the_plugin_profile(self):
         missing = []
         for path in sorted((REPO / "skills").glob("*/SKILL.md")):
-            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                for span, sub in CLI_SPAN.findall(line):
-                    explicit = re.search(r"--profile\b", span)  # an explicit file (voice Build) needs no fallback
-                    if sub in PROFILE_SUBCOMMANDS and "--plugin-profile '${user_config.profile}'" not in span \
-                            and not explicit:
+            for n, span, sub in cli_spans(path):
+                explicit = re.search(r"--profile\b", span)  # an explicit file (voice Build) needs no fallback
+                if sub in PROFILE_SUBCOMMANDS and "--plugin-profile '${user_config.profile}'" not in span \
+                        and not explicit:
+                    missing.append(f"{path.parent.name}/SKILL.md:{n}: {span}")
+        self.assertEqual(missing, [])
+
+
+class LocaleFlagEverywhere(unittest.TestCase):  # #121: skills' Bash calls never see CLAUDE_PLUGIN_OPTION_LOCALE
+    def test_subcommand_set_matches_the_cli(self):
+        src = (REPO / "lib" / "plainspoken" / "__main__.py").read_text(encoding="utf-8")
+        parsers = dict(re.findall(r'(\w+) = sub\.add_parser\("([a-z-]+)"', src))
+        flagged = {parsers[v] for v in re.findall(r'(\w+)\.add_argument\("--plugin-locale"', src)}
+        self.assertEqual(flagged, LOCALE_SUBCOMMANDS)
+
+    def test_every_locale_printing_call_passes_the_plugin_locale(self):
+        missing, seen = [], 0
+        for path in sorted((REPO / "skills").glob("*/SKILL.md")):
+            for n, span, sub in cli_spans(path):
+                if sub in LOCALE_SUBCOMMANDS:
+                    seen += 1
+                    if "--plugin-locale '${user_config.locale}'" not in span:
                         missing.append(f"{path.parent.name}/SKILL.md:{n}: {span}")
         self.assertEqual(missing, [])
+        self.assertGreater(seen, 20)
 
 
 class PerFileProfile(unittest.TestCase):

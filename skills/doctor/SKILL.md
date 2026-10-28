@@ -17,7 +17,7 @@ Never fix, install, enable or edit anything, even when the fix looks small. The 
 
 ## Steps
 
-1. **Run the checks.** Run `RUN doctor --host <host>`. The host is the app this session runs in: `claude-code`
+1. **Run the checks.** Run `RUN doctor --host <host> --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'`. The host is the app this session runs in: `claude-code`
    here, `codex` in Codex or ChatGPT Work, `hermes` in Hermes Agent. If the person named a host in the arguments, use
    that one. Each line is `ok`, `WARN` or `not checked`; it exits 0 even with warnings. If it prints `plainspoken
    needs Python 3.11 or newer` instead, pass that line on to the person and stop: nothing else can run.

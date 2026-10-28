@@ -90,6 +90,48 @@ class Command(unittest.TestCase):
             self.assertIn("never add a fact", r.stdout)
         self.assertFalse((self.project / ".plainspoken").exists())
 
+    def test_locale_writes_the_variant_and_status_shows_it(self):  # #121
+        r = self.run_setup("--host", "codex", "--locale", "en-US")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        text = (self.project / ".plainspoken" / "config.toml").read_text(encoding="utf-8")
+        self.assertEqual(tomllib.loads(text)["locale"]["variant"], "en-US")
+        self.assertIn("# set by plainspoken setup", text)
+        self.assertIn("spelling locale: en-US (project config)", r.stdout)
+        r = self.run_setup("--host", "codex", "--remove")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.project / ".plainspoken" / "config.toml").exists())
+
+    def test_locale_in_the_user_wide_file(self):
+        r = self.run_setup("--host", "hermes", "--scope", "user", "--locale", "en-GB")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        user = self.home / ".config" / "plainspoken" / "config.toml"
+        self.assertEqual(tomllib.loads(user.read_text(encoding="utf-8"))["locale"]["variant"], "en-GB")
+        self.assertIn("spelling locale: en-GB (user-wide config", r.stdout)
+
+    def test_status_without_a_locale_says_where_it_comes_from(self):
+        r = self.run_setup("--host", "codex", "--status")
+        self.assertIn("spelling locale: not set in a config file", r.stdout)
+
+    def test_unknown_locale_refused(self):
+        r = self.run_setup("--host", "codex", "--locale", "en-NZ")
+        self.assertEqual(r.returncode, 2)
+        self.assertFalse((self.project / ".plainspoken").exists())
+
+    def test_chat_paste_in_gains_the_spelling_sentence(self):
+        plain = self.run_setup("--host", "claude-ai").stdout
+        self.assertNotIn("Spell in", plain)
+        for host, variant, words in (("claude-ai", "en-US", "American English"),
+                                     ("chatgpt", "en-GB", "British English"),
+                                     ("claude-ai", "en-AU", "Australian English")):
+            with self.subTest(host=host, variant=variant):
+                r = self.run_setup("--host", host, "--locale", variant)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertIn(f"Spell in {words} ({variant}).", r.stdout)
+                self.assertIn("never add a fact", r.stdout)
+        self.assertTrue(self.run_setup("--host", "claude-ai", "--locale", "en-US").stdout.startswith(
+            plain.rstrip("\n")))
+        self.assertFalse((self.project / ".plainspoken").exists())
+
     def test_broken_config_is_left_alone(self):
         (self.project / ".plainspoken").mkdir()
         (self.project / ".plainspoken" / "config.toml").write_text("[nudge\n", encoding="utf-8")
