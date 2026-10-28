@@ -1,8 +1,8 @@
-# The shipped neutral voice: plain, honest, first person, en-AU.
+# The shipped neutral voice: plain, honest, first person, en-AU unless you choose another variant.
+# It sets no locale, so the plugin option or a [locale] variant in a config file picks the spelling (en-AU if none do).
 # To change it for one project, copy this file to .plainspoken/profiles/<name>.toml and edit the copy.
 [profile]
 name = "default"
-locale = "en-AU"
 flags = []
 
 [identity]
