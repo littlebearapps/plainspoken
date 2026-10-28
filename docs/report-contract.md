@@ -101,8 +101,10 @@ that the previous `<key>.lint.json` had and this check doesn't (same profile and
 An event holds hashes, ruleset words and section kinds, never article text unless `[kaizen] excerpts = true`. Capture
 never changes a command's output or exit code: a capture error is one `plainspoken: kaizen capture skipped: …` line on
 stderr, and `[kaizen] capture = false` turns it off. `[kaizen] capture_sources` keeps some sources (`check`, `merge`,
-`judge`, `lint-watch`; default all four): a source left out writes no events and no friction (`check` then writes no
-snapshot either, and `judge` drops `judge-record`'s friction and the backstop's count).
+`judge`, `lint-watch`, `tool-call`; default all five): a source left out writes no events and no friction (`check`
+then writes no snapshot either, and `judge` drops `judge-record`'s friction and the backstop's count). The tool-call
+check's events never carry an excerpt, and its decision log, `tool-calls.jsonl` in the ledger folder, holds counts
+and outcomes per field, never text.
 
 `merge` records what the judges decided once the report is written: each judge rule entry's own verdict (`fired`
 for the judge's `fail`, `passed` for its `pass`), with facet `agree` on rules both the lint and a judge look at, and

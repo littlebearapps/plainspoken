@@ -71,6 +71,12 @@ here too.
   tells the person that nothing is gated. At the end of a turn, the kaizen nudge tells the person when proposals wait
   or calibrate is due; Claude Code's report guard (write's step 8 owner asks) isn't wired here. Still run the
   check skill yourself before anything goes out: the gate covers `terminal` only.
+- The tool-call check (off unless `[tool_call] mode` is set, usually in the user-wide file): before any tool but the
+  core ones (terminal, files, browser, memory, the task board), the writing in its arguments is linted in a separate
+  process. `warn` posts one line to the person and adds the findings to the tool's result. `block-once` (and `ask`,
+  which works the same here) blocks the first try with the findings as the result: remove what's flagged, never add
+  facts, and call again; the same text sent again goes through. A tool named `…draft…` is only warned. If the lint
+  fails or takes over 10 seconds, the call goes ahead.
 - `[integrity] mode = "block"` works as a warning here: the finding reaches you after the edit, but Hermes can't hold
   the edit back, so fix it before going on. A lint or integrity hook that can't start, times out or prints something
   unreadable says so in one line, and that check didn't run on the file.
