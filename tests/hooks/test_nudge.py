@@ -98,6 +98,40 @@ class Matcher(unittest.TestCase):
             with self.subTest(p=p):
                 self.assertIsNone(nudge.intent(p))
 
+    def test_questions_and_tech_tasks_that_mention_writing_stay_quiet(self):  # #125
+        for p in ("Does the lint hook run when I write emails in Outlook via MCP?",  # verb in a subordinate clause
+                  "Write up how the Stop hook handles replies",  # generic noun, after a clause break
+                  "Can you write a plan for linting chat replies?",  # noun isn't the verb's object
+                  "Draft the plan for issue 125 (lint drafts in chat replies)",
+                  "Write a GitHub issue about the nudge misfiring on emails",
+                  "Write tests for the email extraction",
+                  "Write the docs page for the Stop hook",  # tech object
+                  "Write a page for the docs",  # tech destination
+                  "Write the hook that posts replies",
+                  "I write emails all day, so how does the hook pick them up?",
+                  "When I draft a post, does the nudge fire?",
+                  "Clean up the hook that tidies replies"):
+            with self.subTest(p=p):
+                self.assertIsNone(nudge.intent(p))
+
+    def test_requests_in_other_shapes_still_fire(self):  # #125: the tightening keeps real asks
+        for p in ("Write a LinkedIn post about the new MCP server",
+                  "Write a short reply to Sam saying Thursday works",
+                  "Hey, can you write an email to the parents about Friday?",
+                  "I'd like you to draft a reply to this customer email: ...",
+                  "If you have time, write a post for the club page",
+                  "Thanks. Now please write the newsletter for March",
+                  "Could you help me write a text to my landlord?",
+                  "Write a summary for the board of this quarter's numbers",
+                  "- write an email to the volunteers about the roster",
+                  'Draft the "About the market" page for our market',  # a quoted name before the noun
+                  "Write something for the parents' newsletter"):  # the piece named by where it goes
+            with self.subTest(p=p):
+                self.assertEqual(nudge.intent(p), "draft")
+        self.assertEqual(nudge.intent("Write a feature for our council newsletter (about 450 words) on the library"),
+                         "draft-long")
+        self.assertEqual(nudge.intent("Can you tidy up this email to the parents?"), "rewrite")
+
     def test_ask_buried_in_a_long_paste_is_found_at_either_end(self):
         filler = "Lorem ipsum dolor sit amet. " * 200
         self.assertEqual(nudge.intent("Rewrite this so it sounds human:\n\n" + filler), "rewrite")
