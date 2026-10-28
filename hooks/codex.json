@@ -1,5 +1,5 @@
 {
-  "description": "plainspoken hooks for Codex: the optional prompt nudge, lint + claims integrity after each apply_patch edit, the opt-in publish gate and write guard before shell commands, and the kaizen nudge at the end of a turn. Codex asks you to trust them in /hooks, and again after every plainspoken update.",
+  "description": "plainspoken hooks for Codex: the optional prompt nudge, lint + claims integrity after each apply_patch edit, the opt-in publish gate and write guard before shell commands, the opt-in tool-call check before MCP tool calls, and the kaizen nudge at the end of a turn. Codex asks you to trust them in /hooks, and again after every plainspoken update.",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -25,6 +25,16 @@
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/write_guard.py\" --host codex",
             "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/hooks/tool_prose.py\" --host codex",
+            "timeout": 10
           }
         ]
       }

@@ -22,7 +22,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import NamedTuple
 
-from plainspoken import _util
+from plainspoken import _util, toolcall
 from plainspoken.profile import DEFAULT_LOCALE, Profile, ProfileError, load, locales
 
 _ENGINE_KEYS = {"profile", "profiles"}
@@ -36,25 +36,27 @@ _LINT_WATCH_KEYS = {"mode", "paths"}
 _NUDGE_KEYS = {"mode"}
 _RULE_KEYS = {"enabled"}
 _LOCALE_KEYS = {"variant"}
+_TOOL_CALL_KEYS = set(toolcall.KEYS)
 _KAIZEN_KEYS = {"capture", "capture_sources", "excerpts", "adapter", "ledger_dir", "proposals_dir", "corpus",
                 "human_corpus", "approvers", "github", "trello"}
 _KAIZEN_GITHUB_KEYS = {"repo", "labels"}
 _KAIZEN_TRELLO_KEYS = {"list_id", "label_ids", "key_env", "token_env"}
 _SECTIONS = {"engine": _ENGINE_KEYS, "gate": _GATE_KEYS, "brief": _BRIEF_KEYS, "claims": _CLAIMS_KEYS,
              "reader_value": _READER_VALUE_KEYS, "integrity": _INTEGRITY_KEYS, "lint_watch": _LINT_WATCH_KEYS,
-             "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS, "rule": _RULE_KEYS, "locale": _LOCALE_KEYS}
+             "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS, "rule": _RULE_KEYS, "locale": _LOCALE_KEYS,
+             "tool_call": _TOOL_CALL_KEYS}
 # The user-wide file (~/.config/plainspoken/config.toml) holds only the settings that make sense outside a project:
-# the nudge, the drafting rule, lint-watch and the spelling locale (hosts without install options, Codex and Hermes,
-# set them there). A project's own config wins over it.
-_USER_SECTIONS = ("nudge", "rule", "lint_watch", "locale")
+# the nudge, the drafting rule, lint-watch, the spelling locale and the tool-call check (hosts without install
+# options, Codex and Hermes, set them there). A project's own config wins over it.
+_USER_SECTIONS = ("nudge", "rule", "lint_watch", "locale", "tool_call")
 STRICTNESS = ("watch", "warn", "block")
 INTEGRITY_MODES = ("off", "warn", "block")
 LINT_WATCH_MODES = ("on", "off")
 NUDGE_MODES = ("on", "off")
 # Where kaizen events and friction come from: `check`, `merge`, `judge` (judge-record's rejected replies and the
-# agent-run backstop) and the `lint-watch` hook. `[kaizen] capture_sources` keeps a subset; `capture = false` still
-# turns all of them off.
-CAPTURE_SOURCES = ("check", "merge", "judge", "lint-watch")
+# agent-run backstop), the `lint-watch` hook and the `tool-call` check. `[kaizen] capture_sources` keeps a subset;
+# `capture = false` still turns all of them off.
+CAPTURE_SOURCES = ("check", "merge", "judge", "lint-watch", "tool-call")
 CLAIMS_DEFAULTS = {"ledger_dir": ".plainspoken/claims", "sources_dir": ".plainspoken/sources",
                    "regulated_matrix": None, "platforms_extra": []}
 ADAPTERS = ("file", "github", "trello")
@@ -140,6 +142,12 @@ def _read_config(path: Path, sections: tuple[str, ...]) -> tuple[Path, dict] | N
             if "variant" in body and body["variant"] not in known:
                 raise ConfigError(f"{path}: [locale] variant must be one of {', '.join(known)}, got "
                                   f"{body['variant']!r}")
+        elif section == "tool_call":
+            errors = toolcall.section_errors(body)
+            if errors:
+                raise ConfigError(f"{path}: {errors[0]}")
+            if "profile" in body:
+                _check_profile_base(path, "[tool_call] profile", body["profile"])
         else:
             paths = body.get("paths", [])
             if not isinstance(paths, list) or not all(isinstance(g, str) and g.strip() for g in paths):
@@ -400,10 +408,21 @@ def resolve_locale(prof: Profile | None, root: Path, env: Mapping[str, str],
     return Locale(DEFAULT_LOCALE, "default", note=note)
 
 
+def tool_call_settings(root: Path, env: Mapping[str, str] | None = None) -> dict:
+    """`[tool_call]` with defaults filled in (`toolcall.settings`: each key from the project's section, else the
+    user-wide file's; the Claude Code option `tool_call` for an unset mode; else off), read strictly: a bad project
+    or user-wide file is a ConfigError naming the file and key. The hook uses the lean `toolcall.settings`, which
+    gives the same answer."""
+    env = os.environ if env is None else env
+    _project_config(Path(root))
+    _user_config(env)
+    return toolcall.settings(Path(root), env)
+
+
 def kaizen_settings(root: Path, env: Mapping[str, str]) -> dict:
     """`[kaizen]` with defaults filled in: the settings dict `ledger.append`, `ledger.read` and `ledger.friction` take.
 
-    `capture_sources` lists the sources that may record (CAPTURE_SOURCES, all four by default); `capture` false still
+    `capture_sources` lists the sources that may record (CAPTURE_SOURCES, all five by default); `capture` false still
     turns every one off. `ledger_dir` and `proposals_dir` come back absolute, under `root`. `excerpts` comes from the
     project config, else CLAUDE_PLUGIN_OPTION_LEDGER_EXCERPTS (`true` or `1`), else false. `adapter` comes from the
     project config, else CLAUDE_PLUGIN_OPTION_KAIZEN_ADAPTER when it's a known value, else `file`. A project-config
@@ -587,6 +606,23 @@ def project_profile_refs(root: Path) -> list[str]:
     values = [engine["profile"]] if engine.get("profile") else []
     values += [e["profile"] for e in engine.get("profiles", [])]
     return list(dict.fromkeys(_profile_ref(config_path, v) for v in values))
+
+
+def profile_for_text(root: Path, env: Mapping[str, str], section: str = "tool_call",
+                     plugin_option: str | None = PLUGIN_DEFAULT) -> Profile:
+    """The profile for text that has no file (a tool call's arguments, a chat reply): PLAINSPOKEN_PROFILE →
+    `[<section>] profile` (the project's section, else the user-wide file's) → `[engine] profile` → the Claude Code
+    option → `plugin_option` (the plugin default). `[engine] profiles` globs are paths, so they never apply."""
+    search = (Path(root) / ".plainspoken" / "profiles",)
+    if env.get("PLAINSPOKEN_PROFILE"):
+        return load(env["PLAINSPOKEN_PROFILE"], search=search)
+    found = _project_config(Path(root))
+    if found and "profile" in found[1].get(section, {}):
+        return load(_profile_ref(found[0], found[1][section]["profile"]), search=search)
+    user = _user_config(env)
+    if user and "profile" in user[1].get(section, {}):
+        return load(_profile_ref(user[0], user[1][section]["profile"]), search=search)
+    return resolve_profile(None, Path(root), env, plugin_option=plugin_option)
 
 
 def resolve_profile(cli_value: str | None, cwd: Path, env: Mapping[str, str],

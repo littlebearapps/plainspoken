@@ -267,7 +267,7 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
     def test_defaults(self):
         s = config.kaizen_settings(self.cwd, {})
         self.assertEqual(s, {"capture": True, "excerpts": False, "adapter": "file", "root": self.cwd,
-                             "capture_sources": ["check", "merge", "judge", "lint-watch"],
+                             "capture_sources": ["check", "merge", "judge", "lint-watch", "tool-call"],
                              "ledger_dir": self.cwd / ".plainspoken" / "ledger",
                              "proposals_dir": self.cwd / ".plainspoken" / "kaizen",
                              "corpus": [], "human_corpus": [], "approvers": [],
@@ -498,9 +498,9 @@ class CaptureSources(unittest.TestCase):
         (self.cwd / ".plainspoken").mkdir(exist_ok=True)
         (self.cwd / ".plainspoken" / "config.toml").write_text(toml, encoding="utf-8")
 
-    def test_default_is_all_four(self):
+    def test_default_is_all_five(self):
         self.assertEqual(config.kaizen_settings(self.cwd, {})["capture_sources"],
-                         ["check", "merge", "judge", "lint-watch"])
+                         ["check", "merge", "judge", "lint-watch", "tool-call"])
 
     def test_section_loads(self):
         self.project('[kaizen]\ncapture_sources = ["check", "merge"]\n')
@@ -510,8 +510,8 @@ class CaptureSources(unittest.TestCase):
 
     def test_unknown_capture_source_errors(self):
         for body, msg in (('capture_sources = ["check", "lint"]',
-                           r"\[kaizen\] capture_sources: unknown source 'lint' \(expected check, merge, judge or "
-                           r"lint-watch\)"),
+                           r"\[kaizen\] capture_sources: unknown source 'lint' \(expected check, merge, judge, "
+                           r"lint-watch or tool-call\)"),
                           ('capture_sources = "check"', r"\[kaizen\] capture_sources must be a list"),
                           ('capture_sources = [1]', r"\[kaizen\] capture_sources must be a list")):
             with self.subTest(body=body):

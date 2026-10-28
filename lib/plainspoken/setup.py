@@ -1,5 +1,5 @@
 """`setup`: turn the optional pieces (the writing nudge, the drafting rule, lint after edits) on or off for one host,
-and set the spelling locale (`--locale`).
+and set the spelling locale (`--locale`) and the tool-call check's mode (`--tool-call`).
 
 It edits one config file: the project's `.plainspoken/config.toml` (scope `project`) or the user-wide
 `~/.config/plainspoken/config.toml` (scope `user`). Every line it writes ends with MARK, and `--remove` deletes only
@@ -116,9 +116,9 @@ def _validate(path: Path, text: str, scope: str) -> None:
 
 
 def plan(host: str, scope: str, wanted: dict[str, bool], root: Path, env: Mapping[str, str],
-         remove: bool = False, locale: str | None = None) -> tuple[Path, str, str]:
-    """(path, text before, text after) for this request. `locale` sets `[locale] variant`. Raises SetupError for a
-    request that can't apply."""
+         remove: bool = False, locale: str | None = None, tool_call: str | None = None) -> tuple[Path, str, str]:
+    """(path, text before, text after) for this request. `locale` sets `[locale] variant`; `tool_call` sets
+    `[tool_call] mode`. Raises SetupError for a request that can't apply."""
     if host not in FILE_HOSTS:
         raise SetupError(f"{host} chat can't run hooks or read a config file: use `setup --host {host}` with no "
                          "other options to print the text to paste")
@@ -139,6 +139,8 @@ def plan(host: str, scope: str, wanted: dict[str, bool], root: Path, env: Mappin
         after = set_key(after, section, key, yes if on else no)
     if locale is not None:
         after = set_key(after, "locale", "variant", f'"{locale}"')
+    if tool_call is not None:
+        after = set_key(after, "tool_call", "mode", f'"{tool_call}"')
     if after != before:
         _validate(path, after, scope)
     return path, before, after
@@ -174,6 +176,7 @@ def status(root: Path, env: Mapping[str, str]) -> list[str]:
     try:
         nudge, rule = config.nudge_mode(root, env), config.rule_enabled(root, env)
         lint = config.lint_watch(root, env)["mode"]
+        tool_call = config.tool_call_settings(root, env)["mode"]
     except config.ConfigError as e:
         return [f"config problem: {e}"]
     return [f"project: {root}",
@@ -181,7 +184,8 @@ def status(root: Path, env: Mapping[str, str]) -> list[str]:
             f"writing nudge: {nudge}",
             f"drafting rule: {'on' if rule else 'off'} (Claude Code and Cowork)",
             f"spelling locale: {_locale_status(root, env)}",
-            f"lint after edits: {lint}"]
+            f"lint after edits: {lint}",
+            f"tool-call check: {tool_call}"]
 
 
 def _locale_status(root: Path, env: Mapping[str, str]) -> str:

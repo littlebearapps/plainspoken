@@ -1,0 +1,40 @@
+# Shipped lists for the tool-call check (#124): which tools and which argument fields it never reads.
+# Tool globs match the normalised tool name (lower case, hyphens folded to underscores), so one glob covers
+# mcp__trello__add_comment, a plugin-bundled mcp__plugin_x_trello__add_comment and Hermes' names. A project's
+# [tool_call] skip adds to these, and its include beats every one of them (guides/configuration.md).
+version = 1
+
+skip_tools = [
+  # search, scrape and docs lookups
+  "*firecrawl*", "*brave*", "*exa__*", "*tavily*", "*perplexity*", "*context7*", "*web_search*",
+  # memory stores
+  "*memory*", "*hindsight*", "*mem0*", "*zep*",
+  # code hosts: code, diffs and commit text (include them to check issue and pull request text)
+  "*github*", "*gitlab*", "*bitbucket*",
+  # task trackers: status notes (include them to check comments and descriptions)
+  "*trello*", "*linear*", "*jira*", "*asana*", "*clickup*", "*notion*__*task*",
+  # browser automation and code runners
+  "*playwright*", "*chrome*", "*puppeteer*", "*browser*", "*sandbox*",
+  # data and analytics
+  "*dataforseo*", "*gsc*", "*search_console*", "*analytics*", "*bigquery*", "*_sql*",
+]
+
+# A tool whose own name (after the server) starts with one of these looks something up.
+lookup_prefixes = ["search_", "list_", "get_", "read_", "find_", "query_"]
+
+# Argument fields that hold identifiers, addresses, instructions to another model or code, never writing for a
+# person. Matched on the field's own name, lower case, camelCase split (threadId is thread_id).
+skip_fields = [
+  "id", "ids", "*_id", "*_ids", "url", "urls", "uri", "href", "path", "*_path", "file", "to", "cc", "bcc", "from",
+  "query", "q", "search", "filter", "prompt", "*_prompt", "instructions", "thought", "script", "code", "function",
+  "command", "sql", "regex*", "selector", "pattern", "jql", "expression", "raw", "token", "*_token", "password",
+  "secret", "api_key",
+]
+
+# Hermes: every tool reaches the check except these core tools, which don't send writing to people.
+hermes_core = [
+  "terminal", "process_manage", "read_file", "write_file", "patch", "search_files", "browser_*", "memory",
+  "clarify", "delegate_task", "execute_code", "cronjob_manage", "session_search", "skill_*", "skills_list",
+  "todo_list", "vision_analyze", "video_*", "xai_video_*", "image_generate", "web_search", "web_extract", "x_search",
+  "text_to_speech", "manage_*", "computer_*", "desktop_*", "gui_*", "kanban_*",
+]
