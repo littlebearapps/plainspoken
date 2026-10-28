@@ -101,7 +101,8 @@ asking you to check a line its `needs the owner` list doesn't hold, and an optio
 you switch on with `/plainspoken:setup`. Also optional: the chat-reply check, which lints a draft written into the
 reply when you asked for writing and tells you, never the model, what it found at the end of the turn. The kaizen
 loop records what the checks flagged and what you did, and proposes ruleset changes from that evidence
-([guides/kaizen.md](guides/kaizen.md)).
+([guides/kaizen.md](guides/kaizen.md)). Of the end-of-turn hooks, only the report check can send a turn back; the
+others just tell you.
 
 ## How a check works
 

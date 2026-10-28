@@ -5,13 +5,16 @@ owner's check is held `blocking` in the claims ledger (so `status` lists it) or 
 wrote it and returns the sentences that ask anyway. It reads only a message that carries the `status` block's
 `needs the owner:` line, and only when that line lists nothing (`none`, or `unknown` without a readable ledger):
 with items listed it can't tell which one an ask is about, so it leaves that to the person. The status block's own
-lines are never read as prose, and a sentence naming a plainspoken command is a tool step, not an ask. Stdlib only.
+lines are never read as prose, and a sentence naming a plainspoken command is a tool step, not an ask. Stdlib only,
+plus `plainspoken.reply` for the one OWNER_MARKER.
 """
 from __future__ import annotations
 
 import re
 
-STATUS_PREFIXES = ("Draft:", "check:", "claims:", "needs the owner:", "words:", "reader-value contract:",
+from plainspoken.reply import OWNER_MARKER
+
+STATUS_PREFIXES = ("Draft:", "check:", "claims:", OWNER_MARKER, "words:", "reader-value contract:",
                    "Reader value (outline):", "Anchors:", "For kaizen:")
 _NOT_AN_ASK = r"(?!\s*:)(?!\s+(?:passed|ran|found|said|came|returned|gave|failed|is|was)\b)"
 _CHECK = r"(?:double-check|check|confirm|verify)"
@@ -38,7 +41,7 @@ _SENTENCE_END = re.compile(r"(?<=[.!?])\s+|(?<=[.!?]['\"’”)])\s+")  # a clos
 def _owner_line(lines: list[str]) -> str | None:
     for line in lines:
         s = line.strip()
-        if s.startswith("needs the owner:"):
+        if s.startswith(OWNER_MARKER):
             return s.split(":", 1)[1].strip()
     return None
 

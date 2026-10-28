@@ -17,17 +17,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _common  # noqa: E402
 
-MARKER = "needs the owner:"
-
 
 def main() -> int:
     event = _common.read_event(sys.stdin)
     if not event or event.get("stop_hook_active") is True:
         return 0  # the turn this hook already sent back gets to stop, whatever it says
+    from plainspoken.reply import OWNER_MARKER  # _common puts lib/ on sys.path; the one definition of the marker
     text = event.get("last_assistant_message")
-    if not isinstance(text, str) or MARKER not in text:
+    if not isinstance(text, str) or OWNER_MARKER not in text:
         return 0  # fast exit: not a write report
-    from plainspoken import owner_asks  # _common puts lib/ on sys.path
+    from plainspoken import owner_asks
     asks = owner_asks.unlisted(text)
     if asks:
         print(json.dumps({"decision": "block", "reason": owner_asks.message(asks)}, ensure_ascii=False))
