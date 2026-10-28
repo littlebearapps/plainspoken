@@ -23,7 +23,7 @@ Settings come from three places. When two set the same thing, the first one here
 1. **The project config**, `.plainspoken/config.toml` in the project. It wins everywhere: in the skills, the hooks
    and the command-line tool.
 2. **The user-wide file**, `~/.config/plainspoken/config.toml`. It holds only `[nudge]`, `[rule]`,
-   `[lint_watch]`, `[locale]` and `[tool_call]`.
+   `[lint_watch]`, `[locale]`, `[tool_call]` and `[chat_reply]`.
 3. **The plugin options** you set when you install or enable the plugin in Claude Code. Codex and Hermes Agent have
    no plugin options, so there you use the two files.
 
@@ -45,6 +45,7 @@ Claude Code asks for these when you install or enable the plugin (`userConfig` i
 | `nudge` | On: when a prompt asks for an email, post, script or other writing, a one-line reminder names the plainspoken step that fits | off | `[nudge] mode` |
 | `rule` | On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read | off | `[rule] enabled` |
 | `tool_call` | The tool-call check's mode: `off`, `warn`, `block-once` or `ask` ([The tool-call check](#the-tool-call-check)) | `off` | `[tool_call] mode` |
+| `chat_reply` | On: the chat-reply check tells you what the lint found in a draft written into the reply ([The chat-reply check](#the-chat-reply-check)) | off | `[chat_reply] mode` |
 | `strictness` | What the publish gate does on `git push`: `watch` reports only, `warn` warns, `block` refuses a push unless every gated file has a current PASS | `watch` | `[gate] strictness` |
 | `ledger_excerpts` | Whether the kaizen ledger stores excerpts of your text. Off keeps raw text out of it (hashes only) | off | `[kaizen] excerpts` |
 | `kaizen_adapter` | Where kaizen proposals go: `file` (Markdown in `.plainspoken/`), `github` (issues) or `trello` (cards). The project config supplies the IDs | `file` | `[kaizen] adapter` |
@@ -109,12 +110,23 @@ The same section works in the user-wide file, key by key: a key the project's se
 there, so a project can add `skip` globs and keep the user-wide `mode`. What each mode does:
 [The tool-call check](#the-tool-call-check).
 
+### `[chat_reply]`: the chat-reply check
+
+    [chat_reply]
+    mode = "warn"     # off (the default) | warn
+    min_words = 25    # prose words a marked draft needs; an unmarked one needs at least 40
+
+`warn` is the only on-mode: this check only ever tells you, never the model. The section works in the user-wide file
+too, as a whole: a project's own `[chat_reply]` section replaces it. What it does: [The chat-reply
+check](#the-chat-reply-check).
+
 ### `[kaizen]`: capture sources
 
     [kaizen]
-    capture_sources = ["check", "merge", "judge"]   # drop lint-watch and tool-call events; default all five
+    capture_sources = ["check", "merge", "judge"]   # drop the hooks' events; default all six
 
-The five sources are `check`, `merge`, `judge`, `lint-watch` and `tool-call`. `capture = false` turns them all off.
+The six sources are `check`, `merge`, `judge`, `lint-watch`, `tool-call` and `chat-reply`. `capture = false` turns
+them all off.
 The rest of `[kaizen]` (excerpts, adapter, approvers, folders, GitHub and Trello IDs) is in
 [guides/kaizen.md](kaizen.md).
 
@@ -129,8 +141,8 @@ The rest of `[kaizen]` (excerpts, adapter, approvers, folders, GitHub and Trello
     [rule]
     enabled = true    # the drafting rule (Claude Code and Cowork)
 
-What each does: [Optional pieces](#optional-pieces). `/plainspoken:setup` writes `[nudge]`, `[rule]` and
-`[lint_watch]` for you.
+What each does: [Optional pieces](#optional-pieces). `/plainspoken:setup` writes `[nudge]`, `[rule]`,
+`[lint_watch]` and `[chat_reply]` for you.
 
 ### `[locale]`: which English the skills write in
 
@@ -159,9 +171,9 @@ What these do: [guides/claims-and-reader-value.md](claims-and-reader-value.md).
 
 ## The user-wide file
 
-`~/.config/plainspoken/config.toml` holds only `[nudge]`, `[rule]`, `[lint_watch]`, `[locale]` and `[tool_call]`,
-the settings that make sense outside a project. A project's own config wins over it, and it wins over the Claude
-Code options `nudge`, `rule`, `locale` and `tool_call`.
+`~/.config/plainspoken/config.toml` holds only `[nudge]`, `[rule]`, `[lint_watch]`, `[locale]`, `[tool_call]` and
+`[chat_reply]`, the settings that make sense outside a project. A project's own config wins over it, and it wins
+over the Claude Code options `nudge`, `rule`, `locale`, `tool_call` and `chat_reply`.
 It can't choose a voice profile. Codex and Hermes, which have no plugin options, use it for these switches; Hermes
 reads it because it runs plugins outside the project folder.
 
@@ -183,7 +195,8 @@ and the skills pass it to the calls that don't take a file.
 
 The tool-call check lints text that has no file, so `[engine] profiles` globs never apply to it. It takes
 `PLAINSPOKEN_PROFILE`, then `[tool_call] profile` (the project's, else the user-wide file's), then `[engine] profile`,
-then the `profile` plugin option, then `default`.
+then the `profile` plugin option, then `default`. The chat-reply check takes the same order without a section of its
+own: `PLAINSPOKEN_PROFILE`, `[engine] profile`, the plugin option, then `default`.
 
 ## Which English the skills write in
 
@@ -214,6 +227,7 @@ All of these are off by default and add 0 tokens until you switch them on, apart
 | Drafting rule (`[rule] enabled = true`) | Every session starts with a short rule: whenever something people will read is drafted, use plainspoken. The plugin adds it with this install's paths, so it never goes stale after an update, and it only applies where plainspoken is installed | Claude Code and Cowork |
 | Lint after edits (`[lint_watch] mode`, on by default) | After a draft file is saved, the lint's findings come straight back | Claude Code, Cowork, Codex, Hermes |
 | Tool-call check (`[tool_call] mode`) | Before a tool call that sends writing (an email, a post, a message) runs, its text is linted ([below](#the-tool-call-check)) | Claude Code and Cowork, Codex (`PreToolUse` on MCP tools), Hermes (`pre_tool_call`) |
+| Chat-reply check (`[chat_reply] mode = "warn"`) | When you asked for writing and the reply holds a draft, its lint findings are shown to you, never the model ([below](#the-chat-reply-check)) | Claude Code and Cowork, Codex (`Stop`), Hermes (`post_llm_call`) |
 | Paste-in text (`setup --host claude-ai` or `chatgpt`) | The same rule as text to paste into the app's personal preferences, custom instructions or a project's instructions | claude.ai chat, ChatGPT chat (neither runs hooks) |
 | Session brief (`[brief] enabled = true`) | A short writing brief (at most 800 characters) at session start and in each subagent, never in plainspoken's own agents | Claude Code and Cowork |
 | Output style (`/output-style plainspoken`) | The same guidance as an output style, for the main conversation only | Claude Code |
@@ -279,13 +293,61 @@ for up to 1,000 words. If the check fails or times out (after 10 seconds), the c
 - Attachments named by path.
 - Short replies and texts under the cut-off.
 
+## The chat-reply check
+
+Asked for a short email or a text, the model often writes it straight into its reply, where no file hook sees it.
+The chat-reply check lints that draft when the turn ends and tells you what it found. It's off until you turn it on,
+with `setup --chat-reply on`, `[chat_reply] mode = "warn"` or, in Claude Code, the `chat_reply` plugin option.
+
+**When it speaks.** Only when both of these hold. Your prompt asked for writing, by the same test the writing nudge
+uses (it records the kind of ask, never the prompt, even with the nudge off). And the reply holds a draft: a plain
+text or Markdown fence, a blockquote, labelled options ("Option 1", "Version B"), text between `---` lines, or a
+letter from a greeting or `Subject:` line to a sign-off. A reply with none of those counts as a draft only when it
+has no list or headings, at least 40 words once a lead-in ("Here's a draft:") and trailing offers ("Want me to…") are
+dropped, and no talk about the drafting ("before I write it") or closing question. It lints at most three drafts,
+each as `check -` would (`social` under 300 words, else `article`), and says nothing when they're clean.
+
+**What you see.** One plain-text message of at most six lines: the counts, the top three findings and the check
+command to run. It goes to you only:
+
+| App | When the turn ends |
+|---|---|
+| Claude Code and Cowork | A warning line (a second `Stop` hook printing only `systemMessage`) |
+| Codex | A warning in the app or the event stream (a second `Stop` hook; trust it once in `/hooks`) |
+| Hermes over Telegram, Discord, Slack or Matrix | A separate bot message |
+| Hermes desktop and the terminal app | A notice |
+| Hermes classic CLI (`hermes chat`) | A line printed at the end of your next turn, so it arrives a turn late |
+
+**What it never does.** It never sends a decision, a reason, model context or exit 2, so nothing reaches the model
+and nothing can loop, and it never changes the reply. To have a draft fixed, ask for it, or run the check skill on
+it. It stays quiet on a write report (a reply with the write skill's `needs the owner:` status line), on a draft lint
+after edits or the tool-call check already linted this session, and on a draft it already told you about.
+
+**Records.** With a `.plainspoken` folder in the project, each draft's findings go to the kaizen ledger as
+`chat-reply` events, never with an excerpt, whatever `[kaizen] excerpts` says. `.plainspoken/ledger/chat-replies.jsonl`
+gets one line per draft: its shape, word count, the kind of ask and the outcome, never the text. `kaizen report` sums
+them by outcome and shape.
+
+**Speed.** With the check off it adds about 50 ms at the end of a turn (mostly starting Python); with it on, a turn
+that didn't ask for writing adds about 80 ms, and one with a draft to lint about 150 to 200 ms. If it fails or takes
+over 10 seconds, nothing is shown.
+
+**What it can't see.**
+
+- A draft split over several messages in one turn: only the last message reaches the hook.
+- A draft followed by a tool call and a short closing line, since the closing line is the last message.
+- A draft after a loose ask ("can you help with this?") that the writing test doesn't read as one.
+- Unmarked drafts under 40 words, bulleted newsletters, and unmarked drafts that end on a question.
+- Drafts in a language your profile doesn't cover.
+
 ## The setup command
 
-`/plainspoken:setup` turns the nudge, the drafting rule and lint after edits on or off for the app you're in, and
-shows what's on. Underneath it runs:
+`/plainspoken:setup` turns the nudge, the drafting rule, lint after edits and the chat-reply check on or off for the
+app you're in, and shows what's on. Underneath it runs:
 
     python3 <plugin>/lib/run.py setup --host <host> [--scope project|user] [--nudge on|off] [--rule on|off]
-        [--lint-watch on|off] [--locale en-AU|en-GB|en-US] [--tool-call off|warn|block-once|ask]
+        [--lint-watch on|off] [--chat-reply on|off] [--locale en-AU|en-GB|en-US]
+        [--tool-call off|warn|block-once|ask]
         [--dry-run | --remove | --status]
 
 | Flag | What it does |
@@ -293,6 +355,7 @@ shows what's on. Underneath it runs:
 | `--host` | The app: `claude-code`, `codex` (also ChatGPT Work), `hermes`, `claude-ai` or `chatgpt`. The last two print the paste-in text and write nothing |
 | `--scope` | `project` writes `.plainspoken/config.toml` here; `user` writes `~/.config/plainspoken/config.toml`. Use `user` for Hermes, because it runs plugins outside the project folder |
 | `--nudge`, `--rule`, `--lint-watch` | `on` or `off`; one you leave out stays as it is. `--rule` is for Claude Code |
+| `--chat-reply` | `on` writes `[chat_reply] mode = "warn"`, `off` writes `"off"` |
 | `--locale` | Writes `[locale] variant`. For `claude-ai` and `chatgpt` it adds one line to the paste-in text instead, such as "Spell in American English (en-US)." |
 | `--tool-call` | Writes `[tool_call] mode`: `off`, `warn`, `block-once` or `ask` |
 | `--dry-run` | Print the change without writing it |

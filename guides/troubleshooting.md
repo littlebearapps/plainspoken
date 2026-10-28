@@ -61,6 +61,15 @@ lookups such as `get_…` and `list_…`), an argument under 25 prose words, and
 a tool back with `[tool_call] include`. A config it can't read turns it off; `doctor` names the problem. In Codex,
 check that its hooks are trusted in `/hooks`.
 
+## The chat-reply check never says anything
+
+It's off until you turn it on: `setup --host <host> --chat-reply on` (with `--scope user` for Hermes), or
+`[chat_reply] mode = "warn"` in a config file. `doctor` shows the mode and where it came from. Once on, it speaks
+only when your prompt asked for writing in so many words ("draft an email to Sam…") and the reply holds a draft with
+a BLOCK or WARN finding. It stays quiet on a question about writing, a reply with no draft, a draft lint after edits
+already read, and a draft it already told you about. In Codex, check that its new `Stop` hook is trusted in `/hooks`.
+In the Hermes classic CLI the message arrives at the end of your next turn.
+
 ## Hermes asks me to confirm the install, or wants `--force`
 
 Hermes scans a plugin before it installs or updates it, and a "caution" rating asks you to confirm, but over SSH or

@@ -72,6 +72,10 @@ the skills' rule that you don't award your own pass holds here too.
   after the call has run. `block-once` holds the first try back with the findings: remove what's flagged, never add
   facts, and call again; the same text sent again goes through. `ask` works as `block-once` here. A tool named
   `…draft…` is only warned.
+- The chat-reply check (off unless `[chat_reply] mode = "warn"`): when the person asked for writing and your final
+  reply holds a draft, a second `Stop` hook lints it and shows the person one warning. It never reaches you and never
+  continues the turn, so fix a draft only when the person asks. Codex asks the person to trust this new hook once in
+  `/hooks`.
 - The publish gate takes its strictness only from `[gate] strictness` in `.plainspoken/config.toml` (Codex has no
   plugin options): `block` denies the push, `warn` shows a message and lets it go, and with no file it does nothing.
   `warn` and `block` need `[gate] paths`; with none set, the gate only shows a message that nothing is gated.

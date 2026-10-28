@@ -34,6 +34,7 @@ _READER_VALUE_KEYS = {"cta_phrases"}
 _INTEGRITY_KEYS = {"mode", "paths"}
 _LINT_WATCH_KEYS = {"mode", "paths"}
 _NUDGE_KEYS = {"mode"}
+_CHAT_REPLY_KEYS = {"mode", "min_words"}
 _RULE_KEYS = {"enabled"}
 _LOCALE_KEYS = {"variant"}
 _TOOL_CALL_KEYS = set(toolcall.KEYS)
@@ -44,19 +45,21 @@ _KAIZEN_TRELLO_KEYS = {"list_id", "label_ids", "key_env", "token_env"}
 _SECTIONS = {"engine": _ENGINE_KEYS, "gate": _GATE_KEYS, "brief": _BRIEF_KEYS, "claims": _CLAIMS_KEYS,
              "reader_value": _READER_VALUE_KEYS, "integrity": _INTEGRITY_KEYS, "lint_watch": _LINT_WATCH_KEYS,
              "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS, "rule": _RULE_KEYS, "locale": _LOCALE_KEYS,
-             "tool_call": _TOOL_CALL_KEYS}
+             "tool_call": _TOOL_CALL_KEYS, "chat_reply": _CHAT_REPLY_KEYS}
 # The user-wide file (~/.config/plainspoken/config.toml) holds only the settings that make sense outside a project:
-# the nudge, the drafting rule, lint-watch, the spelling locale and the tool-call check (hosts without install
-# options, Codex and Hermes, set them there). A project's own config wins over it.
-_USER_SECTIONS = ("nudge", "rule", "lint_watch", "locale", "tool_call")
+# the nudge, the drafting rule, lint-watch, the spelling locale, the tool-call check and the chat-reply check (hosts
+# without install options, Codex and Hermes, set them there). A project's own config wins over it.
+_USER_SECTIONS = ("nudge", "rule", "lint_watch", "locale", "tool_call", "chat_reply")
 STRICTNESS = ("watch", "warn", "block")
 INTEGRITY_MODES = ("off", "warn", "block")
 LINT_WATCH_MODES = ("on", "off")
 NUDGE_MODES = ("on", "off")
+CHAT_REPLY_MODES = ("off", "warn")  # warn is the only on-mode: the chat-reply check only ever tells the person
+CHAT_REPLY_MIN_WORDS = 25
 # Where kaizen events and friction come from: `check`, `merge`, `judge` (judge-record's rejected replies and the
-# agent-run backstop), the `lint-watch` hook and the `tool-call` check. `[kaizen] capture_sources` keeps a subset;
-# `capture = false` still turns all of them off.
-CAPTURE_SOURCES = ("check", "merge", "judge", "lint-watch", "tool-call")
+# agent-run backstop), the `lint-watch` hook, the `tool-call` check and the `chat-reply` check. `[kaizen]
+# capture_sources` keeps a subset; `capture = false` still turns all of them off.
+CAPTURE_SOURCES = ("check", "merge", "judge", "lint-watch", "tool-call", "chat-reply")
 CLAIMS_DEFAULTS = {"ledger_dir": ".plainspoken/claims", "sources_dir": ".plainspoken/sources",
                    "regulated_matrix": None, "platforms_extra": []}
 ADAPTERS = ("file", "github", "trello")
@@ -142,6 +145,14 @@ def _read_config(path: Path, sections: tuple[str, ...]) -> tuple[Path, dict] | N
             if "variant" in body and body["variant"] not in known:
                 raise ConfigError(f"{path}: [locale] variant must be one of {', '.join(known)}, got "
                                   f"{body['variant']!r}")
+        elif section == "chat_reply":
+            if "mode" in body and body["mode"] not in CHAT_REPLY_MODES:
+                raise ConfigError(f"{path}: [chat_reply] mode must be one of {', '.join(CHAT_REPLY_MODES)}, "
+                                  f"got {body['mode']!r}")
+            n = body.get("min_words", CHAT_REPLY_MIN_WORDS)
+            if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= toolcall.MAX_WORDS:
+                raise ConfigError(f"{path}: [chat_reply] min_words must be a whole number from 1 to "
+                                  f"{toolcall.MAX_WORDS}, got {n!r}")
         elif section == "tool_call":
             errors = toolcall.section_errors(body)
             if errors:
@@ -419,10 +430,29 @@ def tool_call_settings(root: Path, env: Mapping[str, str] | None = None) -> dict
     return toolcall.settings(Path(root), env)
 
 
+def chat_reply_settings(root: Path, env: Mapping[str, str] | None = None) -> dict:
+    """`[chat_reply]` with defaults filled in, as the nudge resolves: the project's section, else the user-wide file's,
+    and for an unset mode the Claude Code option `chat_reply` (CLAUDE_PLUGIN_OPTION_CHAT_REPLY, "true" turns it to
+    warn), else off. Plus `source`, where the mode came from. A bad file is a ConfigError naming the file and key."""
+    env = os.environ if env is None else env
+    found = _project_config(Path(root))
+    if found and "chat_reply" in found[1]:
+        body, where = found[1]["chat_reply"], "project config"
+    else:
+        user = _user_config(env)
+        body, where = (user[1].get("chat_reply", {}), "user-wide config") if user else ({}, "default")
+    out = {"mode": "off", "min_words": body.get("min_words", CHAT_REPLY_MIN_WORDS), "source": "default"}
+    if "mode" in body:
+        return {**out, "mode": body["mode"], "source": where}
+    if str(env.get("CLAUDE_PLUGIN_OPTION_CHAT_REPLY", "")).strip().lower() == "true":
+        return {**out, "mode": "warn", "source": "plugin option"}
+    return out
+
+
 def kaizen_settings(root: Path, env: Mapping[str, str]) -> dict:
     """`[kaizen]` with defaults filled in: the settings dict `ledger.append`, `ledger.read` and `ledger.friction` take.
 
-    `capture_sources` lists the sources that may record (CAPTURE_SOURCES, all five by default); `capture` false still
+    `capture_sources` lists the sources that may record (CAPTURE_SOURCES, all six by default); `capture` false still
     turns every one off. `ledger_dir` and `proposals_dir` come back absolute, under `root`. `excerpts` comes from the
     project config, else CLAUDE_PLUGIN_OPTION_LEDGER_EXCERPTS (`true` or `1`), else false. `adapter` comes from the
     project config, else CLAUDE_PLUGIN_OPTION_KAIZEN_ADAPTER when it's a known value, else `file`. A project-config

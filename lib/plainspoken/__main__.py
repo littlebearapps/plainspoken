@@ -35,7 +35,7 @@ from pathlib import Path
 
 from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, doctor, evalcli,
                          extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
-                         reader_value, register, report, setup, toolcall, voice)
+                         reader_value, register, reply, report, setup, toolcall, voice)
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
 from plainspoken.registry import load_config
@@ -115,7 +115,7 @@ def _doctor(args: argparse.Namespace, root: Path) -> int:
 
 
 def _setup_run(args: argparse.Namespace, root: Path) -> int:
-    wanted = {"nudge": args.nudge, "rule": args.rule, "lint_watch": args.lint_watch}
+    wanted = {"nudge": args.nudge, "rule": args.rule, "lint_watch": args.lint_watch, "chat_reply": args.chat_reply}
     wanted = {k: (None if v is None else v == "on") for k, v in wanted.items()}
     if args.status:
         print("\n".join(setup.status(root, os.environ)))
@@ -311,13 +311,15 @@ def _main(argv: list[str] | None) -> int:
     jr.add_argument("--from", dest="reply_file", type=Path,
                     help="read the reply from this file; the `reply` path from `paths` is deleted afterwards, "
                          "any other file is kept")
-    su = sub.add_parser("setup", help="turn the writing nudge, the drafting rule and lint after edits on or off for "
-                                      "one host (or print the text to paste into claude.ai or ChatGPT)")
+    su = sub.add_parser("setup", help="turn the writing nudge, the drafting rule, lint after edits and the chat-reply "
+                                      "check on or off for one host (or print the text to paste into claude.ai or "
+                                      "ChatGPT)")
     su.add_argument("--host", required=True, choices=setup.HOSTS)
     su.add_argument("--scope", choices=("project", "user"), default="project",
                     help="project: .plainspoken/config.toml here; user: ~/.config/plainspoken/config.toml")
     for name, what in (("nudge", "the writing nudge"), ("rule", "the drafting rule (Claude Code)"),
-                       ("lint-watch", "lint after each edit")):
+                       ("lint-watch", "lint after each edit"),
+                       ("chat-reply", "the chat-reply check (on writes [chat_reply] mode = \"warn\")")):
         su.add_argument(f"--{name}", choices=("on", "off"), help=f"{what}; unset leaves it as it is")
     su.add_argument("--locale", choices=sorted(locales()),
                     help="the English variant to write in: sets [locale] variant, or for claude.ai and ChatGPT adds "
@@ -933,9 +935,9 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
         if ledger is None:
             raise FileNotFoundError("no ledger")
         owner = claims.needs_owner(claims.load_ledger(ledger))
-        owner_lines = [f"needs the owner: {len(owner) or 'none'}", *(f"  {o}" for o in owner)]
+        owner_lines = [f"{reply.OWNER_MARKER} {len(owner) or 'none'}", *(f"  {o}" for o in owner)]
     except _INPUT_ERRORS:
-        owner_lines = ["needs the owner: unknown (no readable ledger)"]
+        owner_lines = [f"{reply.OWNER_MARKER} unknown (no readable ledger)"]
     contract = reader_value.default_contract(args.path, root)
     shown = claims_tools.display_path(contract, root)
     counted = f"words: {words} (body text; headings, tables, code and numbers not counted)"  # #63: say what it counts
@@ -1239,13 +1241,16 @@ def _kaizen_report(args: argparse.Namespace, root: Path) -> int:
     except (ValueError, OSError):
         min_words = toolcall.MIN_WORDS
     tool_calls = kaizen.tool_call_summary(calls, min_words)
+    replies, bad_replies = ledger.read_rows(settings, "chat-replies.jsonl", window["since"], window["until"])
+    chat_replies = kaizen.chat_reply_summary(replies)
+    bad_rows = bad + bad_friction + bad_calls + bad_replies
     if args.json:
-        print(json.dumps({"window": window, "rules": metrics, "patterns": patterns,
-                          "bad_lines": bad + bad_friction + bad_calls, "friction": friction,
-                          "tool_calls": tool_calls}, indent=2, ensure_ascii=False))
+        print(json.dumps({"window": window, "rules": metrics, "patterns": patterns, "bad_lines": bad_rows,
+                          "friction": friction, "tool_calls": tool_calls, "chat_replies": chat_replies}, indent=2,
+                         ensure_ascii=False))
         return 0
-    print("\n".join(kaizen.report_lines(metrics, bad + bad_friction + bad_calls, friction, patterns)
-                    + kaizen.tool_call_lines(tool_calls)))
+    print("\n".join(kaizen.report_lines(metrics, bad_rows, friction, patterns)
+                    + kaizen.tool_call_lines(tool_calls) + kaizen.chat_reply_lines(chat_replies)))
     return 0
 
 

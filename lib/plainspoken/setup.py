@@ -1,5 +1,5 @@
-"""`setup`: turn the optional pieces (the writing nudge, the drafting rule, lint after edits) on or off for one host,
-and set the spelling locale (`--locale`) and the tool-call check's mode (`--tool-call`).
+"""`setup`: turn the optional pieces (the writing nudge, the drafting rule, lint after edits, the chat-reply check) on
+or off for one host, and set the spelling locale (`--locale`) and the tool-call check's mode (`--tool-call`).
 
 It edits one config file: the project's `.plainspoken/config.toml` (scope `project`) or the user-wide
 `~/.config/plainspoken/config.toml` (scope `user`). Every line it writes ends with MARK, and `--remove` deletes only
@@ -24,7 +24,8 @@ RULE_HOSTS = ("claude-code",)
 # (section, key, value for "on", value for "off")
 SETTINGS = {"nudge": ("nudge", "mode", '"on"', '"off"'),
             "rule": ("rule", "enabled", "true", "false"),
-            "lint_watch": ("lint_watch", "mode", '"on"', '"off"')}
+            "lint_watch": ("lint_watch", "mode", '"on"', '"off"'),
+            "chat_reply": ("chat_reply", "mode", '"warn"', '"off"')}
 LOCALE_NAMES = {"en-AU": "Australian English", "en-GB": "British English", "en-US": "American English"}
 _HEADER = re.compile(r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$")
 
@@ -177,6 +178,7 @@ def status(root: Path, env: Mapping[str, str]) -> list[str]:
         nudge, rule = config.nudge_mode(root, env), config.rule_enabled(root, env)
         lint = config.lint_watch(root, env)["mode"]
         tool_call = config.tool_call_settings(root, env)["mode"]
+        chat_reply = config.chat_reply_settings(root, env)["mode"]
     except config.ConfigError as e:
         return [f"config problem: {e}"]
     return [f"project: {root}",
@@ -185,7 +187,8 @@ def status(root: Path, env: Mapping[str, str]) -> list[str]:
             f"drafting rule: {'on' if rule else 'off'} (Claude Code and Cowork)",
             f"spelling locale: {_locale_status(root, env)}",
             f"lint after edits: {lint}",
-            f"tool-call check: {tool_call}"]
+            f"tool-call check: {tool_call}",
+            f"chat-reply check: {chat_reply}"]
 
 
 def _locale_status(root: Path, env: Mapping[str, str]) -> str:

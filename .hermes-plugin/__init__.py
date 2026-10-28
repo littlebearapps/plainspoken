@@ -1,7 +1,7 @@
 """plainspoken for Hermes Agent: registers the plugin's skills, tells the model where the plugin lives, and runs the
 same hook scripts as Claude Code and Codex: the writing nudge, lint after each edit, the publish gate and write guard
-before each `terminal` command, the opt-in tool-call check before other tools, and the kaizen nudge at the end of each
-turn.
+before each `terminal` command, the opt-in tool-call check before other tools, and the kaizen nudge and the opt-in
+chat-reply check at the end of each turn.
 
 Install: `hermes plugins install littlebearapps/plainspoken --enable`, then start a new session. Hermes ignores
 `.claude-plugin/`, so this folder is the Hermes entry point; the skills, agents and engine are the same files Claude
@@ -26,6 +26,8 @@ HOOK_TIMEOUT = 15  # the gate's, as on Claude Code; Hermes blocks a pre_tool_cal
 GUARD_TIMEOUT = 5
 NUDGE_TIMEOUT = 10
 TOOL_CALL_TIMEOUT = 10  # the tool-call check's lint; well under Hermes' 30 s, after which it blocks the tool
+CHAT_REPLY_TIMEOUT = 10
+NO_READER = ("cron", "")  # platforms where nobody reads a posted message
 NOTES_LIMIT = 50  # tool-call notes waiting for their call's result
 logger = logging.getLogger(__name__)
 
@@ -73,12 +75,12 @@ BLOCK_LEAD = "The edit is saved, but fix this before going on.\n"
 UNCHECKED = {"lint_watch.py": "it wasn't linted", "integrity.py": "its figures weren't checked"}
 
 
-def _run_hook(script: str, event: dict, *args: str, quiet: bool = False) -> str | None:
+def _run_hook(script: str, event: dict, *args: str, quiet: bool = False, env: dict | None = None) -> str | None:
     """A hook script's line for the model, or None when there's nothing to say. A block-mode reply comes back as a
     warning, since Hermes can't hold an edit back once it's saved. A hook that couldn't run says so in one line
     (never its error text), unless `quiet`, for the optional writing nudge. Never raises."""
     try:
-        out, ran = _hook_run(script, event, *args)
+        out, ran = _hook_run(script, event, *args, env=env)
         if not ran:
             if quiet:
                 return None
@@ -247,7 +249,10 @@ def register(ctx):
             # plugin host's working folder isn't the user's.
             event = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": session_id or "hermes",
                      "cwd": str(Path(path).parent), "tool_input": {"file_path": path}}
-            lines += [line for script in ("lint_watch.py", "integrity.py") if (line := _run_hook(script, event))]
+            # lint-watch keeps its state where the chat-reply check reads it (Hermes' plugin-data folder), so a reply
+            # that repeats a file it linted isn't linted again.
+            lines += [line for script, env in (("lint_watch.py", plugin_env()), ("integrity.py", None))
+                      if (line := _run_hook(script, event, env=env))]
         return result + "\n\n" + "\n".join(lines) if lines else None
 
     def tool_call_check(tool_name, args, session_id, kwargs) -> dict | None:
@@ -332,7 +337,33 @@ def register(ctx):
             pass
         return None
 
+    def post_llm_call(session_id=None, turn_id=None, user_message=None, assistant_response=None, platform=None,
+                      **kwargs):
+        # The chat-reply check (#125): after a turn that asked for writing, lint a draft in the reply and post one
+        # message to the person, never to the model. An observer: the return is ignored and the reply is never
+        # changed (no transform_llm_output). The classic CLI shows the post at the end of the next turn.
+        try:
+            if platform in NO_READER or platform is None or not isinstance(assistant_response, str):
+                return None
+            if not nudge.intent(user_message):  # nudge.py's own test, in this process: most turns stop here
+                return None
+            event = {"hook_event_name": "Stop", "session_id": str(session_id or "hermes"), "turn_id": turn_id,
+                     "cwd": session_cwd(ctx), "last_assistant_message": assistant_response, "prompt": user_message}
+            out = _hook_output("reply_lint.py", event, "--host", "hermes", timeout=CHAT_REPLY_TIMEOUT,
+                               env=plugin_env())
+            if isinstance(out, dict) and isinstance(out.get("systemMessage"), str):
+                tell(ctx, out["systemMessage"])
+        except Exception:
+            pass
+        return None
+
+    def plugin_env() -> dict:
+        env = {**os.environ}
+        env.setdefault("CLAUDE_PLUGIN_DATA", str(data_dir(ctx)))
+        return env
+
     ctx.register_hook("pre_llm_call", pre_llm_call)
     ctx.register_hook("transform_tool_result", transform_tool_result)
     ctx.register_hook("pre_tool_call", pre_tool_call)
     ctx.register_hook("on_session_end", on_session_end)
+    ctx.register_hook("post_llm_call", post_llm_call)

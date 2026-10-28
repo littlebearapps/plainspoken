@@ -70,6 +70,12 @@
       ],
       "default": "off"
     },
+    "chat_reply": {
+      "type": "boolean",
+      "title": "Chat-reply check",
+      "description": "On: when you asked for writing and Claude's reply holds a draft (an email, a post, a text), its lint findings are shown to you at the end of the turn. Never to Claude. Off by default.",
+      "default": false
+    },
     "strictness": {
       "type": "string",
       "title": "Gate strictness",

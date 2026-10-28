@@ -2,7 +2,8 @@
 
 One JSON object per line, UTF-8, `\\n`-terminated, at most 4,096 bytes, in `<ledger_dir>/<YYYY-MM>.jsonl` (the month
 of the event's own `ts`, UTC). `friction.jsonl` in the same folder, not month-split, records engine friction, and
-`tool-calls.jsonl` records the tool-call check's decision for each field it looked at (`append_row`), with no text.
+`tool-calls.jsonl` and `chat-replies.jsonl` record the tool-call and chat-reply checks' decisions (`append_row`), with
+no text.
 
 Schema v1, defined by the code below: `make_event` builds and validates an event,
 `validate` lists what's wrong with one. Every event carries an `id`, the first 16 hex of the sha256 of the canonical
@@ -32,7 +33,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plainspoken import config, justify, pinning, prose, toolcall
+from plainspoken import config, justify, pinning, prose, reply, toolcall
 
 SCHEMA_VERSION = 1
 MAX_LINE = 4096
@@ -64,6 +65,12 @@ TOOL_CALL_OUTCOMES = ("below-cutoff", "clean", "warned", "blocked", "asked", "re
 _TOOL_CALL_ROW = frozenset(("v", "ts", "host", "tool_server_hash", "tool_name", "field", "words", "bucket", "prose",
                             "outcome", "mode"))
 _HEX8 = re.compile(r"[0-9a-f]{8}")
+# The chat-reply check (#125): one row per draft it looked at after a writing ask (or one per turn with no draft to
+# look at), with the draft's shape and size and a hash `doc` that joins its finding events (`ledger.label_id`).
+CHAT_REPLY_OUTCOMES = ("no-draft", "write-report", "seen", "repeat", "clean", "warned", "too-long")
+CHAT_REPLY_ASKS = ("draft", "draft-long", "rewrite")
+_CHAT_REPLY_ROW = frozenset(("v", "ts", "host", "ask", "shape", "words", "bucket", "outcome", "doc"))
+_HEX16 = re.compile(r"[0-9a-f]{16}")
 
 _REQUIRED = ("v", "id", "ts", "ruleset_version", "profile", "event", "actor", "outcome", "rule", "severity",
              "doc_id", "doc_sha", "span_hash", "facets")
@@ -524,7 +531,21 @@ def valid_tool_call_row(row: object) -> bool:
             and row["bucket"] in {name for _, name in BUCKETS} and isinstance(row["prose"], bool))
 
 
-ROW_LOGS = {"tool-calls.jsonl": valid_tool_call_row}
+def valid_chat_reply_row(row: object) -> bool:
+    """`row` is a `chat-replies.jsonl` line `append_row` could have written: exactly the schema's fields, a known host,
+    ask, shape (or `-`), bucket and outcome, and a 16-hex `doc` (or `-`)."""
+    if not (isinstance(row, dict) and set(row) == _CHAT_REPLY_ROW):
+        return False
+    words = row["words"]
+    return (not isinstance(row["v"], bool) and row["v"] == SCHEMA_VERSION and valid_ts(row["ts"])
+            and row["host"] in toolcall.HOSTS and row["ask"] in CHAT_REPLY_ASKS
+            and row["shape"] in (*reply.SHAPES, "-") and row["outcome"] in CHAT_REPLY_OUTCOMES
+            and isinstance(words, int) and not isinstance(words, bool) and words >= 0
+            and row["bucket"] in {name for _, name in BUCKETS}
+            and isinstance(row["doc"], str) and (row["doc"] == "-" or _HEX16.fullmatch(row["doc"]) is not None))
+
+
+ROW_LOGS = {"tool-calls.jsonl": valid_tool_call_row, "chat-replies.jsonl": valid_chat_reply_row}
 
 
 def append_row(settings: Mapping, name: str, row: Mapping) -> None:

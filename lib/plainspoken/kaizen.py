@@ -449,3 +449,30 @@ def tool_call_lines(summary: Mapping) -> list[str]:
         out.append(f"  {tool}: {t['holds']} held, {t['resent_unchanged']} sent again unchanged")
     out += [f"  proposal: {p}" for p in tool_call_proposals(summary)]
     return out
+
+
+# --- the chat-reply check (#125) -----------------------------------------------------------------------------------
+# Read from `chat-replies.jsonl`: one row per draft looked at after a writing ask, or per turn with none. Counts only,
+# so a person can see which shapes it lints and how often each has findings; no proposals yet.
+
+def chat_reply_summary(rows: Iterable[dict]) -> dict:
+    """Counts by outcome, and by shape for the drafts it linted (`clean` or `warned`)."""
+    outcomes: dict[str, int] = {}
+    shapes: dict[str, dict[str, int]] = {}
+    for r in rows:
+        outcomes[r["outcome"]] = outcomes.get(r["outcome"], 0) + 1
+        if r["outcome"] in ("clean", "warned"):
+            cell = shapes.setdefault(r["shape"], {"linted": 0, "warned": 0})
+            cell["linted"] += 1
+            cell["warned"] += r["outcome"] == "warned"
+    return {"rows": sum(outcomes.values()), "outcomes": outcomes, "shapes": dict(sorted(shapes.items()))}
+
+
+def chat_reply_lines(summary: Mapping) -> list[str]:
+    """The `kaizen report` section for the chat-reply check; [] when it hasn't recorded anything."""
+    if not summary.get("rows"):
+        return []
+    out = ["", f"chat-reply check ({summary['rows']} decisions after a writing ask):",
+           "  " + ", ".join(f"{n} {name}" for name, n in summary["outcomes"].items())]
+    out += [f"    {shape}: {c['linted']} linted, {c['warned']} with findings" for shape, c in summary["shapes"].items()]
+    return out
