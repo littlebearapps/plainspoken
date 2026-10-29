@@ -695,6 +695,114 @@ class AwaitingRelease(Base):
         self.assertIn("2b", [c["rule"] for c in self.cands(events)])
 
 
+class ApplyAll(Base):
+    """`kaizen apply --all-approved` applies every approved proposal to the ruleset, oldest first, stops at the first
+    refusal and prints a `ruleset:` commit message naming the ids it applied."""
+
+    def two(self) -> tuple[dict, dict]:
+        cfg = load_config(self.rules)
+        by_rule = {c["rule"]: c for c in self.cands(fp_events("2b") + fp_events("23"), cfg=cfg)}
+        older = calibrate.materialise(by_rule["23"], self.rules, cfg, None, [], NOW - timedelta(days=1))
+        newer = calibrate.materialise(by_rule["2b"], self.rules, cfg, None, [], NOW)
+        for x in (newer, older):
+            proposals.save(x, self.settings)
+        return older, newer
+
+    def all_cli(self, *extra):
+        return cli("kaizen", "apply", "--all-approved", "--rules", str(self.rules), *extra, cwd=self.root)
+
+    def test_applies_every_approved_one_oldest_first(self):
+        older, newer = self.two()
+        self.approve(newer["id"], when=NOW - timedelta(days=2))  # approved first, made later: made order wins
+        self.approve(older["id"])
+        review = self.proposal(events=fp_events(rule="20"))  # approved, but carries no edit
+        self.approve(review["id"])
+        pending = self.proposal(events=fp_events(rule="25"))
+        r = self.all_cli()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        raw = tomllib.loads(self.rules.read_text(encoding="utf-8"))
+        self.assertEqual(raw["version"], AFTER_NEXT)
+        self.assertEqual((raw["thresholds"]["default"]["filler_warn"],
+                          raw["thresholds"]["default"]["claude_warn_total"]), (4, 5))
+        applied = [e for e in ledger.read(self.settings)[0] if e["event"] == "apply"]
+        self.assertEqual([(e["proposal"], e["ruleset_version"]) for e in applied],
+                         [(older["id"], NEXT), (newer["id"], AFTER_NEXT)])
+        self.assertIn(f"{review['id']} skipped: a review proposal", r.stdout)
+        self.assertNotIn(pending["id"], r.stdout)
+        message = r.stdout.split("kaizen apply: commit message:\n\n", 1)[1]
+        self.assertTrue(message.startswith(f"ruleset: apply kaizen proposals {older['id']}, {newer['id']}\n\n"))
+        self.assertIn(f"Ruleset {CFG.version} to {AFTER_NEXT}.", message)
+        self.assertIn(f"- {older['id']}: rule 23, loosen. ", message)
+        self.assertIn("(approved by Robin)", message)
+        self.assertLess(message.index(older["id"] + ":"), message.index(newer["id"] + ":"))
+        log = (self.rules.parent / "RULESET-CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertLess(log.index(f"## {AFTER_NEXT}"), log.index(f"## {NEXT}"))
+        r = self.all_cli()  # nothing left
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("no approved proposals to apply", r.stdout)
+
+    def test_stops_at_the_first_refusal(self):
+        older, newer = self.two()
+        self.approve(older["id"])
+        self.approve(newer["id"])
+        Apply.hand_edit(self, "claude_warn_total", 4, 6)  # the newer one (2b) is stale now
+        third = {**newer, "rule": "25", "edits": [{"kind": "set_threshold", "table": "default",
+                                                   "key": "vague_quantifier_warn", "old": 3, "new": 4}],
+                 "created": (NOW + timedelta(minutes=1)).isoformat()}
+        third["id"] = proposals.proposal_id(NOW + timedelta(minutes=1), third)
+        proposals.save(third, self.settings)
+        self.approve(third["id"])
+        r = self.all_cli()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn(f"{newer['id']} refused: stale proposal", r.stderr)
+        self.assertIn("the 1 before it stay applied", r.stderr)
+        events = ledger.read(self.settings)[0]
+        self.assertEqual(proposals.status(older["id"], events), "applied")
+        self.assertEqual(proposals.status(newer["id"], events), "superseded")
+        self.assertEqual(proposals.status(third["id"], events), "approved")  # never reached
+        self.assertIn(f"ruleset: apply kaizen proposal {older['id']}\n", r.stdout)
+        self.assertNotIn(third["id"], r.stdout)
+        raw = tomllib.loads(self.rules.read_text(encoding="utf-8"))
+        self.assertEqual(raw["thresholds"]["default"]["vague_quantifier_warn"], 3)
+
+    def test_dry_run_writes_nothing(self):
+        older, newer = self.two()
+        self.approve(older["id"])
+        self.approve(newer["id"])
+        before = sha(self.rules)
+        r = self.all_cli("--dry-run")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("dry run, nothing written: 2 proposals would apply", r.stdout)
+        self.assertIn("+filler_warn = 4", r.stdout)
+        self.assertNotIn("commit message", r.stdout)
+        self.assertEqual(sha(self.rules), before)
+        self.assertEqual([e for e in ledger.read(self.settings)[0] if e["event"] == "apply"], [])
+
+    def test_usage(self):
+        p = self.proposal()
+        for args in (("kaizen", "apply"), ("kaizen", "apply", p["id"], "--all-approved"),
+                     ("kaizen", "apply", "--all-approved", "--target", "profile")):
+            with self.subTest(args=args):
+                r = cli(*args, cwd=self.root)
+                self.assertEqual(r.returncode, 2)
+                self.assertNotIn("Traceback", r.stderr)
+
+    def test_installed_plugin_ruleset_is_refused_with_nothing_applied(self):
+        p = self.proposal()
+        self.approve(p["id"])
+        with mock.patch.object(proposals, "_installed", return_value=True):
+            out = proposals.apply_all(self.root, self.settings, None)
+        self.assertEqual(out["applied"], [])
+        self.assertIn("installed plugin", out["refused"]["error"])
+
+    def test_commit_message_for_one(self):
+        one = {"id": "KZ-20261101-abcdef", "version": "4.4.0", "rule": "7d", "action": "loosen",
+               "summary": "rule 7d: loosen\nstaccato", "approver": "Sam"}
+        msg = proposals.commit_message([one], "4.3.0")
+        self.assertEqual(msg, "ruleset: apply kaizen proposal KZ-20261101-abcdef\n\nRuleset 4.3.0 to 4.4.0.\n\n"
+                              "- KZ-20261101-abcdef: rule 7d, loosen. rule 7d: loosen staccato (approved by Sam)\n")
+
+
 class RemoveRubric(Base):
     def test_removing_a_judged_rule_names_its_rubric_section(self):  # apply never edits the rubrics
         shutil.copytree(REPO / "data" / "rubrics", self.rules.parent / "rubrics")

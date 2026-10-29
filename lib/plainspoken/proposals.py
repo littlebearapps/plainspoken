@@ -534,8 +534,8 @@ def rubric_notes(edits: Iterable[Mapping], rules_path: Path) -> list[str]:
 
 def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = None, target: str = "ruleset",
           dry_run: bool = False, *, now: datetime | None = None) -> dict:
-    """Apply an approved proposal. Returns `{"id", "target", "path", "diff", "version", "changelog", "dry_run",
-    "logged", "changelog_error", "rebased", "rubric_notes"}` (`rebased`: the ruleset changed since calibrate and the
+    """Apply an approved proposal. Returns `{"id", "target", "path", "diff", "version", "approver", "changelog",
+    "dry_run", "logged", "changelog_error", "rebased", "rubric_notes"}` (`rebased`: the ruleset changed since calibrate and the
     edits still applied; `rubric_notes`: the rubric sections a removed rule leaves behind). Raises `Refused`
     (nothing written), `Stale` (nothing written to the target; outside a dry run the proposal is recorded as
     superseded) or `UnknownProposal`."""
@@ -588,8 +588,8 @@ def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = Non
         raise _supersede(p, e, seen, approver, settings, now, dry_run) from None
     out_path, old_text, new, version, changelog, title, heading = made
     result = {"id": pid, "target": target, "path": str(out_path), "diff": rulesedit.diff(old_text, new, out_path.name),
-              "version": version, "changelog": str(changelog), "dry_run": dry_run, "logged": False,
-              "changelog_error": None, "rebased": rebased,
+              "version": version, "approver": approver, "changelog": str(changelog), "dry_run": dry_run,
+              "logged": False, "changelog_error": None, "rebased": rebased,
               "rubric_notes": rubric_notes(p["edits"], path) if target == "ruleset" else []}
     if dry_run:
         return result
@@ -621,3 +621,66 @@ def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = Non
         result["changelog_error"] = _first_line(e)
     result["logged"] = _log_apply(p, version, approver, settings, now, target)
     return result
+
+
+# --- apply every approved proposal ---------------------------------------------------------------------------------
+
+def approved_queue(settings: Mapping, events: list[dict]) -> tuple[list[dict], list[tuple[str, str]]]:
+    """The approved proposals not yet applied, oldest first (by `created`, then id), and the approved ones `apply`
+    can't take as `(id, why)`: a review proposal carries no edit, so it goes in by hand and never blocks the rest."""
+    queue, skipped = [], []
+    for p in sorted(stored(settings), key=lambda p: (str(p.get("created", "")), p["id"])):
+        if status(p["id"], events) != "approved":
+            continue
+        if p.get("action") == "review" or not p.get("edits"):
+            skipped.append((p["id"], "a review proposal with no edits: make the change by hand in a PR"))
+        else:
+            queue.append(p)
+    return queue, skipped
+
+
+def apply_all(root: Path, settings: Mapping, rules_path: Path | None = None, dry_run: bool = False, *,
+              now: datetime | None = None) -> dict:
+    """`kaizen apply --all-approved`: apply every approved proposal to the ruleset, oldest first, and stop at the
+    first refusal. Returns `{"applied": [apply results, each with its proposal's "rule", "action" and "summary"],
+    "skipped": [(id, why)], "refused": {"id", "error", "stale"} or None, "before" (the ruleset version it started
+    from), "dry_run"}`. Each apply is the same as `apply` on its own: its own changelog entry, version bump
+    and ledger event, so the ones before a refusal stay applied. An edit that went in without its changelog entry
+    stops the run too (`refused` names it). A dry run applies nothing, so each diff is against the current file."""
+    events = ledger.read(settings)[0]
+    queue, skipped = approved_queue(settings, events)
+    try:
+        before = registry.load_config(Path(rules_path) if rules_path is not None else default_rules()).version
+    except (ValueError, OSError):
+        before = None
+    out: dict = {"applied": [], "skipped": skipped, "refused": None, "before": before, "dry_run": dry_run}
+    for p in queue:
+        try:
+            result = apply(p["id"], root, settings, rules_path, "ruleset", dry_run, now=now)
+        except Refused as e:
+            out["refused"] = {"id": p["id"], "error": _first_line(e), "stale": isinstance(e, Stale)}
+            break
+        result.update({k: p.get(k) for k in ("rule", "action", "summary")})
+        out["applied"].append(result)
+        if result["changelog_error"]:
+            out["refused"] = {"id": p["id"], "error": f"applied, but the changelog wasn't written "
+                                                      f"({result['changelog_error']})", "stale": False}
+            break
+    return out
+
+
+def commit_message(results: list[Mapping], before: str | None = None) -> str:
+    """The commit message for the ruleset changes `apply_all` made, in the repository's convention: a `ruleset:`
+    commit (its own Ruleset section in the release notes) naming every proposal id, then one line per proposal with
+    its rule, action, summary and approver, oldest first. `before` is the ruleset version the first apply started
+    from."""
+    ids = [r["id"] for r in results]
+    lines = [f"ruleset: apply kaizen proposal{'s' if len(ids) != 1 else ''} {', '.join(ids)}", ""]
+    if results:
+        lines += [f"Ruleset {before or 'unknown'} to {results[-1]['version']}.", ""]
+    for r in results:
+        line = f"- {r['id']}: rule {r.get('rule', '?')}, {r.get('action', '?')}"
+        if r.get("summary"):
+            line += f". {rulesedit._one_line(r['summary'])}"
+        lines.append(line + (f" (approved by {r['approver']})" if r.get("approver") else ""))
+    return "\n".join(lines).rstrip("\n") + "\n"
