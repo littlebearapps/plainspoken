@@ -16,8 +16,9 @@ A demote is a severity edit only for a `judge`-method rule (a lint check sets it
 in code). A lint or lint+judge rule with no demote knob, and a `remove` that would orphan an [aliases] entry
 or a knob in kaizen.toml, become `review` proposals: no edits, and `apply` refuses them.
 
-Evidence is spent once a proposal for its rule is applied: only a rule's events after its latest
-`applied` event count toward its triggers.
+Evidence is spent once a proposal for its rule is applied and released: only a rule's events after its latest
+released `applied` event count toward its triggers. A rule with an apply awaiting release (applied to a checkout
+whose change hasn't reached the ruleset in use) gets no new proposal until it's released.
 
 Candidates are filtered: a rule + action rejected within `cooldown_days`, and a candidate already stored and still
 open (no decision, or approved and not applied), are skipped. Within a trigger: narrow (facet) knobs first, then more
@@ -223,12 +224,17 @@ def _rule_candidates(rule, m, ctx) -> list[dict]:
     return out
 
 
-def _open_keys(settings: Mapping, events: list[dict]) -> set[str]:
-    """Keys of stored proposals still open: no decision yet, or approved and not applied."""
+OPEN = ("pending", "approved", proposals.AWAITING)
+
+
+def _open_keys(settings: Mapping, events: list[dict], use=None) -> set[str]:
+    """Keys of stored proposals still open: no decision yet, approved and not applied, or applied to a checkout and
+    awaiting release."""
     if not settings.get("proposals_dir"):
         return set()
+    use = proposals.in_use() if use is None else use
     return {p.get("key") for p in proposals.stored(settings)
-            if proposals.status(p["id"], events) in ("pending", "approved")}
+            if proposals.status(p["id"], events, use) in OPEN}
 
 
 def _cooling(settings: Mapping, events: list[dict], now: datetime, days: int) -> set[tuple]:
@@ -250,15 +256,20 @@ def _cooling(settings: Mapping, events: list[dict], now: datetime, days: int) ->
 _BOOKKEEPING = ("apply", "calibrate", "decision")  # events that record what the loop did, never evidence
 
 
-def _unspent(events: list[dict], metrics: Mapping[str, Mapping], cfg, now: datetime) -> tuple[list[dict], dict]:
-    """Evidence is spent once a proposal for its rule is applied: (the events without each rule's
-    evidence up to and including its latest `applied` event, the metrics with those rules recounted). A profile
-    apply spends only the evidence recorded under that profile. A review
-    proposal is never applied, so it doesn't reset anything. Bookkeeping events stay, and so do `last_fired` and
-    `days_since_fired`: the dormant trigger measures silence, and a rule that fired before the change wasn't silent."""
+def _unspent(events: list[dict], metrics: Mapping[str, Mapping], cfg, now: datetime,
+             use=None) -> tuple[list[dict], dict]:
+    """Evidence is spent once a proposal for its rule is applied and in use: (the events without each rule's
+    evidence up to and including its latest released `applied` event, the metrics with those rules recounted). A
+    profile apply spends only the evidence recorded under that profile. An apply awaiting release (`use`, the ruleset
+    in use, hasn't reached it) spends nothing yet: if its change is never released, the evidence still counts. A
+    review proposal is never applied, so it doesn't reset anything. Bookkeeping events stay, and so do `last_fired`
+    and `days_since_fired`: the dormant trigger measures silence, and a rule that fired before the change wasn't
+    silent."""
+    use = proposals.in_use() if use is None else use
     last: dict[tuple[str, str | None], datetime] = {}
     for e in events:
-        if e.get("event") == "apply" and e.get("outcome") == "applied" and e.get("rule"):
+        if (e.get("event") == "apply" and e.get("outcome") == "applied" and e.get("rule")
+                and proposals.released(e, use)):
             # a profile apply spends that profile's evidence only; a ruleset apply (or one logged before the
             # target was recorded) spends every profile's
             scope = e.get("profile") if (e.get("facets") or {}).get("kind") == "profile" else None
@@ -293,7 +304,11 @@ def candidates(metrics: Mapping[str, Mapping], events: Iterable[dict], cfg, sett
     cal = _cal(settings)
     t = cal["triggers"]
     every = ledger.distinct(events)
-    evs, metrics = _unspent(every, metrics, cfg, now)
+    use = proposals.in_use()
+    evs, metrics = _unspent(every, metrics, cfg, now, use)
+    # A rule with a change awaiting release gets no new proposal: its evidence isn't spent yet, so calibrate would
+    # otherwise propose again from the same evidence.
+    waiting = {str(e["rule"]) for e in proposals.awaiting_release(every, use) if e.get("rule")}
 
     def is_stuck(e):
         return (e.get("outcome") == "dismissed" and e.get("severity") == "BLOCK"
@@ -310,11 +325,11 @@ def candidates(metrics: Mapping[str, Mapping], events: Iterable[dict], cfg, sett
            "knobbed": {k["rule"] for k in cal["knobs"]},
            "profiles": _ledger_profiles(evs, settings) if old_enough else []}
     cooling = _cooling(settings, every, now, t["cooldown_days"])
-    open_keys = _open_keys(settings, every)
+    open_keys = _open_keys(settings, every, use)
 
     def keep(c) -> bool:
         c["key"] = candidate_key(c)
-        return (c["rule"], c["action"]) not in cooling and c["key"] not in open_keys
+        return (c["rule"], c["action"]) not in cooling and c["key"] not in open_keys and c["rule"] not in waiting
 
     out = []
     for rid, rule in cfg.rules.items():

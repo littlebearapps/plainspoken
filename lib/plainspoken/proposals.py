@@ -19,6 +19,11 @@ A stale refusal (not a dry run) records the proposal as `superseded`: one ledger
 outcome `superseded`). A superseded proposal is closed, like an applied one: its key is free, so calibrate may
 propose for the rule again once the evidence builds, and no later decision reopens it. Nothing is written to the
 proposal file, so a store written before the state existed reads as it did.
+
+An apply to a checkout (`--rules`) isn't in use until that checkout's change is released and installed: until the
+ruleset in use reaches the version the apply wrote (the `applied` event's `ruleset_version`), or its changelog has the
+proposal's entry, the proposal is `awaiting_release` (`released`). Nothing new is written for this: every `applied`
+event has always recorded the version it wrote, so older ledgers read the same way.
 """
 from __future__ import annotations
 
@@ -168,11 +173,61 @@ def superseded(pid: str, events: Iterable[dict]) -> dict | None:
     return best
 
 
-def status(pid: str, events: list[dict]) -> str:
-    """`applied`, `superseded` (approved, then refused as stale; closed), `approved` (not applied yet), `rejected` or
-    `pending` (no decision)."""
-    if applied(pid, events):
-        return "applied"
+AWAITING = "awaiting_release"
+
+
+def _semver(v: object) -> tuple[int, int, int] | None:
+    m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", v) if isinstance(v, str) else None
+    return None if m is None else (int(m[1]), int(m[2]), int(m[3]))
+
+
+def in_use(path: Path | None = None) -> tuple[str | None, str]:
+    """The ruleset in use (`PLAINSPOKEN_RULES`, else the plugin's own): its version (None when it can't be read) and
+    the text of the `RULESET-CHANGELOG.md` beside it ("" when there's none)."""
+    path = Path(path) if path is not None else default_rules()
+    try:
+        version = tomllib.loads(path.read_text(encoding="utf-8")).get("version")
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        version = None
+    try:
+        log = (path.parent / CHANGELOG).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        log = ""
+    return (version if isinstance(version, str) else None), log
+
+
+def released(e: Mapping, use: tuple[str | None, str] | None = None) -> bool:
+    """An `applied` event's change has reached the ruleset in use (`use`, from `in_use`). A ruleset apply records the
+    version it wrote as the event's `ruleset_version` (it always has), so the change is released once the ruleset in
+    use is at that version or later, or once the changelog beside it has the proposal's entry. A profile apply edits
+    a project file, so it's in use at once. An event whose version, or a ruleset whose version, isn't
+    MAJOR.MINOR.PATCH counts as released, as every apply did before this state existed."""
+    if (e.get("facets") or {}).get("kind") == "profile":
+        return True
+    version, log = in_use() if use is None else use
+    want, have = _semver(e.get("ruleset_version")), _semver(version)
+    if want is None or have is None or have >= want:
+        return True
+    pid = e.get("proposal")
+    return isinstance(pid, str) and re.search(rf"(?m)^- {re.escape(pid)}:", log) is not None
+
+
+def awaiting_release(events: Iterable[dict], use: tuple[str | None, str] | None = None) -> list[dict]:
+    """The `applied` events whose change hasn't reached the ruleset in use: applied to a checkout (`--rules`) that
+    hasn't been released and installed yet."""
+    use = in_use() if use is None else use
+    return [e for e in events if e.get("event") == "apply" and e.get("outcome") == "applied" and not released(e, use)]
+
+
+def status(pid: str, events: list[dict], use: tuple[str | None, str] | None = None) -> str:
+    """`applied` (and in the ruleset in use), `awaiting_release` (applied to a checkout whose change hasn't reached
+    the ruleset in use yet), `superseded` (approved, then refused as stale; closed), `approved` (not applied yet),
+    `rejected` or `pending` (no decision). `use` is `in_use()`, read when needed."""
+    done = [e for e in events if e.get("event") == "apply" and e.get("outcome") == "applied"
+            and e.get("proposal") == pid]
+    if done:
+        use = in_use() if use is None else use
+        return "applied" if any(released(e, use) for e in done) else AWAITING
     if superseded(pid, events) is not None:
         return SUPERSEDED
     d = decision(pid, events)

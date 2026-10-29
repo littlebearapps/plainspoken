@@ -172,6 +172,12 @@ proposal names no profile (calibrate had none to resolve), apply refuses, naming
 If you use the installed plugin, send the evidence upstream instead (section 9). It never edits the rubrics: when it
 removes a judged rule, it names the rubric section left behind, for you to delete in the same change.
 
+**Applied isn't released.** With `--rules`, apply edits a checkout's file, not the one your checks read. The ledger
+notes the version it wrote, and until the copy in use reaches that number (or its `RULESET-CHANGELOG.md` holds the
+entry), `kaizen review` shows the change as awaiting release, with both versions. Meanwhile its evidence still counts
+and calibrate leaves that rule alone. Once a release carrying the edit is installed, it's done: calibrate treats the
+earlier evidence as spent. Writing straight to the rules in use, or to a profile, is released at once.
+
 ## 7. Retiring a rule
 
 A dormant rule is retired in steps, one per calibrate cycle (28 days) after the last step was applied:

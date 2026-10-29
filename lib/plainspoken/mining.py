@@ -326,14 +326,16 @@ def _test(rate: float, corpus_rate: float, hits: int, n: int, m: Mapping) -> tup
 # --- candidates ----------------------------------------------------------------------------------------------------
 
 def _blocked(settings: Mapping, now: datetime, cooldown_days: int) -> set[str]:
-    """Keys of stored proposals still open (pending or approved, not applied), or rejected within the cooldown."""
+    """Keys of stored proposals still open (pending, approved and not applied, or applied and awaiting release), or
+    rejected within the cooldown."""
     if not settings.get("proposals_dir"):
         return set()
     events = ledger.read(settings)[0] if settings.get("ledger_dir") else []
+    use = proposals.in_use()
     out = set()
     for p in proposals.stored(settings):
-        state = proposals.status(p["id"], events)
-        if state in ("pending", "approved"):
+        state = proposals.status(p["id"], events, use)
+        if state in ("pending", "approved", proposals.AWAITING):
             out.add(p.get("key"))
         elif state == "rejected":
             d = proposals.decision(p["id"], events)

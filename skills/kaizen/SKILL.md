@@ -62,6 +62,7 @@ it does, then stop and let the person pick.
 
 1. `RUN kaizen review`: every proposal awaiting a decision, or approved and not yet applied, with its rule, trigger,
    action and one-line summary. A superseded one (stale at apply) is listed for one calibrate cycle; it's closed.
+   One applied to a checkout is listed as awaiting release until the ruleset in use has the change.
 2. For a pending proposal, tell the person where to decide it: the proposal's `.md` file under
    `.plainspoken/kaizen/proposals/` (file adapter), or the issue or card it names. The decision format is printed in
    that file, issue or card; point the person to it rather than writing the line out for them.
