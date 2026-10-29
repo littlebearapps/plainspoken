@@ -32,6 +32,10 @@
           "section": "Bug Fixes"
         },
         {
+          "type": "ruleset",
+          "section": "Ruleset"
+        },
+        {
           "type": "perf",
           "section": "Performance Improvements"
         },
