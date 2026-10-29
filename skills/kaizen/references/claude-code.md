@@ -14,9 +14,12 @@
   or `run.py *`).
 - The Stop hook may show the person a one-line nudge (`… await a decision` or `calibrate is due`). It never reaches
   your context, and it doesn't ask you to do anything.
-- **Mining subagents.** Start each with the Agent tool: `subagent_type` `general-purpose`, the brief's text verbatim
-  as the whole prompt, and `model` set to the person's pick (leave it unset for the session's model). Don't start a
-  `plainspoken:*` agent for this. Several can run in one message. Save each reply with the Write tool under
+- **Mining subagents.** Start each with the Agent tool: `subagent_type` `plainspoken:mining-drafter`, the brief's
+  text verbatim as the whole prompt, and `model` set to the person's pick (leave it unset for the session's model).
+  Never use `general-purpose` for this: it loads the project's `CLAUDE.md`, and with the session brief on it also
+  gets plainspoken's own writing rules. The drafter gets neither. Skipping `CLAUDE.md` needs Claude Code 2.1.308
+  or later: an older CLI ignores `omitClaudeMd`, so on one, say in the report that the drafts may be cleaner than a
+  plain model's. Several can run in one message. Save each reply with the Write tool under
   `.plainspoken/kaizen/mining/` (allowed without a prompt); take the draft only, dropping any agent metadata
   after it.
 - Name each model folder by the model's id: the session's own id when `model` was unset, otherwise the id the person

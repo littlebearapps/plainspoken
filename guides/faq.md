@@ -36,8 +36,8 @@ once; still INCOMPLETE after that, it stops and quotes the problem lines.
 
 ## How much of my context does it use?
 
-The four skills that start on their own, and the four agents, have descriptions that sit in context all the time.
-Together they come to about 490 tokens, measured with `python3 -m scripts.dev.token_budget .` against a budget of
+The four skills that start on their own, and the five agents, have descriptions that sit in context all the time.
+Together they come to about 500 tokens, measured with `python3 -m scripts.dev.token_budget .` against a budget of
 500. The nine manual-only skills add nothing until you call them, because Claude Code keeps their descriptions out
 of context. Hooks add none, unless you switch on the session brief.
 
