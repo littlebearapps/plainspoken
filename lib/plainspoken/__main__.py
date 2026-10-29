@@ -1168,14 +1168,18 @@ def _kaizen_parser(sub) -> None:
     rp.add_argument("--until", help="only events before this ISO date or datetime (a date is 00:00 UTC)")
     rp.add_argument("--json", action="store_true", help="the metrics as JSON")
     rp.add_argument("--share", action="store_true", help="anonymised counts (JSON) to paste into an upstream issue")
-    ca = ks.add_parser("calibrate", help="propose at most 3 ruleset changes from the ledger and send them through "
-                                         "the adapter, re-sending any that weren't sent (never applies them)")
+    ca = ks.add_parser("calibrate", help="propose at most 3 ruleset changes from the ledger (fewer under --max or "
+                                         "[kaizen] monthly_cap) and send them through the adapter, re-sending any "
+                                         "that weren't sent (never applies them)")
     ca.add_argument("--now", help="calibrate as of this ISO date or datetime (default: now)")
     ca.add_argument("--corpus", nargs="+", metavar="GLOB",
                     help="files to measure each proposal's effect on (default: [kaizen] corpus)")
     ca.add_argument("--json", action="store_true", help="the new proposals as JSON")
+    ca.add_argument("--max", type=_count, metavar="N", help="store at most N new proposals this run (only ever "
+                                                         "lowers the limit; [kaizen] monthly_cap still applies)")
     mn = ks.add_parser("mine", help="compare model drafts written from the fixed briefs with a human corpus and "
-                                    "queue at most 5 model-tagged proposals locally (never sends or applies them)")
+                                    "queue at most 5 model-tagged proposals locally (fewer under --max or [kaizen] "
+                                    "monthly_cap; never sends or applies them)")
     mn.add_argument("--drafts", type=Path, required=True, metavar="DIR",
                     help="the drafts, as DIR/<model id>/*.md (relative to the project root)")
     mn.add_argument("--corpus", nargs="+", metavar="GLOB",
@@ -1186,6 +1190,8 @@ def _kaizen_parser(sub) -> None:
                                                                 "is refused")
     mn.add_argument("--json", action="store_true", help="the full result as JSON")
     mn.add_argument("--dry-run", action="store_true", help="show the candidates; store and log nothing")
+    mn.add_argument("--max", type=_count, metavar="N", help="keep at most N candidates this run (only ever lowers "
+                                                         "the limit; [kaizen] monthly_cap still applies)")
     ks.add_parser("decisions", help="record the APPROVE:/REJECT: decisions people made through the adapter "
                                     "(never sends anything)")
     rv = ks.add_parser("review", help="the proposals waiting for a decision or for `kaizen apply`")
@@ -1196,6 +1202,26 @@ def _kaizen_parser(sub) -> None:
                                                 "git checkout)")
     ap_.add_argument("--target", choices=proposals.TARGETS, default="ruleset")
     ap_.add_argument("--dry-run", action="store_true", help="print the diff and write nothing")
+
+
+def _count(text: str) -> int:
+    """A whole number, 0 or more (`--max`)."""
+    try:
+        n = int(text)
+    except ValueError:
+        n = -1
+    if n < 0:
+        raise argparse.ArgumentTypeError(f"expected a whole number, 0 or more, got {text!r}")
+    return n
+
+
+def _cap_line(cmd: str, limits: dict) -> str | None:
+    """One line on the monthly cap when `[kaizen] monthly_cap` is set: how much of it this month has used."""
+    if limits.get("cap") is None:
+        return None
+    left = max(0, limits["cap"] - limits["used"])
+    return (f"kaizen {cmd}: monthly cap {limits['cap']}: {limits['used']} stored in {limits['month']} before this "
+            f"run, room for {left}" + ("" if left else " (no new proposals until next month)"))
 
 
 def _kaizen_line(e: dict) -> str:
@@ -1272,8 +1298,9 @@ def _kaizen_calibrate(args: argparse.Namespace, root: Path) -> int:
     if settings is None:
         return 2
     resent: list[dict] = []
+    limits: dict = {}
     try:
-        made = calibrate.run(root, settings, now, args.corpus, resent=resent)
+        made = calibrate.run(root, settings, now, args.corpus, resent=resent, max_new=args.max, limits=limits)
     except (ValueError, OSError) as e:
         print(f"plainspoken: kaizen calibrate: {_first_line(e)}", file=sys.stderr)
         return 2
@@ -1287,6 +1314,9 @@ def _kaizen_calibrate(args: argparse.Namespace, root: Path) -> int:
     for p in resent:
         print(f"{p['id']}: sent again: " + (f"emitted to {adapters.describe(p.get('adapter'), p['ref'])}"
                                             if p.get("ref") else f"not emitted: {p.get('emit_error', 'unknown')}"))
+    cap = _cap_line("calibrate", limits)
+    if cap:
+        print(cap)
     if not made:
         print("kaizen calibrate: no proposals" + (" (no new ones)" if resent else ""))
         return 0
@@ -1428,7 +1458,7 @@ def _kaizen_mine(args: argparse.Namespace, root: Path) -> int:
             raise mining.MiningError("no human corpus: " + (f"{' '.join(globs)} matched no files under {root}" if globs
                                                             else "pass --corpus GLOB or set [kaizen] human_corpus"))
         drafts = args.drafts if args.drafts.is_absolute() else root / args.drafts  # like --corpus: from the root
-        out = mining.mine(drafts, files, briefs, cfg, prof, settings, dry_run=args.dry_run)
+        out = mining.mine(drafts, files, briefs, cfg, prof, settings, dry_run=args.dry_run, max_new=args.max)
     except (ValueError, OSError) as e:  # MiningError, ConfigError and ProfileError are ValueErrors
         print(f"plainspoken: kaizen mine: {_first_line(e)}", file=sys.stderr)
         return 2
@@ -1440,6 +1470,9 @@ def _kaizen_mine(args: argparse.Namespace, root: Path) -> int:
               + (f" (skipped: {m['skipped']})" if m.get("skipped") else ""))
     print(f"human corpus: {out['corpus']['files']} file{'s' if out['corpus']['files'] != 1 else ''}, "
           f"{out['corpus']['words']} words")
+    cap = _cap_line("mine", out["limits"])
+    if cap:
+        print(cap)
     if not out["candidates"]:
         print("kaizen mine: no candidates")
         return 0

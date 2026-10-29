@@ -594,3 +594,70 @@ class ThresholdAddProposal(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def proposed(pid, when, event="mine"):
+    return ledger.make_event(event=event, actor="engine", outcome="proposed", ruleset_version=CFG.version,
+                             profile="default", rule="2b", proposal=pid, ts=ts(when))
+
+
+class MonthlyCap(TmpCase):
+    """`[kaizen] monthly_cap` is shared by calibrate and mine: what either stored this calendar month counts."""
+
+    def test_counts_this_month_only_from_the_ledger_and_the_store(self):
+        events = [proposed("KZ-20261002-aaaaaa", NOW.replace(day=2)),
+                  proposed("KZ-20261002-aaaaaa", NOW.replace(day=2)),  # the same id twice counts once
+                  proposed("KZ-20261003-bbbbbb", NOW.replace(day=3), event="calibrate"),
+                  proposed("KZ-20260930-cccccc", NOW.replace(month=9, day=30)),  # last month
+                  ev("lint", "lint", "fired", "2b")]
+        stored = {"id": "KZ-20261005-dddddd", "created": ts(NOW.replace(day=5))}  # stored, its ledger line lost
+        proposals.save(stored, self.settings)
+        self.assertEqual(proposals.made_in_month(self.settings, events, NOW), 3)
+        self.assertEqual(proposals.made_in_month(self.settings, events, NOW.replace(month=11, day=1)), 0)
+
+    def test_limit(self):
+        events = [proposed("KZ-20261002-aaaaaa", NOW.replace(day=2))]
+        no_cap = proposals.run_limit(self.settings, events, NOW, 3)
+        self.assertEqual((no_cap["limit"], no_cap["cap"], no_cap["used"]), (3, None, None))
+        self.assertEqual(proposals.run_limit(self.settings, events, NOW, 3, asked=1)["limit"], 1)
+        self.assertEqual(proposals.run_limit(self.settings, events, NOW, 3, asked=9)["limit"], 3)  # only lowers
+        capped = {**self.settings, "monthly_cap": 3}
+        self.assertEqual(proposals.run_limit(capped, events, NOW, 3)["limit"], 2)
+        self.assertEqual(proposals.run_limit(capped, events, NOW, 3, asked=1)["limit"], 1)
+        full = proposals.run_limit({**self.settings, "monthly_cap": 1}, events, NOW, 5)
+        self.assertEqual((full["limit"], full["cap"], full["used"], full["month"]), (0, 1, 1, "2026-10"))
+
+    def test_run_stores_only_what_the_cap_leaves(self):
+        events = stuck_12f_events() + fp_events() + kept_4b_events()
+        events.append(proposed("KZ-20261001-aaaaaa", NOW.replace(day=1)))  # mine stored one this month
+        self.write_ledger(events)
+        settings = {**self.settings, "monthly_cap": 2}
+        limits: dict = {}
+        out = calibrate.run(self.root, settings, NOW, [], limits=limits)
+        self.assertEqual(len(out), 1)
+        self.assertEqual((limits["cap"], limits["used"], limits["limit"]), (2, 1, 1))
+        again: dict = {}
+        self.assertEqual(calibrate.run(self.root, settings, NOW, [], limits=again), [])
+        self.assertEqual((again["used"], again["limit"]), (2, 0))
+
+    def test_max_new_lowers_one_run(self):
+        self.write_ledger(stuck_12f_events() + fp_events() + kept_4b_events())
+        out = calibrate.run(self.root, self.settings, NOW, [], max_new=1)
+        self.assertEqual([p["rule"] for p in out], ["12f"])
+        self.assertEqual(calibrate.run(self.root, self.settings, NOW, [], max_new=0), [])
+
+    def test_cli(self):
+        self.write_ledger(fp_events() + kept_4b_events())
+        r = cli("kaizen", "calibrate", "--now", ts(NOW), "--max", "1", cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("1 proposal stored", r.stdout)
+        self.assertNotIn("monthly cap", r.stdout)
+        (self.root / ".plainspoken" / "config.toml").write_text("[kaizen]\nmonthly_cap = 1\n", encoding="utf-8")
+        r = cli("kaizen", "calibrate", "--now", ts(NOW), cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("monthly cap 1: 1 stored in 2026-10 before this run, room for 0", r.stdout)
+        self.assertIn("no proposals", r.stdout)
+        for bad in ("-1", "two"):
+            r = cli("kaizen", "calibrate", "--max", bad, cwd=self.root)
+            self.assertEqual(r.returncode, 2)
+            self.assertIn("whole number", r.stderr)

@@ -72,7 +72,9 @@ it does, then stop and let the person pick.
 1. Read `[kaizen] adapter` in `.plainspoken/config.toml` (unset means `file`). If it's `github` or `trello`, confirm
    with the person first (core rule 3).
 2. `RUN kaizen calibrate`. It reads the ledger, finds the triggers, stores at most 3 new proposals and sends them
-   through the adapter (it also re-sends any that weren't sent). It never applies anything.
+   through the adapter (it also re-sends any that weren't sent). It never applies anything. With `[kaizen]
+   monthly_cap` set, it stores no more than the cap leaves this month and prints a line saying so; `--max N` lowers
+   one run's limit.
 3. Show each proposal's id, summary and diff as printed. A `not emitted` line names the adapter problem: report it;
    the next calibrate run sends that proposal again, so confirm again before it.
 

@@ -127,7 +127,7 @@ check](#the-chat-reply-check).
 
 The six sources are `check`, `merge`, `judge`, `lint-watch`, `tool-call` and `chat-reply`. `capture = false` turns
 them all off.
-The rest of `[kaizen]` (excerpts, adapter, approvers, folders, GitHub and Trello IDs) is in
+The rest of `[kaizen]` (excerpts, adapter, approvers, the monthly cap, folders, GitHub and Trello IDs) is in
 [guides/kaizen.md](kaizen.md).
 
 ### `[brief]`, `[nudge]` and `[rule]`: the optional pieces
