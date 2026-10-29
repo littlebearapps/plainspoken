@@ -100,7 +100,8 @@ Anonymise any text you paste.
 
 Ruleset changes don't go in as ordinary edits. They go through the kaizen loop: a proposal with its evidence, a
 person's `APPROVE:` line, then `kaizen apply`, which bumps the ruleset version and records who approved it in
-`data/RULESET-CHANGELOG.md`. The [kaizen guide](guides/kaizen.md) explains each step. `kaizen report --share`
+`data/RULESET-CHANGELOG.md`. `kaizen apply --all-approved --rules data/rules.toml` applies every approved proposal
+in one go and prints the commit message to use. The [kaizen guide](guides/kaizen.md) explains each step. `kaizen report --share`
 prints counts only, with no text, if you'd like to attach your numbers to an issue.
 
 ## Evals

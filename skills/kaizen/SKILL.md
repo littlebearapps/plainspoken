@@ -134,6 +134,9 @@ it does, then stop and let the person pick.
    `RUN kaizen apply <id>` once without `--dry-run`. It writes nothing but marks the proposal superseded, and
    **calibrate** can propose for the rule again once new evidence builds. For an installed plugin, offer
    **report** with `--share` so the person can send the evidence upstream.
+5. To apply every approved proposal to a ruleset checkout at once, `RUN kaizen apply --all-approved --rules <path>`
+   (try `--dry-run` first). It applies them oldest first, stops at the first refusal and prints a commit message
+   naming the ids it applied. Show it to the person; never commit or push for them unless they ask.
 
 ### report
 

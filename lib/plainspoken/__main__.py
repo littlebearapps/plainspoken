@@ -11,10 +11,11 @@ JSON object, a missing `deliver --reviewer`, a reader-value contract that can't 
 kind or pattern), or no current / an INCOMPLETE report (justify), an unreadable anchor (anchors, unless
 --skip-missing) or too little sample text (voice-stats). `kaizen report` exits 0 even on an empty or damaged
 ledger (2 only for a bad --since/--until or [kaizen] config). `kaizen calibrate` and `kaizen review` exit 0 with or
-without proposals (2 for a bad --now or config); `kaizen apply` exits 1 when it refuses (no approval, rejected, a
+without proposals (2 for a bad --now or config); `kaizen apply` (one id, or --all-approved, which stops at its
+first refusal) exits 1 when it refuses (no approval, rejected, a
 review proposal, a stale proposal (marked superseded outside a dry run), a changed, already-applied or superseded
 proposal, an installed plugin's ruleset, a target the proposal doesn't allow) or when the edit is in but the changelog
-couldn't be written, and 2 for an unknown proposal id.
+couldn't be written, and 2 for an unknown proposal id, or for both or neither of an id and --all-approved.
 `kaizen calibrate` still exits 0 when a proposal couldn't be emitted through the adapter, or was sent but its file
 couldn't record the ref (it says so; the next calibrate sends unsent proposals again). `kaizen decisions` never sends:
 it exits 0 when proposals are waiting to be sent (it says how many), 1 when any adapter fails (a missing setting or
@@ -1196,8 +1197,12 @@ def _kaizen_parser(sub) -> None:
                                     "(never sends anything)")
     rv = ks.add_parser("review", help="the proposals waiting for a decision or for `kaizen apply`")
     rv.add_argument("--json", action="store_true")
-    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the profile it was made for")
-    ap_.add_argument("id")
+    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the profile it was made "
+                                      "for, or every approved one with --all-approved")
+    ap_.add_argument("id", nargs="?")
+    ap_.add_argument("--all-approved", action="store_true",
+                     help="apply every approved proposal to the ruleset, oldest first, stop at the first refusal "
+                          "and print a commit message naming the ids")
     ap_.add_argument("--rules", type=Path, help="the rules.toml to edit (default: the plugin's own, if it's a "
                                                 "git checkout)")
     ap_.add_argument("--target", choices=proposals.TARGETS, default="ruleset")
@@ -1393,10 +1398,64 @@ def _awaiting_note(pid: str, events: list[dict], use: tuple) -> str:
             f"(the ruleset in use is {use[0] or 'unknown'})")
 
 
+def _kaizen_apply_all(args: argparse.Namespace, root: Path, settings: dict) -> int:
+    """`kaizen apply --all-approved`: 0 when every approved proposal applied (or none was waiting), 1 at the first
+    refusal (the ones before it stay applied, and the commit message names them)."""
+    try:
+        out = proposals.apply_all(root, settings, args.rules, args.dry_run)
+    except (ValueError, OSError) as e:
+        print(f"plainspoken: kaizen apply: refused: {_first_line(e)}", file=sys.stderr)
+        return 1
+    for pid, why in out["skipped"]:
+        print(f"kaizen apply: {pid} skipped: {why}")
+    for r in out["applied"]:
+        print(f"kaizen apply: {r['id']}: rule {r.get('rule')}, {r.get('action')}")
+        print(r["diff"].rstrip("\n"))
+        for note in r.get("rubric_notes") or ():
+            print(f"kaizen apply: {note}")
+        if r.get("rebased"):
+            print(f"kaizen apply: {r['id']}: rebased onto the current ruleset (it changed since calibrate; "
+                  "every edit still applies)")
+        if not args.dry_run and not r["logged"]:
+            print(f"plainspoken: kaizen apply: {r['id']}: the apply event couldn't be written to the ledger",
+                  file=sys.stderr)
+    refused = out["refused"]
+    if refused:
+        print(f"plainspoken: kaizen apply: {refused['id']} refused: {refused['error']}", file=sys.stderr)
+        if out["applied"] and not args.dry_run:
+            print(f"plainspoken: kaizen apply: stopped there; the {len(out['applied'])} before it stay applied",
+                  file=sys.stderr)
+    if not out["applied"]:
+        if not refused:
+            print("kaizen apply: no approved proposals to apply")
+        return 1 if refused else 0
+    n = len(out["applied"])
+    if args.dry_run:
+        print(f"kaizen apply: dry run, nothing written: {n} proposal{'s' if n != 1 else ''} would apply, each diff "
+              "against the current file (a later one may turn stale once an earlier one is in)")
+        return 1 if refused else 0
+    last = out["applied"][-1]
+    print(f"kaizen apply: {n} proposal{'s' if n != 1 else ''} applied to {last['path']} (ruleset {out['before']} "
+          f"to {last['version']}); changelog {last['changelog']}")
+    print("kaizen apply: commit message:")
+    print()
+    print(proposals.commit_message(out["applied"], out["before"]), end="")
+    return 1 if refused else 0
+
+
 def _kaizen_apply(args: argparse.Namespace, root: Path) -> int:
+    if args.all_approved == (args.id is not None):
+        print("plainspoken: kaizen apply: give one proposal id, or --all-approved", file=sys.stderr)
+        return 2
+    if args.all_approved and args.target != "ruleset":
+        print("plainspoken: kaizen apply: --all-approved applies to a ruleset only; apply a profile proposal by its "
+              "id", file=sys.stderr)
+        return 2
     settings = _kaizen_settings("apply", root)
     if settings is None:
         return 2
+    if args.all_approved:
+        return _kaizen_apply_all(args, root, settings)
     try:
         out = proposals.apply(args.id, root, settings, args.rules, args.target, args.dry_run)
     except proposals.UnknownProposal as e:

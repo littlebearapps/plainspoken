@@ -178,6 +178,13 @@ entry), `kaizen review` shows the change as awaiting release, with both versions
 and calibrate leaves that rule alone. Once a release carrying the edit is installed, it's done: calibrate treats the
 earlier evidence as spent. Writing straight to the rules in use, or to a profile, is released at once.
 
+**Every approved proposal at once.** `kaizen apply --all-approved --rules <checkout>/data/rules.toml` applies each
+approved proposal in the order calibrate or mining made them, oldest first, each with its own version bump and
+changelog entry. It stops at the first refusal; the ones before it stay applied. A review proposal is skipped with a
+note, since it carries no edit. At the end it prints a commit message in the repository's convention: a `ruleset:`
+commit naming every id it applied, with one line each for the rule, the change and who approved it. Run the tests in
+the checkout, then commit with that message. `--dry-run` shows each diff against the current file and writes nothing.
+
 ## 7. Retiring a rule
 
 A dormant rule is retired in steps, one per calibrate cycle (28 days) after the last step was applied:
