@@ -14,12 +14,14 @@ from pathlib import Path
 __all__ = ["AGENTS", "agent_prompt", "agent_reply", "agents_dir"]
 
 # The opener each skill sends before the input (check step 3, claims step 6, reader-value step 4).
-# cold-reader's input is already its whole prompt (two lines: Reader, File), so it has no opener.
+# cold-reader's input is already its whole prompt (two lines: Reader, File), so it has no opener; mining-drafter's
+# input is the brief, sent verbatim (kaizen's mining.md), so it has none either.
 AGENTS = {
     "tells-judge": "Judge this. Your input:",
     "claims-checker": "Check this. Your input:",
     "delivery-checker": "Review this. Your input:",
     "cold-reader": "",
+    "mining-drafter": "",
 }
 
 _FRONTMATTER = re.compile(r"\A---\r?\n.*?\r?\n---\r?\n", re.S)

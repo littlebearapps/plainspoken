@@ -205,3 +205,45 @@ class DeliveryChecker(unittest.TestCase):  # the producer never awards its own p
     def test_rubric_lines_keep_the_file_width(self):
         for n, line in enumerate(self.rubric.splitlines(), start=1):
             self.assertLessEqual(len(line), 118, f"line {n}: {line[:60]}…")
+
+
+MINING_DRAFTER = REPO / "agents" / "mining-drafter.md"
+
+
+class MiningDrafter(unittest.TestCase):  # kaizen mine's drafts come from the brief alone (G2)
+    def setUp(self):
+        self.text = MINING_DRAFTER.read_text(encoding="utf-8")
+        self.fm = parse_frontmatter(self.text)
+        self.body = self.text.split("\n---\n", 1)[1]
+
+    def test_isolation(self):
+        self.assertEqual(self.fm["name"], "mining-drafter")
+        self.assertEqual(self.fm.get("tools"), "[]")  # no tools at all: Claude Code reads [] as an empty allowlist
+        self.assertNotIn("disallowedTools", self.fm)
+        self.assertEqual(self.fm.get("omitClaudeMd"), "true")
+        self.assertNotIn("memory", self.fm)
+        self.assertNotIn("skills", self.fm)
+        self.assertNotIn("model", self.fm)  # the Agent call's `model` picks the model being mined
+
+    def test_body_gives_no_writing_advice(self):  # anything here would shape the drafts being mined
+        self.assertLess(len(self.body.split()), 40)
+        lower = self.body.lower()
+        for word in ("plainspoken", "tell", "voice", "style", "plain", "human", "avoid", "never", "rule"):
+            self.assertNotRegex(lower, rf"\b{word}", word)
+
+    def test_description_says_kaizen_only(self):
+        self.assertIn("kaizen mine only", self.fm["description"].lower())
+
+    def test_named_by_the_mining_recipe(self):
+        refs = REPO / "skills" / "kaizen" / "references"
+        cc = " ".join((refs / "claude-code.md").read_text(encoding="utf-8").split())
+        self.assertIn("`subagent_type` `plainspoken:mining-drafter`", cc)
+        self.assertNotIn("`subagent_type` `general-purpose`", cc)
+        self.assertIn("2.1.308", cc)  # older CLIs ignore omitClaudeMd (docs/claude-code-facts.md section 5)
+        self.assertIn("`mining-drafter`", (refs / "mining.md").read_text(encoding="utf-8"))
+
+    def test_docs_say_where_the_human_corpus_goes(self):
+        for path in (REPO / "guides" / "kaizen.md", REPO / "skills" / "kaizen" / "references" / "mining.md"):
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.name):
+                self.assertIn('human_corpus = ["writing/human/*.md"]', text)

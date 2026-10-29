@@ -195,8 +195,20 @@ becomes a review proposal instead. Those need a pull request by hand.
 subagents write drafts from the fixed briefs in `evals/briefs/` (the brief and nothing else, each brief twice, since a
 model needs at least 10 drafts to be mined), saves them by month and model, then compares them with a human corpus
 you supply (`--corpus`, or `[kaizen] human_corpus`). For now the drafts come from Claude models only; other vendors'
-models come later. At most 5 candidates are kept (fewer under `--max` or the monthly cap in section 4), each tagged
-with the
+models come later.
+
+In Claude Code the drafts come from the `mining-drafter` agent. It has no tools and skips your `CLAUDE.md` files
+(Claude Code 2.1.308 or later), so writing rules you keep there don't tidy the drafts and hide the tells mining is
+looking for.
+
+The human corpus is your own writing, done without a model's help: a model draft you edited doesn't count. Keep
+it in a folder of your project, for example `writing/human/`, and point the config at it once:
+
+    [kaizen]
+    human_corpus = ["writing/human/*.md"]
+
+The globs are relative to the project root. At most 5 candidates are kept (fewer under `--max` or the monthly cap in
+section 4), each tagged with the
 model it came from. Mined proposals stay local: they're never sent to github or trello, and you approve them in
 their `.md` file. The recipe is in the skill's `references/mining.md`.
 

@@ -95,6 +95,9 @@ Four agents do the reviewing, each in a fresh context, read-only:
 - `delivery-checker`: reads a draft against its reader-value contract. Where no subagent can run, the writer's own
   reading is kept as a self-check, which can keep a FAIL but never makes a PASS.
 
+A fifth agent, `mining-drafter`, reviews nothing: it writes the plain model drafts that `kaizen mine` compares with
+your own writing.
+
 Hooks run alongside: lint after each edit of a draft file, a claims integrity check that flags unsourced numbers,
 a publish gate on `git push` (off until you set it), a check at the end of a turn that sends back a write report
 asking you to check a line its `needs the owner` list doesn't hold, and an optional writing nudge and drafting rule
