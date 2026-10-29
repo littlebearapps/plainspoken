@@ -47,13 +47,20 @@ request against `main`. The default branch, `stable`, holds the latest release o
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/), because release-please reads
 them to cut releases and write the changelog. Before 1.0, a `feat:` commit makes a minor release and a `fix:`
-commit makes a patch release. `feat`, `fix`, `perf`, `revert` and `docs` commits get a line in [CHANGELOG.md](CHANGELOG.md);
-`chore`, `ci`, `test`, `build`, `style` and `refactor` don't. You don't edit the changelog by hand: write the
-commit subject as the line a user should read.
+commit makes a patch release. `feat`, `fix`, `ruleset`, `perf`, `revert` and `docs` commits get a line in
+[CHANGELOG.md](CHANGELOG.md); `chore`, `ci`, `test`, `build`, `style` and `refactor` don't. You don't edit the
+changelog by hand: write the commit subject as the line a user should read.
 
     fix(check): say which rule a held-back finding belongs to
     feat(claims): accept a saved web page as a source
     docs: explain the report-only route
+    ruleset: loosen rule 7d in FAQ sections (KZ-20261101-1a2b3c)
+
+A ruleset change (an edit to `data/rules.toml` that `kaizen apply` makes, with its entry in
+`data/RULESET-CHANGELOG.md`) gets its own commit type, `ruleset`, and its own Ruleset section in the release
+notes. Release-please groups the notes by type and never by scope, so `fix(ruleset):` would land under Bug Fixes. A
+`ruleset` commit on its own cuts a patch release, the same as `fix`. Name the proposal ids in the subject. Keep the
+ruleset change in a commit of its own, so the code and the rules each get their own line in the notes.
 
 Keep each pull request to one change, with tests for new behaviour. Link the issue it fixes (`Fixes #N`).
 

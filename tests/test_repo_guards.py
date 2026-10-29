@@ -1,5 +1,6 @@
 """The GitHub workflows' shape: paid evals run only by hand and inside a budget; CI runs the free ones and nothing
 that calls a model. Stdlib only, so the YAML is read as text: these tests pin lines, not a parsed tree."""
+import json
 import re
 import unittest
 from pathlib import Path
@@ -152,6 +153,28 @@ class CiWorkflow(unittest.TestCase):
             if re.match(r"^\s*-?\s*uses:", line):
                 with self.subTest(line=line.strip()):
                     self.assertRegex(line, SHA_PIN)
+
+
+class ReleaseNotes(unittest.TestCase):
+    """A ruleset change has its own commit type, so the release notes get a Ruleset section (release-please groups
+    by type, never by scope). Any type in a section that isn't hidden makes a release; one that isn't `feat` (or
+    breaking) bumps the patch version."""
+
+    def test_ruleset_type_has_a_visible_section(self):
+        config = json.loads((ROOT / "release-please-config.json").read_text(encoding="utf-8"))
+        sections = config["packages"]["."]["changelog-sections"]
+        ruleset = [s for s in sections if s["type"] == "ruleset"]
+        self.assertEqual(len(ruleset), 1)
+        self.assertEqual(ruleset[0]["section"], "Ruleset")
+        self.assertFalse(ruleset[0].get("hidden", False), "a hidden type never cuts a release")
+        types = [s["type"] for s in sections]
+        self.assertEqual(len(types), len(set(types)))
+        self.assertLess(types.index("fix"), types.index("ruleset"))
+
+    def test_contributing_names_the_convention(self):
+        text = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^    ruleset: ")
+        self.assertIn("Ruleset section", text)
 
 
 if __name__ == "__main__":
