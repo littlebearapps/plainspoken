@@ -234,6 +234,18 @@ def status(pid: str, events: list[dict], use: tuple[str | None, str] | None = No
     return "pending" if d is None else d["outcome"]
 
 
+OPEN = ("pending", "approved", AWAITING)
+
+
+def open_keys(settings: Mapping, events: list[dict], use=None) -> set[str]:
+    """Keys of stored proposals still open: no decision yet, approved and not applied, or applied to a checkout and
+    awaiting release. Calibrate skips a candidate whose key is open."""
+    if not settings.get("proposals_dir"):
+        return set()
+    use = in_use() if use is None else use
+    return {p.get("key") for p in stored(settings) if status(p["id"], events, use) in OPEN}
+
+
 def pending(settings: Mapping, events: list[dict] | None = None) -> list[dict]:
     """Stored proposals with no decision yet."""
     events = ledger.read(settings)[0] if events is None else events

@@ -665,8 +665,8 @@ class AwaitingRelease(Base):
         events = ledger.read(self.settings)[0]
         self.assertEqual(proposals.status(p["id"], events), proposals.AWAITING)
         self.assertEqual(proposals.status(p["id"], events, proposals.in_use(self.rules)), "applied")
-        self.assertIn(p["key"], calibrate._open_keys(self.settings, events))
-        self.assertNotIn(p["key"], calibrate._open_keys(self.settings, events, proposals.in_use(self.rules)))
+        self.assertIn(p["key"], proposals.open_keys(self.settings, events))
+        self.assertNotIn(p["key"], proposals.open_keys(self.settings, events, proposals.in_use(self.rules)))
         rows = json.loads(cli("kaizen", "review", "--json", cwd=self.root).stdout)
         self.assertEqual([(x["id"], x["state"]) for x in rows], [(p["id"], "awaiting_release")])
         r = self.apply_cli(p["id"])  # still applied: never twice
@@ -740,9 +740,9 @@ class Superseded(Base):
 
     def test_superseded_frees_its_key_and_stays_closed(self):
         p = self.stale_one()
-        self.assertIn(p["key"], calibrate._open_keys(self.settings, ledger.read(self.settings)[0]))
+        self.assertIn(p["key"], proposals.open_keys(self.settings, ledger.read(self.settings)[0]))
         self.assertEqual(self.apply_cli(p["id"]).returncode, 1)
-        self.assertNotIn(p["key"], calibrate._open_keys(self.settings, ledger.read(self.settings)[0]))
+        self.assertNotIn(p["key"], proposals.open_keys(self.settings, ledger.read(self.settings)[0]))
         self.approve(p["id"], when=NOW + timedelta(days=400))  # a later approval doesn't reopen it
         events = ledger.read(self.settings)[0]
         self.assertEqual(proposals.status(p["id"], events), "superseded")
@@ -818,7 +818,7 @@ class V040Store(TmpCase):
         self.assertEqual(states, {self.A: "pending", self.B: "approved", self.C: "rejected", self.D: "applied"})
         self.assertTrue(all(proposals._intact(p) for p in stored))
         self.assertEqual([p["id"] for p in proposals.pending(self.settings, events)], [self.A])
-        self.assertEqual(calibrate._open_keys(self.settings, events),
+        self.assertEqual(proposals.open_keys(self.settings, events),
                          {p["key"] for p in stored if p["id"] in (self.A, self.B)})
         r = cli("kaizen", "review", cwd=self.root)
         self.assertEqual(r.returncode, 0, r.stderr)
