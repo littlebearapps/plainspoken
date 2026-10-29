@@ -1324,21 +1324,25 @@ def _kaizen_review(args: argparse.Namespace, root: Path) -> int:
     events = ledger.read(settings)[0]
     # A superseded proposal is listed for one calibrate cycle after apply refused it, so the person sees why it went.
     recent = datetime.now(timezone.utc) - timedelta(days=settings["triggers"]["cycle_days"])
+    use = proposals.in_use()
     rows = []
     for p in proposals.stored(settings):
-        state = proposals.status(p["id"], events)
+        state = proposals.status(p["id"], events, use)
         if state == proposals.SUPERSEDED:
             try:
                 if datetime.fromisoformat(proposals.superseded(p["id"], events)["ts"]) < recent:
                     continue
             except (TypeError, ValueError, KeyError):
                 continue
-        if state in ("pending", "approved", proposals.SUPERSEDED):
+        if state in ("pending", "approved", proposals.SUPERSEDED, proposals.AWAITING):
             d = proposals.decision(p["id"], events)
             by = (d or {}).get("facets", {}).get("by", "unknown")
-            note = {"pending": "awaiting decision", "approved": f"approved by {by}, not applied",
-                    proposals.SUPERSEDED: f"superseded (approved by {by}, then stale at apply; closed, nothing "
-                                          "to do)"}[state]
+            if state == proposals.AWAITING:
+                note = _awaiting_note(p["id"], events, use)
+            else:
+                note = {"pending": "awaiting decision", "approved": f"approved by {by}, not applied",
+                        proposals.SUPERSEDED: f"superseded (approved by {by}, then stale at apply; closed, "
+                                              "nothing to do)"}[state]
             rows.append({**p, "status": note, "state": state})
     if args.json:
         print(json.dumps(rows, indent=2, ensure_ascii=False))
@@ -1349,6 +1353,14 @@ def _kaizen_review(args: argparse.Namespace, root: Path) -> int:
         print(f"{p['id']} · rule {p['rule']} · {p['trigger']} · {p['action']} · {p['status']}")
         print(f"  {p['summary']}")
     return 0
+
+
+def _awaiting_note(pid: str, events: list[dict], use: tuple) -> str:
+    """The review line for an apply awaiting release: the version it wrote and the version in use."""
+    e = max((e for e in events if e.get("event") == "apply" and e.get("outcome") == "applied"
+             and e.get("proposal") == pid), key=lambda e: str(e.get("ts", "")))
+    return (f"applied as ruleset {e.get('ruleset_version')} on {str(e.get('ts', ''))[:10]}, awaiting release "
+            f"(the ruleset in use is {use[0] or 'unknown'})")
 
 
 def _kaizen_apply(args: argparse.Namespace, root: Path) -> int:
@@ -1383,6 +1395,10 @@ def _kaizen_apply(args: argparse.Namespace, root: Path) -> int:
         return 1
     print(f"kaizen apply: {out['id']} applied to {out['path']} (ruleset {out['version']}); changelog "
           f"{out['changelog']}")
+    if out["target"] == "ruleset" and not proposals.released(
+            {"ruleset_version": out["version"], "proposal": out["id"], "facets": {"kind": "ruleset"}}):
+        print(f"kaizen apply: {out['id']} is awaiting release: the ruleset in use is older, so `kaizen review` lists "
+              "it until a release with this change is installed")
     return 0
 
 

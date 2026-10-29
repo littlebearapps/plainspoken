@@ -617,8 +617,82 @@ class Review(Base):
         self.assertIn("approved by Robin, not applied", r.stdout)
         rows = json.loads(cli("kaizen", "review", "--json", cwd=self.root).stdout)
         self.assertEqual([(x["id"], x["state"]) for x in rows], [(p["id"], "approved")])
-        self.apply_cli(p["id"])
-        self.assertIn("no proposals waiting", cli("kaizen", "review", cwd=self.root).stdout)
+        self.apply_cli(p["id"])  # to a checkout copy, not the ruleset in use: listed until it's released
+        self.assertIn(f"applied as ruleset {NEXT} on ", cli("kaizen", "review", cwd=self.root).stdout)
+        in_use = {"PLAINSPOKEN_RULES": str(self.rules)}
+        self.assertIn("no proposals waiting", cli("kaizen", "review", cwd=self.root, env=in_use).stdout)
+
+
+def apply_event(pid: str, version: str, rule: str = "2b", kind: str | None = "ruleset", when=NOW) -> dict:
+    facets = {"by": "Robin", **({"kind": kind} if kind else {})}
+    return ledger.make_event(event="apply", actor="engine", outcome="applied", ruleset_version=version,
+                             profile="default", rule=rule, proposal=pid, facets=facets,
+                             ts=when.replace(microsecond=0).isoformat())
+
+
+class AwaitingRelease(Base):
+    """An apply to a checkout records the version it wrote; until the ruleset in use reaches it (or its changelog
+    has the entry), the proposal is awaiting release: listed by review, its key open, its evidence not spent."""
+    PID = "KZ-20261014-abcdef"
+
+    def test_released_by_version_or_changelog_entry(self):
+        e = apply_event(self.PID, NEXT)
+        self.assertFalse(proposals.released(e, (CFG.version, "")))
+        self.assertTrue(proposals.released(e, (NEXT, "")))
+        self.assertTrue(proposals.released(e, (AFTER_NEXT, "")))
+        entry = f"# Ruleset changelog\n\n## {NEXT} (2026-10-14)\n\n- {self.PID}: rule 2b, loosen\n"
+        self.assertTrue(proposals.released(e, (CFG.version, entry)))  # merged, then released under another number
+        self.assertFalse(proposals.released(e, (CFG.version, f"mentions {self.PID} in passing\n")))
+        self.assertTrue(proposals.released(apply_event(self.PID, NEXT, kind="profile"), (CFG.version, "")))
+        # an apply logged before the target was recorded is a ruleset apply; a version that isn't semver is released
+        self.assertFalse(proposals.released(apply_event(self.PID, NEXT, kind=None), (CFG.version, "")))
+        self.assertTrue(proposals.released(apply_event(self.PID, "unknown"), (CFG.version, "")))
+        self.assertTrue(proposals.released(e, (None, "")))
+
+    def test_in_use_reads_the_ruleset_and_its_changelog(self):
+        (self.rules.parent / proposals.CHANGELOG).write_text("# Ruleset changelog\n", encoding="utf-8")
+        self.assertEqual(proposals.in_use(self.rules), (CFG.version, "# Ruleset changelog\n"))
+        with mock.patch.dict("os.environ", {"PLAINSPOKEN_RULES": str(self.rules)}):
+            self.assertEqual(proposals.in_use()[0], CFG.version)
+        self.assertEqual(proposals.in_use(self.tmp / "missing.toml"), (None, ""))
+
+    def test_status_and_review(self):
+        p = self.proposal()
+        self.approve(p["id"])
+        r = self.apply_cli(p["id"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(f"{p['id']} is awaiting release", r.stdout)
+        events = ledger.read(self.settings)[0]
+        self.assertEqual(proposals.status(p["id"], events), proposals.AWAITING)
+        self.assertEqual(proposals.status(p["id"], events, proposals.in_use(self.rules)), "applied")
+        self.assertIn(p["key"], calibrate._open_keys(self.settings, events))
+        self.assertNotIn(p["key"], calibrate._open_keys(self.settings, events, proposals.in_use(self.rules)))
+        rows = json.loads(cli("kaizen", "review", "--json", cwd=self.root).stdout)
+        self.assertEqual([(x["id"], x["state"]) for x in rows], [(p["id"], "awaiting_release")])
+        r = self.apply_cli(p["id"])  # still applied: never twice
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("already applied", r.stderr)
+
+    def test_apply_to_the_ruleset_in_use_is_released_at_once(self):
+        p = self.proposal()
+        self.approve(p["id"])
+        r = cli("kaizen", "apply", p["id"], cwd=self.root, env={"PLAINSPOKEN_RULES": str(self.rules)})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("awaiting release", r.stdout)
+
+    def test_evidence_isnt_spent_and_the_rule_waits(self):
+        events = fp_events()
+        cands = self.cands(events + [apply_event(self.PID, NEXT)])
+        self.assertNotIn("2b", [c["rule"] for c in cands])  # awaiting release: no new proposal for the rule
+        evs, _ = calibrate._unspent(ledger.distinct(events + [apply_event(self.PID, NEXT)]), {}, CFG, NOW,
+                                    (CFG.version, ""))
+        self.assertEqual(len([e for e in evs if e.get("rule") == "2b" and e["event"] != "apply"]), len(events))
+        # released: the evidence before the apply is spent, so there's nothing to propose for 2b either
+        released = apply_event(self.PID, CFG.version)
+        self.assertNotIn("2b", [c["rule"] for c in self.cands(events + [released])])
+        evs, _ = calibrate._unspent(ledger.distinct(events + [released]), {}, CFG, NOW, (CFG.version, ""))
+        self.assertEqual([e for e in evs if e.get("rule") == "2b" and e["event"] != "apply"], [])
+        self.assertIn("2b", [c["rule"] for c in self.cands(events)])
 
 
 class RemoveRubric(Base):
