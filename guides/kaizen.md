@@ -104,6 +104,18 @@ after that, because calibrate also re-sends any proposal it couldn't send before
 
 `kaizen review` lists what's waiting.
 
+**A monthly cap.** Calibrate and mining each have their own per-run limit (3 and 5), so one month can bring 8
+proposals. To share one limit between them, set `[kaizen] monthly_cap` in `.plainspoken/config.toml`:
+
+    [kaizen]
+    monthly_cap = 5   # calibrate and mine together store at most 5 proposals a calendar month
+
+Each run counts the proposals either command stored this calendar month (UTC) and stores no more than what's left,
+so whichever runs first can use the whole month's room. When the cap is set, both commands print a line saying how
+much of it is used. `--max N` lowers one run's limit (`kaizen calibrate --max 1`); it never raises it above the
+command's own limit or the room the cap leaves. Proposals that aren't stored this month aren't lost: the evidence
+stays in the ledger, and the next run with room proposes them.
+
 ## 5. Decisions
 
 You decide a proposal by posting your decision as its own comment on the issue or card, or as its own line below
@@ -177,7 +189,8 @@ becomes a review proposal instead. Those need a pull request by hand.
 subagents write drafts from the fixed briefs in `evals/briefs/` (the brief and nothing else, each brief twice, since a
 model needs at least 10 drafts to be mined), saves them by month and model, then compares them with a human corpus
 you supply (`--corpus`, or `[kaizen] human_corpus`). For now the drafts come from Claude models only; other vendors'
-models come later. At most 5 candidates are kept, each tagged with the
+models come later. At most 5 candidates are kept (fewer under `--max` or the monthly cap in section 4), each tagged
+with the
 model it came from. Mined proposals stay local: they're never sent to github or trello, and you approve them in
 their `.md` file. The recipe is in the skill's `references/mining.md`.
 

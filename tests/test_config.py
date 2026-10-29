@@ -270,7 +270,7 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
                              "capture_sources": ["check", "merge", "judge", "lint-watch", "tool-call", "chat-reply"],
                              "ledger_dir": self.cwd / ".plainspoken" / "ledger",
                              "proposals_dir": self.cwd / ".plainspoken" / "kaizen",
-                             "corpus": [], "human_corpus": [], "approvers": [],
+                             "corpus": [], "human_corpus": [], "approvers": [], "monthly_cap": None,
                              "github": {"repo": None, "labels": ["kaizen"]},
                              "trello": {"list_id": None, "label_ids": [], "key_env": "TRELLO_API_KEY",
                                         "token_env": "TRELLO_TOKEN"}})
@@ -280,7 +280,7 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
     def test_section_loads(self):
         self.project('[kaizen]\ncapture = false\nexcerpts = true\nadapter = "github"\nledger_dir = "var/ledger"\n'
                      'proposals_dir = "var/kaizen"\ncorpus = ["posts/**/*.md"]\nhuman_corpus = ["human/*.md"]\n'
-                     'approvers = ["owner"]\n'
+                     'approvers = ["owner"]\nmonthly_cap = 5\n'
                      '[kaizen.github]\nrepo = "owner/name"\nlabels = ["kaizen", "rules"]\n'
                      '[kaizen.trello]\nlist_id = "abc123"\nlabel_ids = ["l1"]\nkey_env = "MY_KEY"\n'
                      'token_env = "MY_TOKEN"\n')
@@ -290,6 +290,7 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
         self.assertEqual((s["ledger_dir"], s["proposals_dir"]), (self.cwd / "var/ledger", self.cwd / "var/kaizen"))
         self.assertEqual((s["corpus"], s["human_corpus"], s["approvers"]),
                          (["posts/**/*.md"], ["human/*.md"], ["owner"]))
+        self.assertEqual(s["monthly_cap"], 5)
         self.assertEqual(s["github"], {"repo": "owner/name", "labels": ["kaizen", "rules"]})
         self.assertEqual(s["trello"], {"list_id": "abc123", "label_ids": ["l1"], "key_env": "MY_KEY",
                                        "token_env": "MY_TOKEN"})
@@ -352,6 +353,9 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
                           ('[kaizen]\ncorpus = "posts"\n', r"\[kaizen\] corpus must be a list"),
                           ('[kaizen]\nhuman_corpus = [""]\n', r"\[kaizen\] human_corpus must be a list"),
                           ('[kaizen]\napprovers = [1]\n', r"\[kaizen\] approvers must be a list"),
+                          ('[kaizen]\nmonthly_cap = -1\n', r"\[kaizen\] monthly_cap must be a whole number"),
+                          ('[kaizen]\nmonthly_cap = 2.5\n', r"\[kaizen\] monthly_cap must be a whole number"),
+                          ('[kaizen]\nmonthly_cap = true\n', r"\[kaizen\] monthly_cap must be a whole number"),
                           ('[kaizen.github]\nrepo = "x"\n', r"\[kaizen.github\] repo must be owner/name"),
                           ('[kaizen.github]\nlabels = "kaizen"\n', r"\[kaizen.github\] labels must be a list"),
                           ('[kaizen.github]\nissue = 1\n', r"unknown key \[kaizen.github\] issue"),

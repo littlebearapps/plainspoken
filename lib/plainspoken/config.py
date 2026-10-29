@@ -39,7 +39,7 @@ _RULE_KEYS = {"enabled"}
 _LOCALE_KEYS = {"variant"}
 _TOOL_CALL_KEYS = set(toolcall.KEYS)
 _KAIZEN_KEYS = {"capture", "capture_sources", "excerpts", "adapter", "ledger_dir", "proposals_dir", "corpus",
-                "human_corpus", "approvers", "github", "trello"}
+                "human_corpus", "approvers", "monthly_cap", "github", "trello"}
 _KAIZEN_GITHUB_KEYS = {"repo", "labels"}
 _KAIZEN_TRELLO_KEYS = {"list_id", "label_ids", "key_env", "token_env"}
 _SECTIONS = {"engine": _ENGINE_KEYS, "gate": _GATE_KEYS, "brief": _BRIEF_KEYS, "claims": _CLAIMS_KEYS,
@@ -64,7 +64,7 @@ CLAIMS_DEFAULTS = {"ledger_dir": ".plainspoken/claims", "sources_dir": ".plainsp
                    "regulated_matrix": None, "platforms_extra": []}
 ADAPTERS = ("file", "github", "trello")
 KAIZEN_DEFAULTS = {"capture": True, "ledger_dir": ".plainspoken/ledger", "proposals_dir": ".plainspoken/kaizen",
-                   "corpus": [], "human_corpus": [], "approvers": []}
+                   "corpus": [], "human_corpus": [], "approvers": [], "monthly_cap": None}
 KAIZEN_GITHUB_DEFAULTS = {"repo": None, "labels": ["kaizen"]}
 KAIZEN_TRELLO_DEFAULTS = {"list_id": None, "label_ids": [], "key_env": "TRELLO_API_KEY", "token_env": "TRELLO_TOKEN"}
 _REPO = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
@@ -285,6 +285,10 @@ def _check_kaizen_section(path: Path, body: dict) -> None:
     for key in ("corpus", "human_corpus", "approvers"):
         if key in body and not _string_list(body[key]):
             raise ConfigError(f"{path}: [kaizen] {key} must be a list of non-empty strings")
+    if "monthly_cap" in body:
+        cap = body["monthly_cap"]
+        if not isinstance(cap, int) or isinstance(cap, bool) or cap < 0:
+            raise ConfigError(f"{path}: [kaizen] monthly_cap must be a whole number, 0 or more, got {cap!r}")
     for name, allowed in (("github", _KAIZEN_GITHUB_KEYS), ("trello", _KAIZEN_TRELLO_KEYS)):
         if name not in body:
             continue
@@ -452,6 +456,9 @@ def chat_reply_settings(root: Path, env: Mapping[str, str] | None = None) -> dic
 def kaizen_settings(root: Path, env: Mapping[str, str]) -> dict:
     """`[kaizen]` with defaults filled in: the settings dict `ledger.append`, `ledger.read` and `ledger.friction` take.
 
+    `monthly_cap` is the most proposals `kaizen calibrate` and `kaizen mine` may store between them in one calendar
+    month (UTC), or None for no shared cap (each keeps its own per-run limit).
+
     `capture_sources` lists the sources that may record (CAPTURE_SOURCES, all six by default); `capture` false still
     turns every one off. `ledger_dir` and `proposals_dir` come back absolute, under `root`. `excerpts` comes from the
     project config, else CLAUDE_PLUGIN_OPTION_LEDGER_EXCERPTS (`true` or `1`), else false. `adapter` comes from the
@@ -480,6 +487,7 @@ def kaizen_settings(root: Path, env: Mapping[str, str]) -> dict:
     return {"capture": out["capture"], "capture_sources": sources, "excerpts": excerpts, "adapter": adapter,
             "ledger_dir": root / out["ledger_dir"], "proposals_dir": root / out["proposals_dir"],
             "corpus": list(out["corpus"]), "human_corpus": list(out["human_corpus"]), "approvers": approvers,
+            "monthly_cap": out["monthly_cap"],
             "github": {**KAIZEN_GITHUB_DEFAULTS, **body.get("github", {})} | {
                 "labels": list(body.get("github", {}).get("labels", KAIZEN_GITHUB_DEFAULTS["labels"]))},
             "trello": {**KAIZEN_TRELLO_DEFAULTS, **body.get("trello", {})} | {

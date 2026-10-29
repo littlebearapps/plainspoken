@@ -185,6 +185,46 @@ def pending(settings: Mapping, events: list[dict] | None = None) -> list[dict]:
     return [p for p in stored(settings) if decision(p["id"], events) is None]
 
 
+# --- the monthly cap -----------------------------------------------------------------------------------------------
+
+_MADE = ("calibrate", "mine")  # the events that log a stored proposal (outcome `proposed`)
+
+
+def _month(when: datetime) -> str:
+    return when.astimezone(timezone.utc).strftime("%Y-%m")
+
+
+def made_in_month(settings: Mapping, events: Iterable[dict], now: datetime) -> int:
+    """How many proposals calibrate and mine stored in `now`'s calendar month (UTC), between them: the distinct ids
+    of the month's `proposed` events, together with the stored proposals made that month (a proposal whose ledger
+    line couldn't be written still counts)."""
+    month = _month(now)
+    ids = {e.get("proposal") for e in events
+           if e.get("event") in _MADE and e.get("outcome") == "proposed" and e.get("proposal")
+           and str(e.get("ts", ""))[:7] == month}
+    if settings.get("proposals_dir"):
+        for p in stored(settings):
+            try:
+                if _month(datetime.fromisoformat(str(p.get("created")))) == month:
+                    ids.add(p["id"])
+            except ValueError:
+                continue
+    return len(ids)
+
+
+def run_limit(settings: Mapping, events: Iterable[dict], now: datetime, run_max: int,
+              asked: int | None = None) -> dict:
+    """How many new proposals this calibrate or mine run may store: `{"limit", "cap", "used", "month"}`. The limit is
+    the command's own per-run maximum, lowered by `asked` (its `--max`), and by what's left of `[kaizen]
+    monthly_cap` after the proposals already stored this month. `cap` and `used` are None when no cap is set."""
+    limit = run_max if asked is None else max(0, min(run_max, asked))
+    cap, used = settings.get("monthly_cap"), None
+    if cap is not None:
+        used = made_in_month(settings, events, now)
+        limit = min(limit, max(0, cap - used))
+    return {"limit": limit, "cap": cap, "used": used, "month": _month(now)}
+
+
 # --- apply ---------------------------------------------------------------------------------------------------------
 
 def default_rules() -> Path:

@@ -12,7 +12,8 @@ a model itself. It finds:
   ratio and share tests. A shadow rule that passes is a promote candidate (one per rule, naming every model that
   passed it); an active rule that passes is evidence only.
 
-At most `max_candidates` candidates in total, ranked by ratio × share, are materialised through
+At most `max_candidates` candidates in total (fewer under `--max` or `[kaizen] monthly_cap`), ranked by ratio ×
+share, are materialised through
 `calibrate.materialise` (the same diff, base hash, corpus effect and id as calibrate's; a candidate whose id is
 already stored is skipped before its corpus effect is measured) and stored as proposals with
 trigger `mined` and the model id in `model`. They stay in the local queue: each is written through the file adapter
@@ -413,10 +414,13 @@ def _emit(p: dict, settings: Mapping) -> None:
 
 
 def mine(drafts_dir: Path, corpus_paths: list[Path], briefs_dir: Path | None, cfg, profile, settings: Mapping, *,
-         now: datetime | None = None, dry_run: bool = False, rules_path: Path | None = None) -> dict:
+         now: datetime | None = None, dry_run: bool = False, rules_path: Path | None = None,
+         max_new: int | None = None) -> dict:
     """Mine once. Returns `{"models": {model: {"drafts", "words"[, "skipped"]}}, "corpus": {"files", "words"},
-    "phrases": [...], "moves": [...], "candidates": [proposal, ...], "dry_run"}`. A model with fewer than
-    `MIN_MODEL_DRAFTS` drafts is skipped (`skipped` says why). Unless `dry_run`, each candidate is stored as a
+    "phrases": [...], "moves": [...], "candidates": [proposal, ...], "limits", "dry_run"}`. At most
+    `max_candidates` are kept, lowered by `max_new` (the CLI's `--max`) and by what's left of `[kaizen]
+    monthly_cap` this month, which calibrate's proposals count against too (`limits`: `proposals.run_limit`).
+    A model with fewer than `MIN_MODEL_DRAFTS` drafts is skipped (`skipped` says why). Unless `dry_run`, each candidate is stored as a
     proposal and logged as one `mine` event (`proposed`, facet `model`); nothing is sent or applied. Raises
     MiningError for bad input, including no model reaching the bar."""
     now = datetime.now(timezone.utc) if now is None else now
@@ -489,9 +493,11 @@ def mine(drafts_dir: Path, corpus_paths: list[Path], briefs_dir: Path | None, cf
                    + _promote_candidates(moves), key=rank)
     blocked = _blocked(settings, now, calibrate._cal(settings)["triggers"]["cooldown_days"])
     known = {p["id"] for p in proposals.stored(settings)} if settings.get("proposals_dir") else set()
+    events = ledger.read(settings)[0] if settings.get("ledger_dir") else []
+    room = proposals.run_limit(settings, events, now, m["max_candidates"], max_new)
     out: list[dict] = []
     for c in cands:
-        if len(out) >= m["max_candidates"]:
+        if len(out) >= room["limit"]:
             break
         model = c.pop("model")
         c.pop("label"), c.pop("score")
@@ -517,4 +523,4 @@ def mine(drafts_dir: Path, corpus_paths: list[Path], briefs_dir: Path | None, cf
                 pass  # the proposal is stored; an unwritable ledger mustn't stop mining (as in calibrate)
         out.append(p)
     return {"models": models, "corpus": {"files": len(corpus), "words": c_words}, "phrases": phrases,
-            "moves": moves, "candidates": out, "dry_run": dry_run}
+            "moves": moves, "candidates": out, "limits": room, "dry_run": dry_run}

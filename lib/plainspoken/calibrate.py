@@ -483,11 +483,15 @@ class _Emitter:
 
 
 def run(root: Path, settings: Mapping, now: datetime, corpus: Iterable[str] | None = None,
-        adapter=None, resent: list | None = None) -> list[dict]:
+        adapter=None, resent: list | None = None, max_new: int | None = None,
+        limits: dict | None = None) -> list[dict]:
     """Calibrate once: read the ledger, rank candidates, materialise up to `max_proposals` new proposals (skipping
     ids already stored), save each, emit it through `adapter` (default: the configured one; a failed emit leaves
     `emit_error` and no `ref` on the proposal), and log a `calibrate` event (`proposed`). Never writes the ruleset,
     the rubrics or a profile.
+
+    `max_new` (the CLI's `--max`) lowers the number of new proposals, and `[kaizen] monthly_cap` lowers it to what's
+    left of the cap this month (`proposals.run_limit`); the limit used goes into `limits` when a dict is given.
 
     First, every stored proposal still waiting for a decision that was never sent (no `ref`: its emit failed) is
     sent again, whether or not there are new candidates; those go into `resent` when a list is given."""
@@ -499,6 +503,11 @@ def run(root: Path, settings: Mapping, now: datetime, corpus: Iterable[str] | No
         emit(waiting)
         if resent is not None:
             resent.append(waiting)
+    room = proposals.run_limit(settings, events, now, cal["triggers"]["max_proposals"], max_new)
+    if limits is not None:
+        limits.update(room)
+    if room["limit"] == 0:
+        return []
     metrics = kaizen.rule_metrics(events, cfg, now)
     start = min((e["ts"] for e in events), default=None)
     cands = candidates(metrics, events, cfg, settings, now, None if start is None else datetime.fromisoformat(start))
@@ -512,7 +521,7 @@ def run(root: Path, settings: Mapping, now: datetime, corpus: Iterable[str] | No
     known = {p["id"] for p in proposals.stored(settings)}
     out: list[dict] = []
     for c in cands:
-        if len(out) >= cal["triggers"]["max_proposals"]:
+        if len(out) >= room["limit"]:
             break
         p = materialise(c, None, cfg, prof, files, now, skip_ids=known)
         if p is None:

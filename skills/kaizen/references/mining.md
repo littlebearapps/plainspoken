@@ -15,7 +15,9 @@ calls a model itself, never edits the ruleset and never sends anything: mined pr
 3. **Mine.** `RUN kaizen mine --drafts .plainspoken/kaizen/mining/<YYYY-MM> --corpus <globs>`, where the globs are
    the person's own human-written files, relative to the project root. With `[kaizen] human_corpus` set in
    `.plainspoken/config.toml`, leave `--corpus` out. Ask the person for the corpus; never use model output or the
-   drafts themselves as the human side. `--dry-run` shows the candidates and stores nothing.
+   drafts themselves as the human side. `--dry-run` shows the candidates and stores nothing. With `[kaizen]
+   monthly_cap` set, mining keeps no more than what calibrate left of the cap this month; `--max N` lowers the
+   limit for one run.
 4. **Present the candidates** as printed: the model, the phrase or rule, the ratio and share, and the action. Each is
    stored as a proposal with its own `.md` file under `.plainspoken/kaizen/proposals/`. It's never sent to github or
    trello, whatever the adapter: the person decides it in that file, then you run `RUN kaizen decisions`.
