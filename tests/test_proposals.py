@@ -757,7 +757,9 @@ class ApplyAll(Base):
         self.assertIn(f"{newer['id']} refused: stale proposal", r.stderr)
         self.assertIn("the 1 before it stay applied", r.stderr)
         events = ledger.read(self.settings)[0]
-        self.assertEqual(proposals.status(older["id"], events), "applied")
+        # applied to a checkout: awaiting release until that ruleset is the one in use
+        self.assertEqual(proposals.status(older["id"], events), proposals.AWAITING)
+        self.assertEqual(proposals.status(older["id"], events, proposals.in_use(self.rules)), "applied")
         self.assertEqual(proposals.status(newer["id"], events), "superseded")
         self.assertEqual(proposals.status(third["id"], events), "approved")  # never reached
         self.assertIn(f"ruleset: apply kaizen proposal {older['id']}\n", r.stdout)
