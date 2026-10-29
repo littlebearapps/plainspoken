@@ -206,7 +206,7 @@ The golden set and the blind-test pairs are held out. They measure the checks; t
 `scripts/dev/verdict_diff.py OLD NEW` lints one fixed public corpus with two versions of the plugin and lists every
 text whose lint status (BLOCK, WARN or CLEAN) or finding count per rule moved. OLD and NEW are git refs or checkout
 folders. The corpus is read from NEW, so both sides lint the same texts: every case in `evals/golden/` plus the
-rewrite references and the voice samples, 268 texts as of 23 October 2026. It runs the lint only, with the default
+rewrite references and the voice samples, 273 texts as of 29 October 2026. It runs the lint only, with the default
 profile. No model is called, and nothing is written into the repo. It takes about 10 seconds.
 
 On every pull request CI runs it base against head and writes the markdown to the job summary. It never

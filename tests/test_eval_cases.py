@@ -171,7 +171,7 @@ def proper_nouns(text: str) -> list[str]:
 class RewriteCases(unittest.TestCase):
     def test_rewrite_cases_shape(self):
         found = list(rewrite_cases())
-        self.assertEqual(len(found), 12)
+        self.assertEqual(len(found), 17)
         for d, fm, prompt, graders in found:
             with self.subTest(case=d.name):
                 self.assertEqual(set(fm) - CASE_KEYS, set())
@@ -206,7 +206,7 @@ class RewriteCases(unittest.TestCase):
                         self.assertIn("i", g.get("flags", ""))
 
     def test_slash_arm_mirrors_each_rewrite_case(self):
-        """evals/rewrite-slash: the same six passages and graders, asked through /plainspoken:humanize, so the arm
+        """evals/rewrite-slash: the same passages and graders, asked through /plainspoken:humanize, so the arm
         measures the skill itself rather than whether a plain request starts it."""
         plain = {d.name: (fm, prompt, graders) for d, fm, prompt, graders in rewrite_cases()}
         slash = [_case(d) for d in sorted(p for p in REWRITE_SLASH.iterdir() if p.is_dir())]
