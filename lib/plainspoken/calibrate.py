@@ -224,19 +224,6 @@ def _rule_candidates(rule, m, ctx) -> list[dict]:
     return out
 
 
-OPEN = ("pending", "approved", proposals.AWAITING)
-
-
-def _open_keys(settings: Mapping, events: list[dict], use=None) -> set[str]:
-    """Keys of stored proposals still open: no decision yet, approved and not applied, or applied to a checkout and
-    awaiting release."""
-    if not settings.get("proposals_dir"):
-        return set()
-    use = proposals.in_use() if use is None else use
-    return {p.get("key") for p in proposals.stored(settings)
-            if proposals.status(p["id"], events, use) in OPEN}
-
-
 def _cooling(settings: Mapping, events: list[dict], now: datetime, days: int) -> set[tuple]:
     """(rule, action) pairs rejected within `days`."""
     out = set()
@@ -325,7 +312,7 @@ def candidates(metrics: Mapping[str, Mapping], events: Iterable[dict], cfg, sett
            "knobbed": {k["rule"] for k in cal["knobs"]},
            "profiles": _ledger_profiles(evs, settings) if old_enough else []}
     cooling = _cooling(settings, every, now, t["cooldown_days"])
-    open_keys = _open_keys(settings, every, use)
+    open_keys = proposals.open_keys(settings, every, use)
 
     def keep(c) -> bool:
         c["key"] = candidate_key(c)
