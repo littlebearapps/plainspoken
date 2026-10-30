@@ -113,6 +113,15 @@ class WriteSkill(SkillBasics, unittest.TestCase):
                       " ".join(self.step(6).split()))
         self.assertIn("for a line you'd want them to check, go back to step 6, cut it or hold it `blocking`", flat)
 
+    def test_prose_copies_the_engine_lines(self):  # #163: "about 270 words" for 272; "passed" beside BLOCKED
+        flat = " ".join(self.text.split("### 8. Report", 1)[1].split())
+        self.assertIn("Every figure and status the prose gives is copied from the block's lines as printed, never "
+                      "rounded or summarised", flat)
+        self.assertIn('`words: 272` is 272 words, not "about 270"', flat)
+        self.assertIn("`claims: BLOCKED` stays BLOCKED, even when the checker's own result was PASS", flat)
+        self.assertIn("Say no fixes were made only when no step edited the draft (lint-only passes and claims fixes "
+                      "are edits too)", flat)
+
     def test_report_starts_with_the_block(self):  # #41: no prose before the block, and the shortfall comes after it
         flat = " ".join(self.text.split("### 8. Report", 1)[1].split())
         self.assertIn("Start the report with this block, with no words before it", flat)
