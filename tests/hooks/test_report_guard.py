@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_owner_asks import ASK, BLOCK, SHORT
+from tests.test_owner_asks import ASK, BLOCK, LEDGER_LEAF, LEDGER_LEAF_ASK, REPAIR, REPAIR_ASK, SHORT
 
 REPO = Path(__file__).resolve().parents[2]
 HOOK = REPO / "hooks" / "report_guard.py"
@@ -45,6 +45,16 @@ class Guard(unittest.TestCase):
         self.assertEqual(r.stderr, "")
         self.assertFalse((self.project / ".data").exists())  # it keeps no state
         self.assertFalse((self.project / ".plainspoken").exists())
+
+    def test_the_round_8_asks_are_sent_back(self):  # #75: fired 0 times in 9 runs before
+        for report, ask in ((REPAIR, REPAIR_ASK), (LEDGER_LEAF, LEDGER_LEAF_ASK)):
+            with self.subTest(ask=ask):
+                r = self.stop(report)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                out = json.loads(r.stdout)
+                self.assertEqual(out["decision"], "block")
+                self.assertIn(ask, out["reason"])
+                self.assertNotIn("Please confirm", out["reason"])  # the ask about the listed claim stays
 
     def test_it_sends_a_report_back_only_once(self):  # Claude Code sets stop_hook_active on the turn it caused
         self.assertEqual((r := self.stop(BLOCK + ASK, active=True)).stdout, "", r.stderr)
