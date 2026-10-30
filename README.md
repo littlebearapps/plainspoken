@@ -100,7 +100,7 @@ your own writing.
 
 Hooks run alongside: lint after each edit of a draft file, a claims integrity check that flags unsourced numbers,
 a publish gate on `git push` (off until you set it), a check at the end of a turn that sends back a write report
-asking you to check a line its `needs the owner` list doesn't hold, and an optional writing nudge and drafting rule
+asking you to check or decide on a line its `needs the owner` list doesn't hold, and an optional writing nudge and drafting rule
 you switch on with `/plainspoken:setup`. Also optional: the chat-reply check, which lints a draft written into the
 reply when you asked for writing and tells you, never the model, what it found at the end of the turn. The kaizen
 loop records what the checks flagged and what you did, and proposes ruleset changes from that evidence

@@ -89,11 +89,17 @@ def _words(text: str) -> set[str]:
     return out
 
 
+def _ids(cid: str) -> list[str]:
+    """A claim id and its short form: `LEDGER-AND-LEAF-SERVICES-C008` is also `C008`, as reports write it."""
+    short = cid.rsplit("-", 1)[-1] if "-" in cid else ""
+    return [cid] + ([short] if re.fullmatch(r"[A-Za-z]+\d+", short) else []) if cid else []
+
+
 def _about(text: str, items: list[tuple[str, set[str]]]) -> bool:
-    """Whether `text` names a listed claim's id or shares two of its distinctive words."""
+    """Whether `text` names a listed claim's id (or its short form) or shares two of its distinctive words."""
     seen = _words(text)
-    return any(cid and re.search(r"(?<![\w-])" + re.escape(cid) + r"(?![\w-])", text) or len(seen & words) >= 2
-               for cid, words in items)
+    return any(any(re.search(r"(?<![\w-])" + re.escape(i) + r"(?![\w-])", text) for i in _ids(cid))
+               or len(seen & words) >= 2 for cid, words in items)
 
 
 def _item(line: str) -> tuple[str, set[str]]:

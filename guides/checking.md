@@ -20,7 +20,9 @@ writing. It explains the check step by step, what each result means, and what th
 1. **Lint.** The lint is a fixed set of pattern rules that code runs on the text, so it gives the same result every
    time: banned words, em dashes over the limit, transitions, sentence rhythm and the like. Each finding is a BLOCK
    (must go), a WARN (fix it or give a reason) or a CANDIDATE, which a judge decides. Before the judges start, the check fixes lint findings in at most
-   two lint-only passes, so the judges read a lint-clean draft.
+   two lint-only passes, so the judges read a lint-clean draft. A line it keeps is passed on with `--keep`, and only
+   for a rule that lint run printed. If the file has a claim ledger that isn't current, `judge-input` waits for it;
+   a check run on its own carries on with `--ignore-claims` and says so in its report.
 2. **Four judges.** A judge is a separate model run that reads the draft in a fresh context. It never sees your
    session, never edits a file and returns its verdicts as JSON with the exact words it objects to. Each judge looks
    at one group of rules, for example:
@@ -108,12 +110,17 @@ this order:
    honest benefit ([guides/claims-and-reader-value.md](claims-and-reader-value.md)).
 3. **Outline, then draft.** It writes headings from what each section says, reads the profile's anchor passages for
    each kind of section, and drafts one section at a time against them.
-4. **Claims.** It builds the claim ledger for the saved draft and has the isolated claims checker review it.
-5. **Check.** It runs the full check, and reruns the claims steps if a fix changed the draft.
+4. **Claims.** It builds the claim ledger for the saved draft and has the isolated claims checker review it. The
+   checker runs in the foreground, and the claims step has to be finished before the judges start: a claims fix
+   after the judges would mean all four again.
+5. **Check.** It runs the full check, and reruns the claims steps if a fix changed the draft, before any more judges.
+   `judge-input` holds the judges (exit 3) while the draft's claim ledger isn't current, unless the only open lines
+   are ones held for you.
 
 Its report starts with the lines `python3 <plugin>/lib/run.py status <draft>` prints, copied exactly: the check and
 claims results, the claims that need you, the word count and the reader-value contract path. Those come from the
-engine, never from the model's memory. Before a drafted piece ships, run `/plainspoken:reader-value deliver <draft>`
+engine, never from the model's memory, and the prose after them repeats their figures and statuses as printed (272
+words, not "about 270"; BLOCKED, not "passed"). Before a drafted piece ships, run `/plainspoken:reader-value deliver <draft>`
 to check it keeps the promise it made.
 
 ## Plain language and the cold reader
