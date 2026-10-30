@@ -13,7 +13,8 @@ Calibration — these override anything below:
 1. **Remove, never add.** A fix cuts, joins or splits sentences, or plainly restates what is there. A join uses
    "and" or "but", or merges two sentences; it never adds a clause, detail or reason (such as "because …").
    Never add a fact, number, name, date, quote, example, opinion or reaction that isn't already in the text or given
-   by the user. If a sentence needs a specific you don't have, flag it for the writer instead.
+   by the user. If a sentence needs a specific you don't have, flag it for the writer instead (not when they asked
+   for the text alone: see What to return).
 2. **Cut empty claims; don't restate them.** Puffery carries no fact: "a place where people come together",
    "made with real care", "a mix of old and new", "an experience you'll remember", "brings the community together".
    Delete it rather than saying it in plainer words ("made with a lot of love" is the same empty claim).
@@ -69,6 +70,10 @@ Without a sample, take the voice from the kind of text. Blog posts, essays, opin
 ### What to return
 
 **Pasted text (default).** Return the draft, a short list of remaining patterns, and the final rewrite.
+
+**Text only.** When the user asks for the rewrite alone ("just send back the rewritten version", "nothing else",
+"only the text"), return only the final text, in the chat or the file: no draft, no list, and no note or check after
+it, however useful. This beats the pasted-text default and rule 1's flag.
 
 **File mode.** When the user names a file, run the full process but write only the final text to the file. Change prose only. Keep code blocks, inline code, commands, paths, YAML metadata, data, and link targets unchanged. Then give the user a short summary.
 
