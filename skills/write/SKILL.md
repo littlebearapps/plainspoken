@@ -145,10 +145,13 @@ printed, never from memory or in other words:
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 
 Then give any length shortfall (step 1) and whatever else the user needs, in plain words. Any length you give is
-the `words:` line's, never an estimate, and you say it counts body text only. Ask the owner to check nothing that
-the `needs the owner` lines don't list: for a line you'd want them to check, go back to step 6, cut it or hold it
-`blocking`, and carry on from there. A check or claims result that isn't PASS is never described as passed. The
-person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
+the `words:` line's, never an estimate, and you say it counts body text only. Every figure and status the prose
+gives is copied from the block's lines as printed, never rounded or summarised: `words: 272` is 272 words, not
+"about 270", and `claims: BLOCKED` stays BLOCKED, even when the checker's own result was PASS. Say no fixes were
+made only when no step edited the draft (lint-only passes and claims fixes are edits too). Ask the owner to check
+nothing that the `needs the owner` lines don't list: for a line you'd want them to check, go back to step 6, cut
+it or hold it `blocking`, and carry on from there. A check or claims result that isn't PASS is never described as
+passed. The person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.
 
 A piece step 2 parked, or left INCOMPLETE, gets only `Reader value (outline): PARKED (<contract path>)` (or
 `INCOMPLETE`) and the reason, with no delivery tail: there's no draft to check. READY means the outline has a
