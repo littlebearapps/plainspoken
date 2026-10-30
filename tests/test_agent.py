@@ -136,6 +136,21 @@ class ClaimsChecker(unittest.TestCase):
         blocking = rubric.split("## Severity", 1)[1].split("**`warning`**", 1)[0]
         self.assertIn("a client's result ledgered `verified` rather than sensitive", blocking)
 
+    def test_a_pinned_claim_and_a_briefs_call_to_action(self):  # #77 round 8: a named CTA blocked, offers re-judged
+        rubric = " ".join((REPO / "data" / "rubrics" / "claims.md").read_text(encoding="utf-8").split())
+        pinned = rubric.split("**A pinned claim is judged on its passage.**", 1)[1].split(" - **", 1)[0]
+        self.assertIn("however it's reworded), it passes", pinned)
+        self.assertIn("Don't file a finding because you'd word it differently", pinned)
+        self.assertIn("quotes the article's words that go beyond the passage", pinned)
+        brief = rubric.split("**A brief speaks only for the person who gave it.**", 1)[1].split(" - **", 1)[0]
+        self.assertIn("the call to action, the offer, who it's for and the tone", brief)
+        self.assertIn("unless the line itself narrows who it's for", brief)
+        self.assertIn("It's a finding only for a term the line doesn't give", brief)
+        rules = " ".join((REPO / "skills" / "claims" / "references" / "evidence-rules.md")
+                         .read_text(encoding="utf-8").split())
+        self.assertIn("Ledger the article's call to action as a claim and pin it to the brief's line that asks for it",
+                      rules)
+
     def test_rubric_ledger_blocking_locations_and_signoff(self):
         rubric = " ".join((REPO / "data" / "rubrics" / "claims.md").read_text(encoding="utf-8").split())
         self.assertIn("already marks `blocking` needs no finding", rubric)

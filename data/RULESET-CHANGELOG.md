@@ -2,6 +2,22 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## Claims rubric revision (2026-10-30; ruleset version unchanged)
+
+- **A pinned claim is judged on its passage (#77):** a claim whose text and locations say no more than its pinned
+  passages passes, however it's reworded. A finding against a pinned claim quotes the article's words that go
+  beyond the passage, and wording the checker would only have put differently isn't one. In the round-8 long-form
+  runs the same offer wording passed in one piece and was blocked in two others, and an unchanged sentence passed
+  one checker run and was blocked in the next.
+- **A brief's lines about the piece are sources (#77):** its call to action, offer, audience and tone lines are the
+  owner's word. A call to action pinned to such a line may invite every reader in the article's own words, unless
+  the line narrows who it's for; only a term the line doesn't give (a price, length, deadline, what follows, a
+  wider offer) is a finding. A round-8 checker blocked a call to action the brief named as the piece's call to
+  action. The claims skill's evidence rules now say to pin the call to action to that line.
+- New golden cases `CL-brief-005` and `CL-brief-006` (provisional). The rubric's hash changes, so an earlier
+  `<key>.claims-check.json` reads as `checker result stale (rubric changed)` until the checker runs again. Not yet
+  measured with `eval claims` (a paid run). The owner approves by merging the pull request.
+
 ## Engine change (2026-10-28; ruleset version unchanged)
 
 - **Social caps merge as the stricter value (#104):** a cap (a `*_max` key) in a content type's layer, such as
