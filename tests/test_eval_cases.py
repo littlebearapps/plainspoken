@@ -451,12 +451,17 @@ class EvalCases(unittest.TestCase):
                         self.assertIsNone(rx.search(f"<<<PIECE\n{facts}"), "a piece with no closing marker counts")
 
     def test_smoke_cases_run_every_skill_once_by_slash(self):
-        """evals/smoke: one case per skill that does real work on a saved draft (paid; `--tag smoke`)."""
+        """evals/smoke: one case per skill that does real work on a saved draft (paid; `--tag smoke`), plus named
+        variants `<skill>--<variant>-smoke` for a second route through the same skill (deliver mode, report only)."""
         skills = sorted(p.parent.name for p in (REPO / "skills").glob("*/SKILL.md"))
         found = [_case(d) for d in sorted(p for p in SMOKE.iterdir() if p.is_dir())]
-        self.assertEqual([d.name for d, *_ in found], [f"{s}--smoke" for s in skills])
+        names = [d.name for d, *_ in found]
+        self.assertEqual([n for n in names if n.endswith("--smoke")], [f"{s}--smoke" for s in skills])
         for d, fm, prompt, graders in found:
-            skill = d.name.removesuffix("--smoke")
+            skill = d.name.removesuffix("--smoke") if d.name.endswith("--smoke") else d.name.split("--")[0]
+            if not d.name.endswith("--smoke"):
+                self.assertRegex(d.name, r"^[a-z-]+--[a-z]+(?:-[a-z]+)*-smoke$")
+                self.assertIn(skill, skills, d.name)
             with self.subTest(case=d.name):
                 self.assertEqual(set(fm) - CASE_KEYS, set())
                 self.assertEqual(fm["name"], d.name)
