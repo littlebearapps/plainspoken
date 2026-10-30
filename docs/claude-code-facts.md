@@ -430,3 +430,38 @@ Still to probe on live hosts (a paid round, with a scratch MCP server that recor
 - Hermes: the `mcp__` naming on a live install, `block`, the posted line, and whether `transform_tool_result`
   carries the call's `tool_call_id` (the plugin falls back to the session and tool name when it doesn't).
 - Whether an `ask` prompt reaches the person through a bridge such as Untether.
+
+Probed live on 2026-10-30 (round 8), Claude Code CLI 2.1.314, Linux, `claude -p --model sonnet` on the subscription,
+`--plugin-dir` on main b895cf8 plus eval-case commits, with a scratch stdio MCP server `outbox` (one `send(to, body)`
+tool that records the arguments it receives). Project config only (`[tool_call] mode = …`); the prompt asked for a
+52-word body with four BLOCK tells, sent verbatim.
+
+- **block-once:** the hook fired for `mcp__outbox__send` (reached through `ToolSearch` first: MCP tools load deferred).
+  The deny reached the model as the tool result, prefixed by Claude Code with `PreToolUse:mcp__outbox__send hook
+  error:` (its label for a deny reason, not a hook failure). Asked for the body verbatim, the model resent it
+  unchanged and it went through; the server recorded one call, equal to what the model sent the second time.
+- **warn:** the call ran on the first try; the findings reached the model after it, and its reply passed them on.
+- **ask:** in `-p` it counted as a deny (`permission_denials` 1, nothing recorded by the server). The reason named the
+  tally and rule IDs only, so the model had to guess the words: fixed in #152 (the reason now carries the lines).
+- **A body the model wrote itself** (asked for "warm and a bit enthusiastic", block-once): clean, no hold, one call.
+
+Still open: `ask` interactively and through a bridge such as Untether; the installed copy (the hooks get plugin
+options there, `--plugin-dir` gives them none); Codex 0.164+ and Hermes.
+
+## 16. What the chat-reply check does live (#125)
+
+Probed 2026-10-30 (round 8), the same CLI, model and `--plugin-dir`, `[chat_reply] mode = "warn"` in the project
+config.
+
+- It speaks only when the prompt asked for writing. A prompt that pasted a finished email and asked for it back
+  verbatim wrote no row (the nudge intent isn't a writing ask); a prompt asking for a 70-word email with four required
+  tell words wrote `ask: "draft"`, `outcome: "warned"`, so the UserPromptSubmit intent reached the Stop hook.
+- In `stream-json` the Stop `systemMessage` arrives as a `system` event with subtype `informational`, level `notice`,
+  each line prefixed `Stop says:` by Claude Code. It listed the BLOCK lines (three, then "… and 1 more") and the
+  `/plainspoken:check` pointer.
+- It stays out of the model's context: resumed with `--resume` and asked to quote any hook or plainspoken message
+  after its reply, the model said none reached it.
+- A clean draft (the model's own 91-word email) logged `outcome: "clean"` and showed nothing.
+
+Not probed: whether Untether forwards the notice to Telegram (it relays the final assistant text, so probably not),
+Codex `turn_id`, and Hermes.
