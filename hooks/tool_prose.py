@@ -185,7 +185,7 @@ def _check(event: dict, host: str, name: str, root: str, settings: dict, candida
         return _emit(hostreply.pre_tool(host, decision="deny", reason=reason))
     if effective == "ask":
         reason = (f"plainspoken: the text of this {name} call has {tally}. Approve to send it as written, or say no "
-                  f"so it can be fixed first.")
+                  f"so it can be fixed first.\n{detail}")
         return _emit(hostreply.pre_tool(host, decision="ask", reason=reason))
     person = f"plainspoken checked the text of this {name} call: {tally}. Warn mode, so the call went ahead."
     model = (f"plainspoken checked the text of this {name} call: {tally}. Warn mode doesn't hold a call back, so "
