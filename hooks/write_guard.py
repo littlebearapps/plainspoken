@@ -14,7 +14,9 @@ writes files: inline code (`python3 -c`, `bash -c`, `node -e`), a heredoc or her
 by name (`python3 build.py`, `bash x.sh`, `./x.py`), whose file is read from the event's cwd (#57). A shell program
 is followed command by command; other code counts as writing when it calls `open(…, 'w')`, `write_text`,
 `json.dump(…, open(…, 'w'))`, `writeFile`, `subprocess`, `os.system` and the like. A program the guard can't see (a
-missing script, `-m module`) is refused only when the command itself names a protected file.
+missing script, `-m module`) is refused only when the command itself names a protected file. A plain literal
+assigned earlier in the same command (`R=/…/run.py; python3 $R …`) is expanded before any of this (#161); a value
+the guard can't read (`$(…)`, backticks, one that expands itself) leaves the name unseen.
 
 Reading (`cat`, `python3 -c` that only loads the ledger), `git`, `rm` and the CLI's `--from` stay allowed. A
 guardrail against a habit, not a security boundary: code that builds the path from parts, or a script piped in, isn't
