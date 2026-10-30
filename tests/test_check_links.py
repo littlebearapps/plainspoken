@@ -70,6 +70,8 @@ class Links(unittest.TestCase):
 
     def test_skipped_folders(self):
         self.assertEqual(self.bad("[a](/abs)\n", rel="evals/results/p.md"), [])
+        # the plugin's own reports when it's used on this checkout (git-ignored): copies of docs, links resolve elsewhere
+        self.assertEqual(self.bad("[a](guides/install.md)\n", rel=".plainspoken/reports/README-x.checked.md"), [])
 
     def test_line_numbers(self):
         self.bad("\n\n[a](nope.md)\n")

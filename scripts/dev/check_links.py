@@ -10,7 +10,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-SKIP_PREFIXES = (".git/", "tests/fixtures/", "evals/results/", ".superpowers/")
+SKIP_PREFIXES = (".git/", "tests/fixtures/", "evals/results/", ".superpowers/", ".plainspoken/")  # .plainspoken/: git-ignored reports from using the plugin here
 SKIP_FILES = ("CHANGELOG.md",)
 ROOT_VAR = "${CLAUDE_PLUGIN_ROOT}/"
 _FENCE = re.compile(r"(?ms)^(```|~~~).*?^\1[^\n]*$")
