@@ -56,7 +56,8 @@ outgoing text), follow this route. It overrides the fixing in the core rules and
 edit FILE, and its bytes stay unchanged.
 - Step 1: run its `check` call and fix nothing. When a later step asks you to rerun step 1, again fix nothing.
 - Step 2: the lint cuts long lists short ("… N more"), so take the rules from `judge-input`'s exit-1 list, which
-  names every open line, and rerun step 2 with `--keep <rule>` for each rule it names. Here exit 1 always means keep.
+  names every open line, and rerun step 2 with `--keep <rule>` for each rule it names. Here exit 1 always means
+  keep, and exit 3 always means rerun with `--ignore-claims`.
 - Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
   and go to step 8.
 - If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (`status` doesn't
@@ -69,12 +70,16 @@ edit FILE, and its bytes stay unchanged.
 ## Steps
 
 1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed),
-   on its own: read it before step 2. Exit 2 → stop with its message. Before the first judges, fix its BLOCK and
-   WARN lines under the fix rule and run step 1 again (at most two lint-only passes), so the judges read a
-   lint-clean draft. A line you leave (a WARN you have a real reason to keep, one still there after two, or any once
-   the judges have started) goes to step 2 as `--keep <rule>`. Justify a kept WARN in step 7 rather than fix it:
-   a fix after the judges means all four again.
-2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 1 → it names lint lines still open: fix them (step 1) or keep them. Exit 2 → rerun step 1 once.
+   on its own: read it before step 2, in full. Never send it to `/dev/null` or cut it with a pipe. Exit 2 → stop
+   with its message. Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again
+   (at most two lint-only passes, counting a caller's, such as write step 6's), so the judges read a lint-clean
+   draft. A line you leave (a WARN you have a real reason to keep, one still there after two, or any once the judges
+   have started) goes to step 2 as `--keep <rule>`, only for a rule this pass's lint printed. Justify a kept WARN in
+   step 7 rather than fix it: a fix after the judges means all four again.
+2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 1 → it names lint lines still open: fix them (step 1) or keep them. Exit 2 → rerun step 1 once (a `--keep` for a rule with no open line lands here too).
+   Exit 3 → FILE has a claim ledger that isn't current, and it prints why. From write, finish the claims step
+   (write steps 6 and 7 say how), then step 1 again. On its own, rerun step 2 with `--ignore-claims` and say so
+   in step 8.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
    this. Your input:" followed by that line verbatim. Nothing else: no file contents, no opinion, no hint about who
    wrote it.

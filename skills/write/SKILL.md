@@ -103,8 +103,10 @@ When the piece recommends or reports findings, say how strong each one's evidenc
 ### 6. Claims
 
 First make the check's lint-only passes here, so a lint fix lands before the ledger is built: its step 1 on the
-saved draft (`RUN check '<draft>' --plugin-profile '${user_config.profile}'`), fixing BLOCK and WARN lines by cutting,
-joining, splitting or restating, at most twice (a join adds no clause, detail or reason). Claims runs before the
+saved draft (`RUN check '<draft>' --plugin-profile '${user_config.profile}'`), read in full (never sent to
+`/dev/null`), fixing BLOCK and WARN lines by cutting, joining, splitting or restating, at most twice (a join adds no
+clause, detail or reason). Those two are the run's whole lint-only allowance: once they're spent, check step 1
+makes no more, and a line still there goes to the judges as `--keep <rule>`. Claims runs before the
 check, so its edits land before the four judges read the draft. Run `/plainspoken:claims` on the saved draft.
 It's manual-only, so follow
 `${CLAUDE_PLUGIN_ROOT}/skills/claims/SKILL.md` yourself: it builds the claim ledger, pins every verified claim to a
@@ -116,6 +118,11 @@ never only ask in the report. A line the sources don't give that speaks for the 
 promise, a feeling) is a new fact, however warm: cut it or hold it `blocking` too. Never skip this step; if it can't
 run, the report keeps `claims: INCOMPLETE` and says which step stopped and why.
 
+Start its checker in the foreground, never in the background, and read its reply before anything else. Step 7
+starts only once `RUN claims status '<draft>'` prints PASS, or BLOCKED only on `blocking:` lines (claims held for
+the owner). Anything else goes back through the claims skill's step 7 first, so no claims fix lands after the
+judges; once its two fix rounds are spent, go on to step 7, which says what to pass.
+
 ### 7. Check
 
 Run `/plainspoken:check` on the saved draft with the mapped content type: add `--content-type social` only for
@@ -125,11 +132,12 @@ fact. Its two lint-only passes include step 6's. Step 7 ends where the check's o
 merge goes through its fix-or-justify loop first (fix the WARN, or `justify` it). A WARN you keep without an accepted
 justification leaves the check UNRESOLVED.
 
-If the check changed the draft, the ledger no longer matches it: rerun the claims skill's steps 4 to 6 once (back
-to step 2 for any claim a fix touched), then `RUN claims status '<draft>'`. That's one claims checker, not four
-judges. If that rerun has to edit the draft, run the check once more. If a status still isn't current, say so in
-the report and tell the user to run `/plainspoken:claims <draft>` again. Report the status lines from those last
-runs, whatever they say.
+If the check changed the draft, the ledger no longer matches it, and the check's `judge-input` holds the judges
+back (exit 3) until it does: rerun the claims skill's steps 4 to 6 once (back to step 2 for any claim a fix
+touched), checker in the foreground, then `RUN claims status '<draft>'` and the check's step 1 again. That's one
+claims checker, not four judges. Pass `--ignore-claims` only once the claims skill has stopped (its two fix rounds
+spent, or it can't run). If a status still isn't current, say so in the report and tell the user to run
+`/plainspoken:claims <draft>` again. Report the status lines from those last runs, whatever they say.
 
 ### 8. Report
 

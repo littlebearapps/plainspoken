@@ -52,6 +52,26 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual(kept.returncode, 0, kept.stderr)
         self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
+    def test_keep_names_only_open_lines(self):  # #162: a keep typed before the lint was read is refused
+        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks.\n",
+                            encoding="utf-8")
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        stray = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,7d,HM,r2", cwd=self.cwd)
+        self.assertEqual((stray.returncode, stray.stdout), (2, ""), stray.stderr)
+        self.assertIn("--keep r2:", stray.stderr)
+        self.assertIn("keep only the rules it prints", stray.stderr)
+        kept = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,r7d,HM", cwd=self.cwd)
+        self.assertEqual(kept.returncode, 0, kept.stderr)
+        self.assertIn("kept with --keep", kept.stderr)  # the kept lines are shown even if the lint went unread
+        for line in ("WARN  r4b", "WARN  r7d", "WARN  rHM"):
+            self.assertIn(line, kept.stderr)
+        self.art.write_text("Text.\n", encoding="utf-8")  # fixed since: last pass's keep names nothing open now
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(cli("judge-input", "post.md", "--profile", "default", "--keep", "7d", cwd=self.cwd).returncode,
+                         2)
+        clean = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual((clean.returncode, clean.stderr), (0, ""))
+
     def test_report_only_keeps_a_block_and_never_edits(self):  # #107: skills/check/SKILL.md "Report only"
         import hashlib
         import re
