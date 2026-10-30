@@ -83,5 +83,82 @@ class Registration(unittest.TestCase):
         self.assertIn("${CLAUDE_PLUGIN_ROOT}/hooks/kaizen_nudge.py", json.dumps(stop))
 
 
+def _transcript(project: Path, records: list[dict]) -> str:
+    path = project / "t.jsonl"
+    path.write_text("".join(json.dumps(r) + "\n" for r in records), encoding="utf-8")
+    return str(path)
+
+
+def _user(text):
+    return {"type": "user", "message": {"role": "user", "content": text}}
+
+
+def _skill(name):
+    return {"type": "assistant", "message": {"role": "assistant", "content": [
+        {"type": "tool_use", "id": "t-" + name, "name": "Skill", "input": {"skill": name}}]}}
+
+
+def _loaded(folder):  # how Claude Code loads a skill's instructions into the turn
+    return {"type": "user", "message": {"role": "user", "content": [
+        {"type": "text", "text": f"Base directory for this skill: /p/skills/{folder}\n\n# plainspoken {folder}"}]}}
+
+
+def _status():
+    return {"type": "user", "message": {"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": "t-b", "content": "check: PASS · coverage 41/41\nclaims: PASS\n"
+                                                                 "needs the owner: none\nwords: 236 (body text)"}]}}
+
+
+class MissingBlock(unittest.TestCase):
+    """#171: a write turn whose report leaves out the status block goes back once, to start with it."""
+    PROSE = "The post is written, but it comes to 236 words, not 500. All the checks passed."
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
+
+    def stop(self, records, message=None, active=False):
+        event = {"hook_event_name": "Stop", "session_id": "s1", "cwd": str(self.project),
+                 "transcript_path": _transcript(self.project, records) if records is not None else None,
+                 "stop_hook_active": active, "last_assistant_message": message or self.PROSE}
+        return run(event, self.project)
+
+    def test_a_write_report_without_the_block_is_sent_back(self):
+        for records in ([_user("Write the post."), _skill("plainspoken:write"), _loaded("write"), _status()],
+                        [_user("/plainspoken:write notes.md"), _loaded("write"), _status()]):
+            with self.subTest(first=records[1]["type"]):
+                r = self.stop(records)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                out = json.loads(r.stdout)
+                self.assertEqual(out["decision"], "block")
+                self.assertIn("leaves out the status block", out["reason"])
+
+    def test_left_alone(self):
+        write = [_user("Write the post."), _skill("plainspoken:write"), _loaded("write"), _status()]
+        cases = {
+            "the block is there": (write, BLOCK + SHORT, False),
+            "sent back already": (write, None, True),
+            "no transcript": (None, None, False),
+            "a check, not a write": ([_user("Check it."), _skill("plainspoken:check"), _loaded("check"), _status()],
+                                     None, False),
+            "write never got to status": ([_user("Write the post."), _skill("plainspoken:write"), _loaded("write")],
+                                          None, False),
+            "write was an earlier turn": (write + [_user("Thanks, what's next?")], None, False),
+        }
+        for why, (records, message, active) in cases.items():
+            with self.subTest(why):
+                r = self.stop(records, message, active)
+                self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
+
+    def test_an_unreadable_transcript_fails_open(self):
+        event = {"hook_event_name": "Stop", "session_id": "s1", "cwd": str(self.project),
+                 "transcript_path": str(self.project / "missing.jsonl"), "stop_hook_active": False,
+                 "last_assistant_message": self.PROSE}
+        (self.project / "bad.jsonl").write_text("{not json\n", encoding="utf-8")
+        for path in ("missing.jsonl", "bad.jsonl"):
+            event["transcript_path"] = str(self.project / path)
+            self.assertEqual(run(event, self.project).stdout, "")
+
+
 if __name__ == "__main__":
     unittest.main()

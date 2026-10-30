@@ -137,6 +137,17 @@ class Scope(unittest.TestCase):
         self.assertEqual(owner_asks.unlisted(thanks + "\nThe thanks to Kath and Ollie is new. Please confirm "
                                              "you're happy to print it.\n"), [])  # "it": the paragraph says which
 
+    def test_a_listed_claim_named_by_its_short_id_is_left_alone(self):  # round-8 verification: "C008" for the id
+        item = ("needs the owner: 1\n  LEDGER-AND-LEAF-SERVICES-C008: A typical one: a cafe came to me nine months "
+                "behind on its reconciliations (owner approval)\n")
+        block = BLOCK.replace("needs the owner: none\n", item) if "needs the owner: none\n" in BLOCK else None
+        self.assertIsNotNone(block)
+        report = block + ("\n- **C008, the cafe clean-up example.** It describes a real client's job, so it waits for "
+                          "your approval. If you don't want it on the page, cut that paragraph.\n")
+        self.assertEqual(owner_asks.unlisted(report), [])
+        other = report.replace("- **C008, the cafe", "- **C009, the cafe")
+        self.assertTrue(owner_asks.unlisted(other))  # another claim's id doesn't cover it
+
     def test_an_ask_about_another_line_is_caught_beside_listed_claims(self):  # round 8: items listed, ask unlisted
         self.assertEqual(owner_asks.unlisted(listed(2) + ASK),
                          ["Each is a small bit of warmth in Jo's voice, so check Jo is happy with them."])
