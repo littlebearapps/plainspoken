@@ -3,7 +3,8 @@ don't list (issue #75).
 
 Write's step 8 allows no such ask: a line worth the owner's check is held `blocking` in the claims ledger, so
 `status` lists it, or it's cut. The hook reads the turn's last message (`last_assistant_message`), and only a message
-that carries the `status` block with nothing listed is read at all (lib/plainspoken/owner_asks.py). On a hit it
+that carries the `status` block is read at all. An ask about a claim the block lists is allowed; any other ask, a
+decision handed to the owner ("cut it if you'd rather …") included, is caught (lib/plainspoken/owner_asks.py). On a hit it
 prints a block decision whose reason quotes each ask and says to cut the line or hold it `blocking`, so Claude
 carries on and reports again. It never sends a report back twice in a row (`stop_hook_active`), keeps no state,
 writes no file and fails open: any problem is exit 0 with nothing printed.
