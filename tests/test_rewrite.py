@@ -267,6 +267,26 @@ class DerivedNumbers(unittest.TestCase):
         self.assertIsNone(rewrite.derivation("302", ["151"]), "a number isn't combined with itself")
         self.assertEqual(rewrite.derivation("1.40", ["1.4"]), "= 1.4", "the same value, written another way")
 
+    def test_a_spelled_count_of_names_the_source_gives(self):
+        """#158: "Two sisters, Ana and Ruth Silva" counts names the source lists; it isn't a new number."""
+        src = "Founded by sisters Ana and Ruth Silva. Stalls come from Hobart, Launceston and Devonport."
+        c = rewrite.counted_names
+        self.assertEqual(c("Two", "This is Little Lune. Two sisters, Ana and Ruth Silva, started it.", src),
+                         "counts 2 names in the source (Ana and Ruth Silva)")
+        self.assertEqual(c("three", "They come from three towns: Hobart, Launceston and Devonport.", src),
+                         "counts 3 names in the source (Hobart and Launceston and Devonport)")
+        self.assertIsNone(c("two", "Two sisters, Ana and Maria Silva, started it.", src), "a name the source lacks")
+        self.assertIsNone(c("two", "We have two cafes. Ana and Ruth Silva run them.", src), "the list is elsewhere")
+        self.assertIsNone(c("four", "Hobart, Launceston and Devonport host four fairs.", src), "the count is wrong")
+        self.assertIsNone(c("six", "six of them: Ana and Ruth Silva", src), "past five isn't a count of a list here")
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: [f.unlink() for f in d.iterdir()] and d.rmdir())
+        (d / "s.md").write_text(src + "\n", encoding="utf-8")
+        (d / "d.md").write_text("Two sisters, Ana and Ruth Silva, started it.\n", encoding="utf-8")
+        g = rewrite.grade(d / "d.md", d / "s.md", default_profile(), "article")
+        self.assertEqual(g["new_numbers"], [])
+        self.assertEqual(g["derived_numbers"], [{"number": "Two", "from": "counts 2 names in the source (Ana and Ruth Silva)"}])
+
     def test_grade_lists_derived_apart_from_new(self):
         d = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: [f.unlink() for f in d.iterdir()] and d.rmdir())

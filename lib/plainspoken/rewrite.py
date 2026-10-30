@@ -27,6 +27,9 @@ ratio (a / b: exact, or rounded when the piece number has decimals); or, for a r
 another at the rate's base, rounded to the piece number's decimal places: 71% is 100 × 151 / 212, and "seven in every
 ten" is 10 × 151 / 212 (a rate is a number followed by `%` or "per cent", base 100, or by "in", "in every", "out of"
 or "out of every" and a base; a rate's base is part of it, so it's derived along with it).
+A spelled count from two to five is derived, too, when the piece's sentence that holds it names that many people or
+places the source names, as a list ("Two sisters, Ana and Ruth Silva", from "sisters Ana and Ruth Silva"):
+`counted_names`.
 Derived numbers are listed with how they were worked out, so a reader can check them, and don't fail a rewrite; only
 new ones do."""
 from __future__ import annotations
@@ -231,6 +234,30 @@ def derivation(n: str, sources: list[str], base: str | None = None) -> str | Non
     return None
 
 
+COUNT_WORDS = {"two": 2, "three": 3, "four": 4, "five": 5}
+_NAME = r"[A-Z][\w'’-]*(?: [A-Z][\w'’-]*)*"
+_NAME_LIST = re.compile(rf"\b({_NAME})((?:, {_NAME})*),? and ({_NAME})")
+
+
+def counted_names(word: str, text: str, source: str) -> str | None:
+    """How a spelled count (`two` … `five`) in `text` counts names the source gives, or None: some sentence of the
+    piece that holds the word also lists exactly that many capitalised names ("Ana and Ruth Silva", "Hobart, Launceston
+    and Devonport"), and every one of them is in the source. A sentence-initial capital ("Two") is the word itself, not
+    a name, so it's never counted."""
+    n = COUNT_WORDS.get(word.lower())
+    if n is None:
+        return None
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", text):
+        if not re.search(rf"\b{re.escape(word)}\b", sentence, re.I):
+            continue
+        for m in _NAME_LIST.finditer(sentence):
+            names = [m.group(1), *[x for x in m.group(2).split(", ") if x], m.group(3)]
+            names = [x for x in names if x.lower() not in COUNT_WORDS]
+            if len(names) == n and all(re.search(rf"\b{re.escape(x)}\b", source) for x in names):
+                return f"counts {n} names in the source ({' and '.join(names)})"
+    return None
+
+
 def _read(path: Path) -> str:
     """The file's text, read once. ValueError naming the file when it isn't UTF-8; OSError when it can't be read."""
     try:
@@ -259,7 +286,8 @@ def grade(draft: Path, source: Path | None, profile: Profile, content_type: str 
     derived: list[dict] = []
     if source is not None:
         src = parse(_read(Path(source)), path=str(source), profile=profile, content_type=content_type)
-        known = [k for _, k, _ in figures(_visible(src))]
+        src_text = _visible(src)
+        known = [k for _, k, _ in figures(src_text)]
         seen = set(known)
         rate: str | None = None  # a derived rate this number is the base of ("seven" in "seven in every ten")
         for n, k, base in figures(text):
@@ -267,6 +295,8 @@ def grade(draft: Path, source: Path | None, profile: Profile, content_type: str 
             if k in seen:
                 continue
             how = f"base of the rate {rate_of} in {n}" if rate_of else derivation(k, known, base)
+            if how is None and base is None:
+                how = counted_names(n, text, src_text)
             if how is not None and base not in (None, "100") and how != derivation(k, known):
                 rate = n  # derived as a rate, so its base comes with it
             if how is None:
