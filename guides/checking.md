@@ -37,9 +37,11 @@ writing. It explains the check step by step, what each result means, and what th
 4. **Fix or justify.** Every BLOCK must be fixed. A failing WARN is fixed, or kept with a one-line reason. A fifth
    judge, JR, reviews each reason in a fresh context and accepts or rejects it.
 5. **Up to two fix passes.** A fix pass cuts, joins or splits sentences, or restates plainly what's already there. A
-   join uses "and" or "but", or merges two sentences; it never adds a clause, detail or reason. A fix never adds a
-   fact, number, name, quote, example or opinion. After each pass the lint and all four judges run again, because the
-   text changed.
+   join uses "and" or "but", or merges two sentences; it never adds a clause, detail or reason. Rhythm fixes (rules
+   7 and 7d) join two neighbouring sentences in their own words or split one, and never pad a sentence to reach a
+   length; when that can't clear the warning, the warning is kept and justified. A fix never adds a fact, number,
+   name, quote, example or opinion. After each pass the lint and all four judges run again, because the text
+   changed.
 
 The check writes its files to `.plainspoken/reports/` in the project you run it from. Every report file is listed in
 [docs/report-contract.md](../docs/report-contract.md).

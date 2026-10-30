@@ -81,8 +81,9 @@ class Structural(unittest.TestCase):
         messages = [f.message for f in staccato + uniform + bursty + markers]
         self.assertEqual(len(messages), 4)
         self.assertTrue(staccato[0].message.endswith(
-            'join two short sentences with "and" or "but", or merge them; add no clause, detail or reason'))
-        self.assertTrue(uniform[0].message.endswith("join or split one; add no clause, detail or reason"))
+            'join two neighbours with "and" or "but" in their own words, or keep it; never pad one'))
+        self.assertTrue(uniform[0].message.endswith(
+            "join two neighbours or split one, in their own words, or keep it; never pad one"))
         self.assertIn("join or split sentences", bursty[0].message)
         self.assertIn("add nothing new", markers[0].message)
         for m in messages:
@@ -97,8 +98,9 @@ class Structural(unittest.TestCase):
                  + run("7d", faq7) + run("7d", nar7, profile=NARRATIVE) + run("7d", venue, profile=NARRATIVE))
         self.assertEqual(len(found), 5)
         for f in found:
-            self.assertIn('with "and" or "but", or merge them; add no clause, detail or reason', f.message)
-            self.assertNotIn("because", f.message)
+            self.assertIn('join two neighbours with "and" or "but" in their own words, or keep it; never pad one',
+                          f.message)
+            self.assertNotRegex(f.message, r"\b(?:so|because|merge)\b")  # "so" and "because" add a reason
             self.assertLessEqual(len(f.message), 140, f.message)  # the lint summary cuts a message at 140
 
     def test_narrative_paragraph_variation(self):
