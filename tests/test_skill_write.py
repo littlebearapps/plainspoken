@@ -138,6 +138,23 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("tell the user to run `/plainspoken:claims <draft>` again", check)
         self.assertIn("list for step 6", " ".join(self.step(2).split()))
 
+    def test_judges_start_only_on_a_current_claims_status(self):  # #160: a later claims block cost four judges
+        claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
+        self.assertIn("Start its checker in the foreground, never in the background, and read its reply", claims)
+        self.assertIn("Step 7 starts only once `RUN claims status '<draft>'` prints PASS, or BLOCKED only on "
+                      "`blocking:` lines (claims held for the owner)", claims)
+        self.assertIn("so no claims fix lands after the judges", claims)
+        self.assertIn("holds the judges back (exit 3) until it does", check)
+        self.assertIn("Pass `--ignore-claims` only once the claims skill has stopped", check)
+        notes = " ".join((REFS / "claude-code.md").read_text(encoding="utf-8").split())
+        self.assertIn("in the foreground: never `run_in_background`", notes)
+
+    def test_lint_is_read_and_the_two_passes_are_the_whole_allowance(self):  # #162: 4 to 9 lint-only passes
+        claims = " ".join(self.step(6).split())
+        self.assertIn("read in full (never sent to `/dev/null`)", claims)
+        self.assertIn("Those two are the run's whole lint-only allowance: once they're spent, check step 1 makes no "
+                      "more", claims)
+
     def test_lint_only_passes_before_claims(self):  # #42: a lint fix after claims would stale the ledger
         claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
         self.assertIn("First make the check's lint-only passes here, so a lint fix lands before the ledger is built",

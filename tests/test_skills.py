@@ -110,13 +110,29 @@ class CheckSkill(unittest.TestCase):
         step = " ".join(self.text[self.text.index("1. **Lint.**"):self.text.index("2. **Judge input.**")].split())
         self.assertIn("on its own: read it before step 2", step)
         self.assertIn("Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again "
-                      "(at most two lint-only passes)", step)
+                      "(at most two lint-only passes, counting a caller's, such as write step 6's)", step)  # #162
         self.assertIn("so the judges read a lint-clean draft", step)
         self.assertIn("one still there after two, or any once the judges have started) goes to step 2 as "
                       "`--keep <rule>`", step)  # #74: judge-input holds an open lint line back without it
         self.assertIn("Justify a kept WARN in step 7 rather than fix it", step)
         step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
         self.assertIn("Exit 1 → it names lint lines still open: fix them (step 1) or keep them.", step2)
+
+    def test_the_lint_is_read_and_keeps_name_only_what_it_printed(self):  # #162: `check … >/dev/null; … --keep r7d`
+        step = " ".join(self.text[self.text.index("1. **Lint.**"):self.text.index("2. **Judge input.**")].split())
+        self.assertIn("read it before step 2, in full. Never send it to `/dev/null` or cut it with a pipe.", step)
+        self.assertIn("`--keep <rule>`, only for a rule this pass's lint printed", step)
+        step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
+        self.assertIn("a `--keep` for a rule with no open line lands here too", step2)
+
+    def test_judges_wait_for_a_current_claims_status(self):  # #160: judge-input exits 3 on an open claims step
+        step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
+        self.assertIn("Exit 3 → FILE has a claim ledger that isn't current", step2)
+        self.assertIn("From write, finish the claims step", step2)
+        self.assertIn("On its own, rerun step 2 with `--ignore-claims` and say so in step 8", step2)
+        self.assertIn("exit 3 always means rerun with `--ignore-claims`", " ".join(self.text.split()))  # report only
+        notes = (REPO / "skills" / "claims" / "references" / "claude-code.md").read_text(encoding="utf-8")
+        self.assertIn("in the foreground (never `run_in_background`)", " ".join(notes.split()))
 
     def test_report_reads_status_and_reruns_when_stale(self):  # #29: no clean finish after an uncounted edit
         step = " ".join(self.text[self.text.index("8. **Report.**"):].split())

@@ -336,6 +336,27 @@ def status_report(article: Path, ledger: Path, project_root: Path, check_path: P
             "ledger": display_path(ledger, project_root), "gaps": gaps, "check": check}
 
 
+def judge_hold(article: Path, project_root: Path, check_path: Path, platforms: tuple[str, ...] | None) -> list[str]:
+    """Why the four judges should wait for the claims step (#160), or [] when they needn't. A draft with no ledger
+    is never held, so a check on its own still runs. With one, `claims status` must be PASS, or BLOCKED only on the
+    ledger's own `blocking: …` lines (claims held for the owner): a stale ledger, an open gap, a checker that hasn't
+    reported on this ledger or a checker BLOCKED all hold, since fixing them edits the draft the judges would read.
+    The first line is the status line; the rest are the reasons that hold. Reads only; writes nothing."""
+    try:
+        ledger = claims.ledger_path_for(article, project_root)
+        if not ledger.exists():
+            return []
+        rep = status_report(article, ledger, project_root, check_path, platforms)
+    except (ValueError, OSError) as e:  # an ambiguous ledger or a broken [claims] config: claims can't be current
+        return ["claims: INCOMPLETE", f"can't report: {type(e).__name__}: {(str(e).splitlines() or [''])[0]}"]
+    if rep["status"] == "PASS":
+        return []
+    holds = [r for r in rep["reasons"] if not r.startswith(("blocking: ", "note: "))]
+    if rep["status"] == "BLOCKED" and not holds:
+        return []
+    return [f"claims: {rep['status']}", *(holds or rep["reasons"])]
+
+
 def unreported(article: Path, ledger: Path | None, project_root: Path, error: BaseException) -> dict:
     """The INCOMPLETE `<key>.claims.json` payload written when `claims status` can't report (a configured matrix
     that isn't there, an unreadable article, an ambiguous ledger), so an earlier PASS never outlives the error.

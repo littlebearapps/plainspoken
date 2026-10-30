@@ -2,12 +2,15 @@
 `claims checker-input`, and how `claims status` reads the record."""
 import json
 import os
+import re
 import stat
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
 from plainspoken import checker
-from tests.test_cli_claims import FIX, PASSAGE, SRC, Project, run, sha
+from tests.test_cli_claims import FIX, PASSAGE, RUN, SRC, Project, run, sha
 
 REPLIES = FIX / "replies"
 ARTICLE = (FIX / "article.md").read_text(encoding="utf-8")
@@ -422,6 +425,76 @@ class Record(Project):
         self.assert_bad_input(self.record("pass-clean.txt", ledger_sha="sha256:" + "0" * 64),
                               self.ledger_for("article.md").name)
         self.assertFalse(self.check.exists())
+
+
+class JudgeHold(Record):
+    """#160: `judge-input` waits for a claims step that's open or stale, and never for a draft with no ledger."""
+
+    def hold(self, article="article.md"):
+        from plainspoken import claims_tools
+        return claims_tools.judge_hold(self.root / article, self.root, Path(self.paths(article)["claims-check"]), None)
+
+    def judge_input(self, *extra):
+        env = {k: v for k, v in os.environ.items()
+               if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_", "CLAUDE_PROJECT_DIR"))}
+        env.pop("PYTHONPATH", None)
+        cmd = [sys.executable, str(RUN)]
+        subprocess.run([*cmd, "check", "article.md", "--profile", "default"], cwd=self.root, capture_output=True,
+                       env=env)
+        held = subprocess.run([*cmd, "judge-input", "article.md", "--profile", "default"], cwd=self.root,
+                              capture_output=True, text=True, env=env)
+        rules = sorted(set(re.findall(r"(?m)^\s+(?:BLOCK|WARN)\s+(\S+)\s+L", held.stderr))) if held.returncode == 1 else []
+        keep = ["--keep", ",".join(rules)] if rules else []
+        return subprocess.run([*cmd, "judge-input", "article.md", "--profile", "default", *keep, *extra],
+                              cwd=self.root, capture_output=True, text=True, env=env)
+
+    def test_no_ledger_never_holds(self):
+        (self.root / "other.md").write_text("Text.\n", encoding="utf-8")
+        self.assertEqual(self.hold("other.md"), [])
+
+    def test_a_checker_that_hasnt_reported_holds(self):  # M99Lk3: the checker still running in the background
+        hold = self.hold()
+        self.assertEqual(hold[0], "claims: INCOMPLETE")
+        self.assertIn("checker not run", hold)
+
+    def test_a_current_pass_lets_the_judges_start(self):
+        self.assertEqual(self.record("pass-clean.txt").returncode, 0)
+        self.assertEqual(self.hold(), [])
+
+    def test_a_checker_block_holds(self):
+        self.assertEqual(self.record("blocking-verbatim.txt").returncode, 1)
+        self.assertEqual(self.hold(), ["claims: BLOCKED", "checker: BLOCKED"])
+
+    def test_an_edit_after_the_pass_holds(self):  # jMtx8T: edits after a claims block, judged without a recheck
+        self.assertEqual(self.record("pass-clean.txt").returncode, 0)
+        self.art.write_text(ARTICLE + "\nOne more line.\n", encoding="utf-8")
+        hold = self.hold()
+        self.assertEqual(hold[0], "claims: INCOMPLETE")
+        self.assertIn("checker result stale", hold)
+
+    def test_blocked_only_on_owner_holds_lets_the_judges_start(self):
+        text = self.ledger.read_text(encoding="utf-8").replace(
+            'method = "booking system export"', 'method = "booking system export"\nsensitive = true')
+        self.ledger.write_text(text, encoding="utf-8")
+        self.assertEqual(self.record("pass-clean.txt").returncode, 0)
+        s = self.status()
+        self.assertEqual(s.stdout.splitlines()[0], "claims: BLOCKED", s.stdout)
+        self.assertIn("owner approval required", s.stdout)
+        self.assertEqual(self.hold(), [])
+
+    def test_cli_exits_3_and_ignore_claims_runs(self):
+        held = self.judge_input()
+        self.assertEqual((held.returncode, held.stdout), (3, ""), held.stderr)
+        self.assertIn("  claims: INCOMPLETE", held.stderr)
+        self.assertIn("in the foreground", held.stderr)
+        self.assertIn("--ignore-claims", held.stderr)
+        ignored = self.judge_input("--ignore-claims")
+        self.assertEqual(ignored.returncode, 0, ignored.stderr)
+        self.assertEqual(len(ignored.stdout.splitlines()), 4)
+        self.assertEqual(self.record("pass-clean.txt").returncode, 0)
+        ok = self.judge_input()
+        self.assertEqual(ok.returncode, 0, ok.stderr)
+        self.assertEqual(len(ok.stdout.splitlines()), 4)
 
 
 class CheckerInput(Project):

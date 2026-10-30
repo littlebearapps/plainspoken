@@ -35,7 +35,7 @@ here too.
 
    ```bash
    T=$(mktemp -d)
-   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1: see check step 2
+   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1 or 3: see check step 2
    RUN agent-prompt tells-judge --line 1 < "$T/input.jsonl" > "$T/J1.prompt"    # and --line 2, 3, 4
    ```
 

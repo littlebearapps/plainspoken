@@ -14,7 +14,8 @@
   notes. Writing the contract under
   `.plainspoken/reader-value/`, the ledger, saved sources and the checker reply asks for permission, because this
   skill's allowed tools cover the CLI only. The claims checker is the `plainspoken:claims-checker` subagent, started
-  with the Agent tool exactly as the claims skill's step 6 says.
+  with the Agent tool exactly as the claims skill's step 6 says, in the foreground: never `run_in_background`, and
+  its reply read and recorded before the next step.
 - Step 8: a Stop hook reads the report when the turn ends. If its `needs the owner` line lists nothing and the
   prose still asks the owner to check something, the hook sends the report back once, quoting the ask: cut the line
   or hold it `blocking` as step 6 says, then report again.

@@ -2,7 +2,8 @@
 register-checklist|claims|reader-value|kaizen|setup|doctor|eval} …
 Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
 invalid justifications or nothing to review (justify), a lint BLOCK or WARN left
-without --keep (judge-input), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
+without --keep (judge-input; 3 while the draft's claim ledger isn't current, unless --ignore-claims), claims findings,
+gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
 (checker-input, record), reader-value or action-module findings, a delivery record or status other than a
 current PASS (every self-check), a stale delivery reply or a contract that doesn't validate (deliver-input,
 deliver, status), or a kaizen refusal (no current check or snapshot, no finding, a bad hunk number, capture off, a
@@ -293,7 +294,11 @@ def _main(argv: list[str] | None) -> int:
     ji.add_argument("--plugin-profile")
     ji.add_argument("--keep", action="append", default=[], metavar="RULE",
                     help="a rule whose open lint BLOCK or WARN you leave (repeat, or comma-separate); without it, "
-                         "judge-input exits 1 while the lint has one")
+                         "judge-input exits 1 while the lint has one, and a rule with no open line exits 2")
+    ji.add_argument("--ignore-claims", action="store_true",
+                    help="judge even when the draft's claim ledger isn't current (a check on its own; write never "
+                         "passes it); without it, judge-input exits 3 while `claims status` is stale, INCOMPLETE or "
+                         "BLOCKED on anything but claims held for the owner")
     ag = sub.add_parser("agent-prompt", help="print an agent's self-contained prompt with stdin as its input, for "
                                              "hosts without plugin agents (Codex, Hermes)")
     ag.add_argument("name", choices=list(hosts.AGENTS))
@@ -475,6 +480,11 @@ def _main(argv: list[str] | None) -> int:
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "prepare judge input for")
         keep = {k.strip() for arg in args.keep for k in arg.split(",") if k.strip()}
+        stray = judges.stray_keeps(args.path, reports_dir, root, keep)
+        if stray:  # #162: a keep names a line this pass's lint printed, never one typed before it was read
+            print(f"plainspoken: --keep {', '.join(stray)}: the current lint has no open BLOCK or lint-owned WARN for "
+                  "that rule. Read the lint (`check`) and keep only the rules it prints.", file=sys.stderr)
+            return 2
         held = judges.open_lint(args.path, reports_dir, root, keep)
         if held:
             print("plainspoken: the lint still has lines the judges can't clear (merge fails them whatever the "
@@ -484,6 +494,23 @@ def _main(argv: list[str] | None) -> int:
             print("Fix them and run `check` again, or rerun with --keep <rule> for each one you leave (a WARN you'll "
                   "justify after merge).", file=sys.stderr)
             return 1
+        hold = [] if args.ignore_claims else claims_tools.judge_hold(
+            args.path, root, report.report_paths(args.path, reports_dir, root)["claims-check"],
+            extraction.platform_names(root))
+        if hold:  # #160: a claims fix after the judges would send all four round again
+            print("plainspoken: the claims step isn't finished for this draft, so its fixes could still change what "
+                  "the judges read:", file=sys.stderr)
+            for line in hold:
+                print(f"  {line}", file=sys.stderr)
+            print("Finish it first (the claims skill's steps 4 to 6, the checker in the foreground) until `claims "
+                  "status` says PASS, or BLOCKED only on claims held for the owner. A check on its own can rerun with "
+                  "--ignore-claims.", file=sys.stderr)
+            return 3
+        kept = [f for f in judges.open_lint(args.path, reports_dir, root) if f not in held]
+        if kept:  # shown here too, so a kept line is read even when the lint's own output wasn't
+            print("plainspoken: open lint lines kept with --keep (merge still counts each one):", file=sys.stderr)
+            for f in kept:
+                print(f"  {f['severity']:5} r{f['rule']:<4} L{f.get('line', '?')}", file=sys.stderr)
         for item in items:
             print(json.dumps(item, ensure_ascii=False))
         return 0

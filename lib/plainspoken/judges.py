@@ -86,6 +86,13 @@ def open_lint(article: Path, reports_dir: Path, cwd: Path, keep: set[str] = froz
     return out
 
 
+def stray_keeps(article: Path, reports_dir: Path, cwd: Path, keep: set[str]) -> list[str]:
+    """Each `--keep` rule that names no line `open_lint` holds now (#162): a keep is for a line the lint printed in
+    this pass, so one typed before the lint was read, or left over from an earlier pass, is refused."""
+    open_ = {f.get("rule") for f in open_lint(article, reports_dir, cwd)}
+    return sorted(k for k in keep if k not in open_ and not (k.startswith("r") and k[1:] in open_))
+
+
 def _parse(text: str) -> dict:
     m = _FENCE.match(text)
     body = m.group(1) if m else text
