@@ -98,6 +98,40 @@ class Matcher(unittest.TestCase):
             with self.subTest(p=p):
                 self.assertIsNone(nudge.intent(p))
 
+    def test_questions_and_tech_tasks_that_mention_writing_stay_quiet(self):  # #125
+        for p in ("Does the lint hook run when I write emails in Outlook via MCP?",  # verb in a subordinate clause
+                  "Write up how the Stop hook handles replies",  # generic noun, after a clause break
+                  "Can you write a plan for linting chat replies?",  # noun isn't the verb's object
+                  "Draft the plan for issue 125 (lint drafts in chat replies)",
+                  "Write a GitHub issue about the nudge misfiring on emails",
+                  "Write tests for the email extraction",
+                  "Write the docs page for the Stop hook",  # tech object
+                  "Write a page for the docs",  # tech destination
+                  "Write the hook that posts replies",
+                  "I write emails all day, so how does the hook pick them up?",
+                  "When I draft a post, does the nudge fire?",
+                  "Clean up the hook that tidies replies"):
+            with self.subTest(p=p):
+                self.assertIsNone(nudge.intent(p))
+
+    def test_requests_in_other_shapes_still_fire(self):  # #125: the tightening keeps real asks
+        for p in ("Write a LinkedIn post about the new MCP server",
+                  "Write a short reply to Sam saying Thursday works",
+                  "Hey, can you write an email to the parents about Friday?",
+                  "I'd like you to draft a reply to this customer email: ...",
+                  "If you have time, write a post for the club page",
+                  "Thanks. Now please write the newsletter for March",
+                  "Could you help me write a text to my landlord?",
+                  "Write a summary for the board of this quarter's numbers",
+                  "- write an email to the volunteers about the roster",
+                  'Draft the "About the market" page for our market',  # a quoted name before the noun
+                  "Write something for the parents' newsletter"):  # the piece named by where it goes
+            with self.subTest(p=p):
+                self.assertEqual(nudge.intent(p), "draft")
+        self.assertEqual(nudge.intent("Write a feature for our council newsletter (about 450 words) on the library"),
+                         "draft-long")
+        self.assertEqual(nudge.intent("Can you tidy up this email to the parents?"), "rewrite")
+
     def test_ask_buried_in_a_long_paste_is_found_at_either_end(self):
         filler = "Lorem ipsum dolor sit amet. " * 200
         self.assertEqual(nudge.intent("Rewrite this so it sounds human:\n\n" + filler), "rewrite")
@@ -193,12 +227,15 @@ class Hook(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
         self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
 
-    def run_hook(self, prompt: str, env: dict | None = None, args: tuple = ()):
-        e = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_"))}
-        e.update({"HOME": str(self.home), "CLAUDE_PROJECT_DIR": str(self.project)})
+    def run_hook(self, prompt: str, env: dict | None = None, args: tuple = (), **ids):
+        e = {k: v for k, v in os.environ.items()
+             if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_", "CLAUDE_PLUGIN_DATA", "PLUGIN_DATA"))}
+        e.update({"HOME": str(self.home), "CLAUDE_PROJECT_DIR": str(self.project),
+                  "CLAUDE_PLUGIN_DATA": str(self.home / "data")})
         e.pop("XDG_CONFIG_HOME", None)
         e.update(env or {})
-        event = {"hook_event_name": "UserPromptSubmit", "prompt": prompt, "cwd": str(self.project), "session_id": "s"}
+        event = {"hook_event_name": "UserPromptSubmit", "prompt": prompt, "cwd": str(self.project), "session_id": "s",
+                 **ids}
         return subprocess.run([sys.executable, str(HOOK), *args], input=json.dumps(event), capture_output=True,
                               text=True, env=e)
 
@@ -226,6 +263,29 @@ class Hook(unittest.TestCase):
         r = self.run_hook(HANDBACK, {"CLAUDE_PLUGIN_OPTION_NUDGE": "true"})
         self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
 
+    def flags(self) -> dict:
+        path = self.home / "data" / "writing-ask-state.json"
+        return json.loads(path.read_text(encoding="utf-8"))["last"] if path.exists() else {}
+
+    def test_writing_ask_flag_only_when_the_chat_reply_check_is_on(self):  # #125
+        on = {"CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "true"}
+        r = self.run_hook(DRAFT[0], prompt_id="p1")
+        self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
+        self.assertEqual(self.flags(), {})
+        r = self.run_hook(DRAFT[0], on, prompt_id="p1")
+        self.assertEqual(r.stdout, "")  # the nudge itself is still off: nothing for the model
+        self.run_hook(REWRITE[0], on, ("--host", "codex"), turn_id="t9")
+        self.run_hook(DRAFT[1], on)
+        self.run_hook(QUIET[0], on, prompt_id="p2")
+        self.assertEqual(self.flags(), {"s|p1": "draft", "s|t9": "rewrite", "s|latest": "draft"})
+        self.assertNotIn("excursion", (self.home / "data" / "writing-ask-state.json").read_text(encoding="utf-8"))
+
+    def test_flag_and_nudge_together(self):
+        r = self.run_hook(DRAFT[0], {"CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "true", "CLAUDE_PLUGIN_OPTION_NUDGE": "true"},
+                          prompt_id="p1")
+        self.assertIn("/plainspoken:write", json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"])
+        self.assertEqual(self.flags(), {"s|p1": "draft"})
+
     def test_bad_config_or_stdin_never_blocks(self):
         (self.project / ".plainspoken").mkdir()
         (self.project / ".plainspoken" / "config.toml").write_text("[nudge\n", encoding="utf-8")
@@ -246,9 +306,9 @@ class Manifests(unittest.TestCase):
         manifest = json.loads((REPO / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["hooks"], "./hooks/codex.json")
         codex = json.loads((REPO / "hooks" / "codex.json").read_text(encoding="utf-8"))["hooks"]
-        self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolUse"})
+        self.assertEqual(set(codex), {"UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"})
         self.assertEqual(codex["PostToolUse"][0]["matcher"], "apply_patch")
-        for group in (*codex["UserPromptSubmit"], *codex["PostToolUse"]):
+        for group in (g for groups in codex.values() for g in groups):
             for h in group["hooks"]:
                 script = h["command"].split('"$PLUGIN_ROOT/')[1].split('"')[0]
                 self.assertTrue((REPO / script).is_file(), script)

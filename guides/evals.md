@@ -4,6 +4,23 @@ The checks can only claim what they've been measured to do, so this guide covers
 each one costs and the rules that keep the numbers honest. Every eval command prints its own `--help`; the CLI is
 `python3 lib/run.py eval …`.
 
+## Results so far
+
+The golden set now holds 257 cases: 233 for the judges (J1 to J4 and JR) and 24 for the claims checker
+(`eval golden validate --require-counts` prints the counts). The runs below were made on the 226 judge cases it held
+in October 2026; the full write-up is `docs/acceptance/p6-evals.md`.
+
+- On the golden set, Claude Opus as judge met the 0.8 bar in every group in 3 of 3 runs. That's an upper bound,
+  because Claude built and labelled most of the cases.
+- A five-vendor panel judged all 226 cases through OpenRouter for US$3.86: GLM-5.3, GPT-6 Luna (J1 to J4 only),
+  Gemini 3.8 Flash, DeepSeek V4.1 Flash and Muse Glimmer 30B. Its majority vote was right on 222 of 225 decided
+  cases. On the 17 cases backed by the owner's own decisions, DeepSeek got 16 right and Claude 15.
+- Four other models were screened and left out: Cohere Command A+, Inception Mercury 2.5, Writer Palmyra X5 and
+  Mistral Large 4.
+- The blind reader test against the author's own writing hasn't run yet: it needs samples of the author's
+  unassisted writing. Model readers have compared pieces made with and without the plugin
+  (`docs/acceptance/v1.0-eval-campaign.md`).
+
 ## What each eval measures
 
 | Eval | Question it answers | Command | Cost |
@@ -20,6 +37,7 @@ each one costs and the rules that keep the numbers honest. Every eval command pr
 | Ablations | Does the output style, the session brief or a ban list in the prompt change the drafts? | `scripts/dev/draft_runs.py`, then `scripts/dev/ablation_table.py` | subscription |
 | Blind reader test | Can a reader tell plainspoken's drafts from the author's own writing? | `eval blind build`, `form`, `run`, `score` | people: free; panel: subscription or paid |
 | Lint pass rate | What share of a folder of drafts has no lint BLOCK? | `eval lint-rate --drafts DIR` | free |
+| Verdict diff | Which lint verdicts on a fixed public corpus does a change move? | `scripts/dev/verdict_diff.py OLD NEW` | free |
 | Anti-Goodhart report | Is the lint pass rate rising while readers notice nothing? | `eval goodhart` | free |
 
 The judge report gives each group's true-positive rate (TPR: the share of real tells found) and true-negative rate
@@ -30,8 +48,8 @@ rather than the writing.
 ## Free, subscription and paid
 
 - **Free** means no model is called: the golden-set check, the rewrite graders, the lint rate and the goodhart report.
-  CI runs the unit tests for all of these on every pull request, and validates the golden set with
-  `eval golden validate --require-counts`. The lint rate and the goodhart report need drafts and history, so you run
+  CI runs the unit tests for all of these on every pull request, validates the golden set with
+  `eval golden validate --require-counts`, and posts the verdict diff (below). The lint rate and the goodhart report need drafts and history, so you run
   them yourself.
 - **Subscription** means `claude -p` on a Claude plan. Nothing is billed, but each run uses the plan's quota, and the
   CLI reports a notional cost (what the same tokens would cost through the API). A full `write` run with its check is
@@ -90,8 +108,9 @@ python3 lib/run.py eval judges-report --run .plainspoken/evals/judges-<time>
 A run that stops early, or gets interrupted, resumes when you re-run it with the same `--out`: every reply already in
 `replies.jsonl` is skipped. A model reply that isn't the JSON asked for counts as an error, never as a pass or a fail.
 
-`claude plugin eval` has no dry run. Estimate it from the last run: the trigger suite's 28 cases at one run each cost
-US$3.51 on 2026-10-14, and the rewrite suite runs every case twice (with and without the plugin). Every run here uses
+`claude plugin eval` has no dry run. Estimate it from the last run: `eval trigger-estimate` scales the last recorded
+trigger run (see the monthly drift check below; before any was recorded, 28 cases at one run each cost US$3.51 on
+2026-10-14), and the rewrite suite runs every case twice (with and without the plugin). Every run here uses
 `--no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin`. The ceiling is checked before each run launches, so
 one invocation can spend about US$5 plus the runs already in flight (up to 4 with `-j 4`), and the workflow's `all`
 suite, two invocations, about twice that:
@@ -123,7 +142,7 @@ Since #12 each skill runs that call as its first step instead, which should lift
 run on the current CLI confirms it, keep using `npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI
 version at a time: two at once on one login revoked a token mid-run.
 
-Each smoke case except `humanize` and `setup`, which have no profile step, also has a `*-first` grader: the run's first
+Each smoke case except `setup`, which has no profile step, also has a `*-first` grader: the run's first
 `run.py` call must be the skill's first step, `run.py profile` (`run.py kaizen review` for kaizen). When it fails, the
 runner says only "pattern not found in trace", so run the suite with `--keep-temp` and `--json`, then `eval first-call`
 on that file: it prints the first engine call of each run.
@@ -182,6 +201,25 @@ The golden set and the blind-test pairs are held out. They measure the checks; t
 - When a judge misses a case, don't edit the rubric to catch that case. Fix the rubric only from evidence outside the
   held-out set (the kaizen ledger, new examples written fresh), then measure again.
 
+## The verdict diff
+
+`scripts/dev/verdict_diff.py OLD NEW` lints one fixed public corpus with two versions of the plugin and lists every
+text whose lint status (BLOCK, WARN or CLEAN) or finding count per rule moved. OLD and NEW are git refs or checkout
+folders. The corpus is read from NEW, so both sides lint the same texts: every case in `evals/golden/` plus the
+rewrite references and the voice samples, 273 texts as of 29 October 2026. It runs the lint only, with the default
+profile. No model is called, and nothing is written into the repo. It takes about 10 seconds.
+
+On every pull request CI runs it base against head and writes the markdown to the job summary. It never
+fails the build: a rule change is meant to move verdicts, and a person reads the list to see whether the right ones
+moved. For a release, paste the output for the range into the release PR:
+
+```bash
+python3 scripts/dev/verdict_diff.py v0.12.0 HEAD           # markdown; --json for the full record
+```
+
+The report names texts by path and case id, never by their words or labels, and the held-out rule above still
+applies: a golden case that moved is a reason to look at the change, never to tune a rule to that case.
+
 ## The blind reader test
 
 The blind test asks whether a reader picks plainspoken's draft as the person's writing about as often as the person's
@@ -222,10 +260,33 @@ settings still do), and the comparison doesn't measure your setup.
 Every brief must carry its own facts. The `write` skill stops and asks when a brief wants facts it doesn't have, where
 the plain model makes them up. That's the plugin working, but it leaves the arm with no draft to compare.
 
+## The monthly drift check
+
+Models change under the same name, and the CLI changes how skills start. Once a month, re-run the judges and the
+trigger suite on the current models and compare each with the last run. The runs are paid, so each needs the
+owner's OK; the comparisons are free and only read files.
+
+1. `python3 lib/run.py eval judges --models <the last run's models> --dry-run` for the estimate, and
+   `python3 lib/run.py eval trigger-estimate` for the trigger suite's (the last recorded cost per run × today's
+   cases).
+2. With the OK, run both (`eval judges … --yes --max-cost-usd N`; the trigger suite with `--json trigger.json`).
+3. `python3 lib/run.py eval drift --run <new run> --against <last month's run>` compares the judges per group and
+   model: TPR, TNR and precision with both runs' 95% intervals. It flags a drop where the new interval sits
+   entirely below the old one, a model id that changed, and a group only one run has. Overlapping intervals aren't
+   flagged: with 20 cases a label, an interval spans 0.2 to 0.35, so 0.95 to 0.82 shows in the table but may be
+   noise. Add `--fail-on-drift` to exit 1 on a flag.
+4. `python3 lib/run.py eval trigger-record trigger.json --model <model id>` adds the trigger run to the history
+   (the result file doesn't name the model) and prints how it compares with the last one: the pass rate by
+   interval, a changed CLI version or model, and the cases that passed fewer runs.
+
+A flag is a reason to look, not to retune: read the replies behind a drop before changing a judge, and never tune
+against the golden set.
+
 ## The history and the anti-Goodhart report
 
-`eval judges`, `eval judges-report`, `eval blind score` and `eval lint-rate` each add a line to
-`.plainspoken/evals/history.jsonl` (`judges-report` skips a run and `--min` the history already holds).
+`eval judges`, `eval judges-report`, `eval blind score`, `eval lint-rate` and `eval trigger-record` each add a line
+to `.plainspoken/evals/history.jsonl` (`judges-report` skips a run and `--min` the history already holds, and
+`trigger-record` a run it already holds).
 `eval goodhart` reads it and flags when, between two blind runs, the lint pass rate on their drafts rose by 0.10 or
 more while readers' results didn't improve: the two intervals overlap, or the later one sits entirely below the
 earlier. A blind score with no valid judgement adds no line. A flag means the lint may be rewarding its own patterns

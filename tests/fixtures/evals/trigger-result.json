@@ -1,0 +1,419 @@
+{
+ "schemaVersion": 1,
+ "claudeVersion": "2.1.303",
+ "startedAt": "2026-10-21T05:14:43.884Z",
+ "durationSeconds": 60,
+ "costUsd": 0.833808,
+ "partial": false,
+ "suite": {
+  "root": "/plugin",
+  "ablation": "none",
+  "tagFilters": [
+   "trigger"
+  ],
+  "threshold": 0,
+  "concurrency": 4,
+  "plugins": [
+   {
+    "name": "plainspoken",
+    "version": "0.7.0",
+    "path": "/plugin"
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "adapt--natural",
+   "dir": "evals/triggers/adapt--natural",
+   "source": "prose",
+   "promptMarkdown": "(trimmed)",
+   "runsPerCase": 3,
+   "timeoutSeconds": 180,
+   "maxTurns": 8,
+   "graders": [
+    {
+     "name": "does-not-fire",
+     "type": "tool_used",
+     "weight": 1
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 1,
+      "costUsd": 0.052542,
+      "judgeCostUsd": 0,
+      "durationSeconds": 8,
+      "startedAt": "2026-10-21T05:14:44.379Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "does-not-fire",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 1,
+      "costUsd": 0.051947,
+      "judgeCostUsd": 0,
+      "durationSeconds": 7,
+      "startedAt": "2026-10-21T05:14:44.380Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "does-not-fire",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 4,
+      "costUsd": 0.097611,
+      "judgeCostUsd": 0,
+      "durationSeconds": 20,
+      "startedAt": "2026-10-21T05:14:44.380Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "does-not-fire",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 1,
+    "passRate": 1
+   }
+  },
+  {
+   "name": "check--sounds-like-ai",
+   "dir": "evals/triggers/check--sounds-like-ai",
+   "source": "prose",
+   "promptMarkdown": "(trimmed)",
+   "runsPerCase": 3,
+   "timeoutSeconds": 180,
+   "maxTurns": 8,
+   "graders": [
+    {
+     "name": "fires",
+     "type": "tool_used",
+     "weight": 1
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 0,
+      "passed": false,
+      "turns": 1,
+      "costUsd": 0.056637,
+      "judgeCostUsd": 0,
+      "durationSeconds": 9,
+      "startedAt": "2026-10-21T05:15:23.329Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "fires",
+        "passed": false,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 1..\u221e)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 0,
+      "passed": false,
+      "turns": 1,
+      "costUsd": 0.055732,
+      "judgeCostUsd": 0,
+      "durationSeconds": 9,
+      "startedAt": "2026-10-21T05:15:24.416Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "fires",
+        "passed": false,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 1..\u221e)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 4,
+      "costUsd": 0.092319,
+      "judgeCostUsd": 0,
+      "durationSeconds": 18,
+      "startedAt": "2026-10-21T05:15:32.397Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "fires",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 1x (expected 1..\u221e)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 0.3333333333333333,
+    "passRate": 0.3333333333333333
+   }
+  },
+  {
+   "name": "humanize--de-ai",
+   "dir": "evals/triggers/humanize--de-ai",
+   "source": "prose",
+   "promptMarkdown": "(trimmed)",
+   "runsPerCase": 3,
+   "timeoutSeconds": 180,
+   "maxTurns": 8,
+   "graders": [
+    {
+     "name": "fires",
+     "type": "tool_used",
+     "weight": 1
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 3,
+      "costUsd": 0.074553,
+      "judgeCostUsd": 0,
+      "durationSeconds": 12,
+      "startedAt": "2026-10-21T05:16:27.152Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "fires",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 1x (expected 1..\u221e)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 3,
+      "costUsd": 0.07943,
+      "judgeCostUsd": 0,
+      "durationSeconds": 15,
+      "startedAt": "2026-10-21T05:16:34.552Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "fires",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 1x (expected 1..\u221e)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 3,
+      "costUsd": 0.078431,
+      "judgeCostUsd": 0,
+      "durationSeconds": 13,
+      "startedAt": "2026-10-21T05:16:39.116Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "fires",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 1x (expected 1..\u221e)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 1,
+    "passRate": 1
+   }
+  },
+  {
+   "name": "write--sql-query",
+   "dir": "evals/triggers/write--sql-query",
+   "source": "prose",
+   "promptMarkdown": "(trimmed)",
+   "runsPerCase": 3,
+   "timeoutSeconds": 180,
+   "maxTurns": 8,
+   "graders": [
+    {
+     "name": "does-not-fire-plain-language",
+     "type": "tool_used",
+     "weight": 1
+    },
+    {
+     "name": "does-not-fire-write",
+     "type": "tool_used",
+     "weight": 1
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 1,
+      "costUsd": 0.061717,
+      "judgeCostUsd": 0,
+      "durationSeconds": 9,
+      "startedAt": "2026-10-21T05:21:58.777Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "does-not-fire-plain-language",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "does-not-fire-write",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 1,
+      "costUsd": 0.062087,
+      "judgeCostUsd": 0,
+      "durationSeconds": 11,
+      "startedAt": "2026-10-21T05:21:59.082Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "does-not-fire-plain-language",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "does-not-fire-write",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 2,
+      "costUsd": 0.070802,
+      "judgeCostUsd": 0,
+      "durationSeconds": 15,
+      "startedAt": "2026-10-21T05:22:01.662Z",
+      "error": null,
+      "tracePath": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "does-not-fire-plain-language",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "does-not-fire-write",
+        "passed": true,
+        "weight": 1,
+        "explanation": "Skill called 0x (expected 0..0)",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 1,
+    "passRate": 1
+   }
+  }
+ ],
+ "aggregates": {
+  "casesTotal": 4,
+  "casesPassed": 4
+ }
+}

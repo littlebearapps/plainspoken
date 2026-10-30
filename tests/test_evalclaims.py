@@ -209,6 +209,12 @@ class Cli(unittest.TestCase):
         with mock.patch.object(lp, "call", fake or FakeCall()):
             return run_cli("eval", "claims", "--out", str(self.out), *extra)
 
+    def roomy(self) -> list[str]:
+        """A budget that holds the whole CL set at FakeCall's cost, so a run that isn't testing the budget isn't cut
+        short by it as the set grows (from 24 cases, US$0.04 a call plus the next call's estimate passes the US$1
+        default)."""
+        return ["--max-cost-usd", str(len(CASES))]
+
     def test_dry_run_prints_the_plan_and_sends_nothing(self):
         fake = FakeCall()
         code, out, err = self.claims("--dry-run", fake=fake)
@@ -238,7 +244,7 @@ class Cli(unittest.TestCase):
 
     def test_run_writes_files_reports_accuracy_and_resumes(self):
         fake = FakeCall()
-        code, out, err = self.claims(fake=fake)
+        code, out, err = self.claims(*self.roomy(), fake=fake)
         self.assertEqual(code, 0, err)
         self.assertEqual(len(fake.keys), len(CASES))
         self.assertEqual(set(fake.models), {"claude-cli:claude-opus-5-5"})  # Claude only, on the CLI
@@ -248,7 +254,7 @@ class Cli(unittest.TestCase):
         self.assertEqual(summary["claims"]["accuracy"]["value"], 1.0)
         self.assertIn("ok    C001 expect fail", out)
         self.assertIn("- Claims: accuracy 1.00", out)
-        code, _, err = self.claims(fake=fake)
+        code, _, err = self.claims(*self.roomy(), fake=fake)
         self.assertEqual(code, 0, err)
         self.assertEqual(len(fake.keys), len(CASES))  # resumed: nothing called twice
 
@@ -285,11 +291,11 @@ class Cli(unittest.TestCase):
                 return reply(CASES[0], error="claude-cli: timed out")
             return r
         with mock.patch.object(lp, "call", flaky):
-            code, _, err = run_cli("eval", "claims", "--out", str(self.out))
+            code, _, err = run_cli("eval", "claims", "--out", str(self.out), *self.roomy())
         self.assertEqual(code, 1)
         self.assertIn("re-run", err)
         with mock.patch.object(lp, "call", flaky):
-            code, _, err = run_cli("eval", "claims", "--out", str(self.out))
+            code, _, err = run_cli("eval", "claims", "--out", str(self.out), *self.roomy())
         self.assertEqual(code, 0, err)
         self.assertEqual(fake.keys.count(first), 2)
         self.assertEqual(len(fake.keys), len(CASES) + 1)

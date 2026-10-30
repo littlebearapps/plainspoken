@@ -28,11 +28,28 @@ Record what a page does, not what it says about itself. For each page you look a
 2. Note the job the page is doing (introduce, sell one service, help a decision) and who it seems to be written for.
 3. Run the same audit you would run on your own copy: the gates, the tells and the checklist.
 4. Give a verdict (pass, partial or fail) and list the specific lines behind each finding.
-5. Record the pattern in your own words, with its tier, and what kind of business it came from, because a pattern from
-   a solo practice may not transfer to a team.
+5. Record the pattern in your own words, with its tier and the kind of organisation it came from. Whether it fits
+   your own writing is a separate test, in the next section.
 
 Say plainly where the evidence is thin. If every example you collected is the same kind of business, the finding
 leans that way, and the record should say so.
+
+## Studying other organisations' pages
+
+When you study other organisations' pages to shape your own writing, start from one stated question: the decision
+the evidence should inform, such as "should the enrolment page show the fee before the form?" With no question,
+don't collect. Then test each pattern for fit against the active profile: the writer's stance and scale (its pronoun,
+one person or a team), the reader it names, the page's job, and the honesty bar of the copy-audit
+[control test](../skills/copy-audit/references/principle.md), which keeps a promise to what the writer controls.
+Record the test a pattern fails, and note when the intent fits but the mechanism doesn't. A large club's page of staff
+photos shows the reader who'll be there, and a sole coach can meet the same worry with one line about who runs
+each session.
+
+Say what you didn't take and why: their wording (a light rewrite is still their line), a distinctive layout or visual
+identity, pressure tactics and unbacked claims. Say what you did take too. There's no quota for either list, and a
+study that takes nothing is a finished study. Prevalence isn't fit, because a pattern on most of the pages you saw
+may be one habit everyone copied. A pattern unique to one organisation shows a difference, not that it works. And
+absence proves nothing: not seeing a pattern doesn't show it fails, and a canonical rule rests on its own reasoning.
 
 ## Quoting
 

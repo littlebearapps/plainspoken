@@ -18,6 +18,10 @@ Core rules (these hold for the whole run):
   "and" or "but", or merges two sentences; it never adds a clause, detail or reason (such as "because …"). You never
   edit an article to add a fact, number, name, quote, example, opinion or detail that isn't already in the text or
   given by the user. You never edit or add `anti-ai-allow` markers.
+- A rhythm fix (7, 7d) joins two neighbouring sentences with "and", "but", a comma or a semicolon, keeping their own
+  words, or splits one. It never pads or restates to reach a length: no extra word to cross the line (an added "can"
+  or "working"), no fact the text already gives said again, no "so" or "because". When no such join or split clears
+  the line, keep the WARN (`--keep`, then step 7): an unresolved 7d is better than a padded sentence.
 - At most two fix passes, and fix passes come before justify: justify only what you keep after the last fix pass.
   Before the judges start, step 1 fixes lint findings the same way in at most two lint-only passes; no judge has
   read that text, so they aren't fix passes. Once the judges start, every edit to FILE is a fix pass (after justify
@@ -29,7 +33,7 @@ Core rules (these hold for the whole run):
 - Run every call from the same working directory (the project root); report files are keyed to it.
 
 **First, before any other step:** run
-`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}'` and read what it prints.
+`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'` and read what it prints.
 That's the active profile the steps below use. If the call fails, carry on without it.
 
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. These calls take
@@ -39,19 +43,47 @@ argument; quote it in every command (`"drafts/my post.md"`). Pass `--content-typ
 asks for it or the file is a social post. When the project gives files their own profile (`[engine] profiles` in
 `.plainspoken/config.toml`), every call that takes FILE uses FILE's profile by itself; the first step's summary is
 the project's default (`RUN config profile-for FILE` prints FILE's).
+
+For a post or video with a title, caption and alt text, put each in the frontmatter and list its key in the profile's
+`[document] visible_frontmatter_keys`, or keep alt text inline as `![alt](…)` in the body. The `read:` line under
+the lint heading (`fields_read` in the JSON) shows what the lint read. The plugin checks only the text it's given,
+never a platform's rendered version.
+
 Asked only for a quick lint that shouldn't count as kaizen evidence? Run step 1 with `--no-record` and stop there.
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
 run.py status.
 
+## Report only
+
+When the person asks for findings without edits (the words must stay their own, or only a person may write the
+outgoing text), follow this route. It overrides the fixing in the core rules and in steps 1, 2 and 5: you never
+edit FILE, and its bytes stay unchanged.
+- Step 1: run its `check` call and fix nothing. When a later step asks you to rerun step 1, again fix nothing.
+- Step 2: the lint cuts long lists short ("… N more"), so take the rules from `judge-input`'s exit-1 list, which
+  names every open line, and rerun step 2 with `--keep <rule>` for each rule it names. Here exit 1 always means
+  keep, and exit 3 always means rerun with `--ignore-claims`.
+- Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
+  and go to step 8.
+- If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (`status` doesn't
+  say which): report INCOMPLETE with that line, and stop. Don't rerun steps 1 to 5.
+- The report gives step 8's `check:` lines and lists each BLOCK and WARN with its line. Merge's status line names
+  the rules; the lines are in the `report` file from `RUN paths FILE` (each rule's `findings` from the lint,
+  `evidence` from a judge). Say plainly that nothing was fixed. Merge's FAIL or UNRESOLVED is the result: never
+  call it a PASS while a BLOCK or failing WARN remains.
+
 ## Steps
 
 1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed),
-   on its own: read it before step 2. Exit 2 → stop with its message. Before the first judges, fix its BLOCK and
-   WARN lines under the fix rule and run step 1 again (at most two lint-only passes), so the judges read a
-   lint-clean draft. A line you leave (a WARN you have a real reason to keep, one still there after two, or any once
-   the judges have started) goes to step 2 as `--keep <rule>`. Justify a kept WARN in step 7 rather than fix it:
-   a fix after the judges means all four again.
-2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 1 → it names lint lines still open: fix them (step 1) or keep them. Exit 2 → rerun step 1 once.
+   on its own: read it before step 2, in full. Never send it to `/dev/null` or cut it with a pipe. Exit 2 → stop
+   with its message. Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again
+   (at most two lint-only passes, counting a caller's, such as write step 6's), so the judges read a lint-clean
+   draft. A line you leave (a WARN you have a real reason to keep, a 7d line the rhythm rule can't clear, one still
+   there after two, or any once the judges have started) goes to step 2 as `--keep <rule>`, only for a rule this
+   pass's lint printed. Justify a kept WARN in step 7 rather than fix it: a fix after the judges means all four again.
+2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 1 → it names lint lines still open: fix them (step 1) or keep them. Exit 2 → rerun step 1 once (a `--keep` for a rule with no open line lands here too).
+   Exit 3 → FILE has a claim ledger that isn't current, and it prints why. From write, finish the claims step
+   (write steps 6 and 7 say how), then step 1 again. On its own, rerun step 2 with `--ignore-claims` and say so
+   in step 8.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
    this. Your input:" followed by that line verbatim. Nothing else: no file contents, no opinion, no hint about who
    wrote it.
@@ -70,8 +102,9 @@ run.py status.
 6. **Fix pass** (at most two in the whole run). Use `/plainspoken:humanize` on FILE with the list of failing rules
    and their evidence from `RUN paths FILE` → the `report` file. If it can't be started (the project may deny it),
    follow `${CLAUDE_PLUGIN_ROOT}/skills/humanize/SKILL.md` yourself. Fix every BLOCK and every failing WARN under
-   the fix rule above. Then go back to step 1 (the hash changed, so all four judges rerun). When both passes are
-   spent and merge still says FAIL → step 8 and report it. If it says UNRESOLVED → step 7, then step 8.
+   the fix rules above; a 7 or 7d WARN the rhythm rule can't clear goes to step 7 instead, never lengthened. Then
+   go back to step 1 (the hash changed, so all four judges rerun). When both passes are spent and merge still says
+   FAIL → step 8 and report it. If it says UNRESOLVED → step 7, then step 8.
 7. **Justify what you kept** (after the last fix pass you'll make). When no BLOCK remains but a WARN still fails and you have a real reason to keep it,
    follow `references/fix-or-justify.md` (template → fill → review input → one JR judge → record → merge). A JR
    reject leaves the rule UNRESOLVED: fix it, or rewrite the reason once.

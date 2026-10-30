@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "plainspoken",
   "displayName": "plainspoken",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Write like a person, not an AI: anti-AI-tells engine with isolated judges, voice profiles, plain language, claims integrity and built-in kaizen.",
   "author": {
     "name": "Little Bear Apps",
@@ -29,7 +29,7 @@
     "locale": {
       "type": "string",
       "title": "Spelling locale",
-      "description": "English variant used for spelling and word lists.",
+      "description": "English variant the skills write in (en-AU, en-GB or en-US). A project config or a voice profile that sets one wins.",
       "options": [
         "en-AU",
         "en-GB",
@@ -56,6 +56,24 @@
       "type": "boolean",
       "title": "Drafting rule",
       "description": "On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read. Off by default.",
+      "default": false
+    },
+    "tool_call": {
+      "type": "string",
+      "title": "Tool-call check",
+      "description": "Lint the writing in an MCP tool call (an email, a post, a message) before it goes out. off (default), warn = tell you and Claude, block-once = hold the first try back, ask = you decide. A project or user-wide [tool_call] mode wins.",
+      "options": [
+        "off",
+        "warn",
+        "block-once",
+        "ask"
+      ],
+      "default": "off"
+    },
+    "chat_reply": {
+      "type": "boolean",
+      "title": "Chat-reply check",
+      "description": "On: when you asked for writing and Claude's reply holds a draft (an email, a post, a text), its lint findings are shown to you at the end of the turn. Never to Claude. Off by default.",
       "default": false
     },
     "strictness": {

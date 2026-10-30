@@ -71,8 +71,11 @@ class CopyAuditReferences(unittest.TestCase):
                                                                 "The heading fits the section",
                                                                 "Don't build sections that force taglines",
                                                                 "One main action per page",
-                                                                "Say what happens next"),
-            "guides/evidence-method.md": ("Evidence tiers", "Capturing a site", "Quoting", "Retiring evidence"),
+                                                                "Say what happens next",
+                                                                "Order sections by the reader's decision",
+                                                                "One name per thing across a site"),
+            "guides/evidence-method.md": ("Evidence tiers", "Capturing a site", "Studying other organisations' pages",
+                                          "Quoting", "Retiring evidence"),
         }
         for rel, names in want.items():
             h = headings(self.read(rel))
@@ -110,6 +113,20 @@ class CopyAuditReferences(unittest.TestCase):
         for target in ("references/section-design.md", "references/principle.md", "references/outcomes-led.md",
                        "references/worked-examples.md", "../../guides/evidence-method.md"):
             self.assertIn(f"]({target})", text, target)
+
+    def test_tier_wording_matches_the_guide(self):  # one place = a single example, not a hypothesis
+        _, text = __import__("tests._skills", fromlist=["load"]).load("copy-audit")
+        self.assertNotIn("seen in one place is a hypothesis", text)
+        self.assertIn("single example", text)
+        self.assertIn("**Single example.**", self.read("guides/evidence-method.md"))
+
+    def test_requested_assessment_keeps_its_finding(self):  # tell n doesn't soften a review the reader asked for
+        tells = self.read("skills/copy-audit/references/tells.md")
+        entry = tells.split("### n. ", 1)[1].split("\n### ", 1)[0]
+        self.assertIn("asked for the assessment", entry)
+        watch = self.read("skills/plain-language/references/watch-outs.md")
+        section = watch.split("## Negative framing", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("asked for the assessment", section)
 
     def test_task8_review_minors(self):
         tells = self.read("skills/copy-audit/references/tells.md")

@@ -626,3 +626,45 @@ class Briefs(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MonthlyCap(Case):
+    """Mining stores no more than what's left of `[kaizen] monthly_cap` after calibrate's proposals this month."""
+
+    def calibrated(self, n: int, when: datetime = NOW) -> None:
+        for i in range(n):
+            ledger.append(ledger.make_event(event="calibrate", actor="engine", outcome="proposed",
+                                            ruleset_version=CFG.version, profile="default", rule="2b",
+                                            proposal=f"KZ-20261001-00000{i}",
+                                            ts=when.replace(day=1, microsecond=0).isoformat()), self.settings)
+
+    def test_calibrate_proposals_count_against_mining(self):
+        full = self.mine(dry_run=True)
+        self.assertGreater(len(full["candidates"]), 1)
+        self.assertIsNone(full["limits"]["cap"])
+        self.calibrated(2)
+        self.settings["monthly_cap"] = 3
+        out = self.mine()
+        self.assertEqual(len(out["candidates"]), 1)
+        self.assertEqual((out["limits"]["used"], out["limits"]["limit"]), (2, 1))
+        self.assertEqual(len(self.stored()), 1)
+        again = self.mine()
+        self.assertEqual((again["candidates"], again["limits"]["limit"]), ([], 0))
+
+    def test_max_new(self):
+        out = self.mine(dry_run=True, max_new=1)
+        self.assertEqual(len(out["candidates"]), 1)
+
+    def test_cli_prints_the_cap(self):
+        shutil.copytree(FIX / "corpus", self.root / "corpus")
+        shutil.copytree(FIX / "drafts", self.root / "drafts")
+        self.calibrated(1, datetime.now(timezone.utc))  # the CLI mines as of now
+        (self.root / ".plainspoken" / "config.toml").write_text("[kaizen]\nmonthly_cap = 1\n", encoding="utf-8")
+        r = cli("kaizen", "mine", "--drafts", "drafts", "--corpus", "corpus/*.md", "--briefs", str(FIX / "briefs"),
+                "--dry-run", cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("kaizen mine: monthly cap 1:", r.stdout)
+        self.assertIn("no candidates", r.stdout)
+        r = cli("kaizen", "mine", "--drafts", "drafts", "--corpus", "corpus/*.md", "--briefs", str(FIX / "briefs"),
+                "--dry-run", "--max", "x", cwd=self.root)
+        self.assertEqual(r.returncode, 2)

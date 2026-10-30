@@ -14,14 +14,17 @@ writes files: inline code (`python3 -c`, `bash -c`, `node -e`), a heredoc or her
 by name (`python3 build.py`, `bash x.sh`, `./x.py`), whose file is read from the event's cwd (#57). A shell program
 is followed command by command; other code counts as writing when it calls `open(…, 'w')`, `write_text`,
 `json.dump(…, open(…, 'w'))`, `writeFile`, `subprocess`, `os.system` and the like. A program the guard can't see (a
-missing script, `-m module`) is refused only when the command itself names a protected file.
+missing script, `-m module`) is refused only when the command itself names a protected file. A plain literal
+assigned earlier in the same command (`R=/…/run.py; python3 $R …`) is expanded before any of this (#161); a value
+the guard can't read (`$(…)`, backticks, one that expands itself) leaves the name unseen.
 
 Reading (`cat`, `python3 -c` that only loads the ledger), `git`, `rm` and the CLI's `--from` stay allowed. A
 guardrail against a habit, not a security boundary: code that builds the path from parts, or a script piped in, isn't
 seen.
 
 Always on and cheap: a command without `reply.json`, `.claims.` or a script name exits before anything beyond
-sys/json is imported. Any error of its own is silent (exit 0), so it never blocks an unrelated Bash call."""
+sys/json is imported. Any error of its own is silent (exit 0), so it never blocks an unrelated Bash call.
+`--host codex` names apply_patch, Codex's file-writing tool, in the deny; `--host hermes` names write_file and patch."""
 import json
 import os
 import sys
@@ -29,16 +32,22 @@ import sys
 _MARKERS = ("reply.json", ".claims.", ".py", ".sh", ".bash", ".js", ".rb", ".pl", ".php")  # a script may name one
 
 
-def _deny(path: str, why: str) -> None:
-    reason = (f"plainspoken: {path} is written with the Write or Edit tool, never through the shell ({why}). A reply: "
-              "Write its JSON object to that path, then run the record command with --from. The claims ledger: Edit "
-              "one claim at a time, setting its five binding judgements after reading its pinned passage. To read "
-              "one, use cat, or code that only reads it.")
+def _deny(path: str, why: str, host: str = "claude-code") -> None:
+    tool, write, edit = {
+        "codex": ("apply_patch", "Write its JSON object to that path with apply_patch",
+                  "Edit one claim at a time with apply_patch"),
+        "hermes": ("write_file or patch", "Write its JSON object to that path with write_file",
+                   "Edit one claim at a time with patch"),
+    }.get(host, ("the Write or Edit tool", "Write its JSON object to that path", "Edit one claim at a time"))
+    reason = (f"plainspoken: {path} is written with {tool}, never through the shell ({why}). A reply: {write}, then "
+              f"run the record command with --from. The claims ledger: {edit}, setting its five binding judgements "
+              "after reading its pinned passage. To read one, use cat, or code that only reads it.")
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                              "permissionDecisionReason": reason}}))
 
 
-def main() -> int:
+def main(argv: list[str]) -> int:
+    host = argv[argv.index("--host") + 1] if "--host" in argv[:-1] else "claude-code"
     try:
         event = json.load(sys.stdin)
     except (ValueError, OSError):
@@ -57,9 +66,9 @@ def main() -> int:
     except Exception:  # noqa: BLE001 - never block an unrelated Bash call on a bug here
         return 0
     if found is not None:
-        _deny(*found)
+        _deny(*found, host)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

@@ -62,6 +62,15 @@ class Rule:
         return value in profile.flags if kind == "flag" else bool(profile.extra_bans)
 
 
+def stricter_cap(a, b):
+    """The stricter of two caps (the lower), where a negative cap means no limit (en_dash_max's default)."""
+    if a < 0:
+        return b
+    if b < 0:
+        return a
+    return min(a, b)
+
+
 @dataclass(frozen=True)
 class Config:
     version: str
@@ -71,14 +80,18 @@ class Config:
     _thresholds: dict[str, dict] = field(repr=False)
 
     def thresholds(self, profile: Profile | None = None, content_type: str = "article") -> dict:
-        """default → profile → content-type layer: a profile that loosens an article cap (em_dash_max = 5, say)
-        never lifts a social cap, so social caps always apply to social posts. With no profile, the ruleset's own
-        values (`thresholds()` is a copy of `[thresholds."default"]`): the public way to read them."""
+        """default → profile → content-type layer. A cap (a `*_max` key) in the content-type layer merges as the
+        stricter of the two values (`stricter_cap`), so a profile that loosens an article cap (em_dash_max = 5,
+        say) never lifts a social cap, and a profile that tightens one (em_dash_max = 0) keeps its own value on
+        social posts too (#104). Every other content-type key (run lengths, sentence lengths) replaces the profile
+        value, as before. With no profile, the ruleset's own values (`thresholds()` is a copy of
+        `[thresholds."default"]`): the public way to read them."""
         merged = dict(self._thresholds["default"])
         if profile is not None:
             merged.update(profile.thresholds)
         if content_type != "article":
-            merged.update(self._thresholds.get(content_type, {}))
+            for key, value in self._thresholds.get(content_type, {}).items():
+                merged[key] = stricter_cap(merged[key], value) if key.endswith("_max") and key in merged else value
         return merged
 
     def thresholds_for(self, doc) -> dict:

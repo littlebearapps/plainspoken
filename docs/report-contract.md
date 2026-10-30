@@ -8,6 +8,10 @@ the current project; `--reports DIR` changes it). File names start with the arti
 Each file, what writes it, and what it's bound to:
 
 - `<key>.lint.json`: written by `check`; bound to article_sha256, profile_sha256, ruleset_version, content_type.
+  Its `fields_read` lists what was linted, in order: `body`, then each of the profile's
+  `visible_frontmatter_keys` the file has as a string, then the profile's `faq_frontmatter_key` once if any FAQ
+  question or answer was read (the summary prints it as `read: …`). It's additive: a lint file without it, from
+  an older version, still reads and merges.
 - `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn` (or `--all` for all four);
   bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint) and input_digest (a hash
   of the whole `judge-input` line; `judge-record` rebuilds that line for the current draft and refuses a reply
@@ -35,6 +39,9 @@ Each file, what writes it, and what it's bound to:
 - `<key>.checked.md`: written by `check`, only when kaizen capture is on for `check` and it saves `<key>.lint.json`
   (not with `--no-save`, `--no-record` or `--out`); bound to the article's exact bytes as checked, so its sha256 is
   the lint's article_sha256 (the snapshot `kaizen diff` reads).
+- `<key>.prev.checked.md` and `<key>.prev.lint.json`: written by `check` when it saves a changed draft over a
+  snapshot and lint that belong together (the pair they replace); bound to each other, the check before the current
+  one (`kaizen dismiss --from-snapshot` reads it). Removed when check capture is off.
 
 Hash formats differ by file type. The lint, judge, justify and report files carry `article_sha256` as bare hex
 (`3f2a…`); the claims files (`claims`, `claims-check`, `claims-reply`), the delivery files (`delivery`,
@@ -44,6 +51,8 @@ field in a file of the same type, never across the two families.
 `merge` treats a file as stale, and the report as INCOMPLETE, when its bound hashes or stamps don't match the article,
 profile and ruleset now in use. `profile_sha256` covers the profile file and its calibration-notes file, so editing
 either one invalidates the lint and every judge file. `judge-record` refuses a reply when there's no current lint.
+A judge record proves the reply fitted the current draft, lint and input. It doesn't prove which process wrote it
+(`judge-record --from` accepts any valid file), and a fresh context isn't a sandbox.
 `claims status` reads `<key>.claims-check.json` only when its bound hashes match the article and ledger on disk now,
 and its `rubric_sha256` and `matrix_sha256` match the rubric and the configured matrix; otherwise the status can't be
 PASS (`checker result stale`, `checker result stale (rubric changed)`, `checker result stale (matrix changed)`, or
@@ -92,8 +101,11 @@ that the previous `<key>.lint.json` had and this check doesn't (same profile and
 An event holds hashes, ruleset words and section kinds, never article text unless `[kaizen] excerpts = true`. Capture
 never changes a command's output or exit code: a capture error is one `plainspoken: kaizen capture skipped: …` line on
 stderr, and `[kaizen] capture = false` turns it off. `[kaizen] capture_sources` keeps some sources (`check`, `merge`,
-`judge`, `lint-watch`; default all four): a source left out writes no events and no friction (`check` then writes no
-snapshot either, and `judge` drops `judge-record`'s friction and the backstop's count).
+`judge`, `lint-watch`, `tool-call`, `chat-reply`; default all six): a source left out writes no events and no
+friction (`check` then writes no snapshot either, and `judge` drops `judge-record`'s friction and the backstop's
+count). The tool-call and chat-reply checks' events never carry an excerpt, and their decision logs in the ledger
+folder, `tool-calls.jsonl` (counts and outcomes per field) and `chat-replies.jsonl` (shape, size and outcome per
+draft), never hold text.
 
 `merge` records what the judges decided once the report is written: each judge rule entry's own verdict (`fired`
 for the judge's `fail`, `passed` for its `pass`), with facet `agree` on rules both the lint and a judge look at, and
@@ -174,6 +186,8 @@ Each path (under the project root), what writes it, and what it holds:
   line.
 - `.plainspoken/kaizen/last-calibrate.txt`: written by `kaizen calibrate`; holds when calibrate last ran, with or
   without proposals (the Stop nudge's clock).
+- `.plainspoken/kaizen/capture-off.txt`: written by `check` when check capture is off and the ledger folder exists;
+  holds when that check ran, so `kaizen diff` ignores a snapshot older than it.
 - `.plainspoken/kaizen/CHANGELOG.md`: written by `kaizen apply --target profile`; holds one entry per applied profile
   change, naming the approver.
 - `.plainspoken/kaizen/mining/<YYYY-MM>/<model id>/<brief stem>.md`: written by the kaizen skill (mining drafts);
@@ -181,11 +195,11 @@ Each path (under the project root), what writes it, and what it holds:
 
 `[kaizen] ledger_dir` (relative to the project root, default `.plainspoken/ledger`) moves the ledger month files and
 `friction.jsonl`. `[kaizen] proposals_dir` (default `.plainspoken/kaizen`) moves `proposals/` (the `.json` and `.md`
-files), `last-calibrate.txt` and the profile `CHANGELOG.md`. The mining folder doesn't move: the kaizen skill always
-writes drafts under `.plainspoken/kaizen/mining/`, and `kaizen mine --drafts` names it. The ledger's decision events,
-not the proposal files, say whether a proposal is approved. `RULESET-CHANGELOG.md`, beside the ruleset `kaizen apply`
-edits, gets one entry per applied ruleset change. The loop in plain words, with what's stored and what isn't:
-`guides/kaizen.md`.
+files), `last-calibrate.txt`, `capture-off.txt` and the profile `CHANGELOG.md`. The mining folder doesn't move: the
+kaizen skill always writes drafts under `.plainspoken/kaizen/mining/`, and `kaizen mine --drafts` names it. The
+ledger's decision events, not the proposal files, say whether a proposal is approved. `RULESET-CHANGELOG.md`, beside
+the ruleset `kaizen apply` edits, gets one entry per applied ruleset change. The loop in plain words, with what's
+stored and what isn't: `guides/kaizen.md`.
 
 ## Text normalisation
 

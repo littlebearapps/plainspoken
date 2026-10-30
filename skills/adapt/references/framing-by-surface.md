@@ -82,6 +82,9 @@ Form labels and help text, confirmations, error messages, FAQ answers, cards for
 - Job: lower worry, answer the objection, help the reader take the next step.
 - Forms: plain and reassuring, and say what happens after sending. "Send the basics. I'll read them and reply within
   two working days with a suggested next step."
+- Intake questions: offer the common situations as options in the reader's words, plus an explicit "Not sure where
+  to start" option, so nobody has to diagnose their own problem to send the form. "My child is new to swimming ·
+  My child can swim but not confidently · Not sure where to start" beats a blank "Describe your needs" box.
 - Confirmations: specific, not generic. Not "Submission received", but "Thanks, I've got it. I'll reply by Thursday."
 - Errors: say what to fix, with no blame. "Add your email so I know where to reply."
 - FAQ: answer the objection directly, including "no" when no is right. A real answer is more credible than reassurance.

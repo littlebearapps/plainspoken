@@ -14,6 +14,9 @@ Read the text as the reader named in the profile and stop at any of these:
 - **Nouns stacked on nouns** (a four-word chain of nouns with no verb in it), where the reader has to guess which
   noun does what to which.
 
+A reader who uses a term in their own message hasn't shown they understand it, so keep their word and add its plain
+meaning: they may only be repeating what someone else told them.
+
 ## Glossing
 
 1. Say it in plain words first: what it is or what it does for this reader.

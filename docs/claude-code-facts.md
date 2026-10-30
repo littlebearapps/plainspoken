@@ -86,6 +86,16 @@ so `omitClaudeMd: true` in a plugin agent's frontmatter did **not** hide the pro
 ignored for plugin agents, or it is not honoured in this version/mode. Judge isolation must not rely on it: pass the
 judge only what it needs and treat project instructions as potentially visible.
 
+Re-probed 2026-10-23 on CLI 2.1.308 (plan 7b.0), Linux, `claude -p --output-format stream-json --verbose` on the
+subscription, a scratch plugin and project (not committed). Two plugin agents
+with the same body (reply `visible MARKER-<digits>` if any context holds that line, else `hidden`): `omit-agent` with
+`omitClaudeMd: true` and `ctrl-agent` with `omitClaudeMd: false`. The project `CLAUDE.md` held `MARKER-7731`. Both
+Agent calls carried only the prompt "Do the check in your instructions."
+
+Result: `omit-agent` answered **`hidden`**, `ctrl-agent` answered **`visible MARKER-7731`**. On 2.1.308 the field
+works for plugin agents, with a positive control. It didn't on 2.1.296 (above). Judge isolation still shouldn't rely
+on it alone: older CLIs ignore it, so keep passing each judge only what it needs.
+
 ## Summary
 
 | # | Question | Answer |
@@ -94,7 +104,7 @@ judge only what it needs and treat project instructions as potentially visible.
 | 2 | `CLAUDE_PLUGIN_OPTION_*` in hooks | None present under `--plugin-dir`; `multiple` encoding unobserved. |
 | 3 | SKILL.md substitution | `${user_config.*}` literal; `${CLAUDE_PLUGIN_ROOT}` substituted (hook env corroborates); `${CLAUDE_SKILL_DIR}` unverified. |
 | 4 | `` !`…` `` and Bash env | Injection runs; no `CLAUDE_PLUGIN_*` or `OPTION_*` visible to it or to Bash. |
-| 5 | `omitClaudeMd: true` | Agent still saw `MARKER-7731` (`visible`). |
+| 5 | `omitClaudeMd: true` | 2.1.296: agent still saw `MARKER-7731` (`visible`). 2.1.308: hidden, control visible. |
 | 6 | `if: "Bash(git push*)"` / `"Bash(git *)"` | Push filter misses `git -C x push`; `git *` catches that and `cd x && git push` but not `env git push`. Gate registered with no `if`; its own parser and limits are listed in section 6. |
 
 ## 6. Does `if: "Bash(git push*)"` fire only for `git push`?
@@ -368,3 +378,90 @@ on by the main agent would have been visible.
 Result: **an output style reaches the main conversation only, not subagents** (project and plugin styles alike), as
 the README says. Not tested: an interactive session, `/output-style` chosen mid-session, and plugin agents
 (`plainspoken:*`), which are subagents like the two tested.
+
+## 14. Does Claude Code's sandbox stop the CLI writing `.plainspoken/`?
+
+Probed 2026-10-23 on Claude Code CLI 2.1.308, Linux, `claude -p --safe-mode --allowedTools Bash` on the
+subscription. Scratch project (a `git init` folder whose `.claude/settings.json` holds
+only `{"sandbox": {"enabled": true}}`); not committed. One Bash call:
+`mkdir -p .plainspoken && touch .plainspoken/x && ls -la .plainspoken && touch $HOME/.config/<probe>`.
+
+- The project's `.plainspoken/` was created and written. The write to `~/.config/` failed with
+  `Read-only file system`. That matches the sandbox docs: a sandboxed command can write the working directory, the
+  per-user temp directory and any added directories, and nothing else unless `sandbox.filesystem.allowWrite` lists it.
+- So the skills' CLI calls (reports, ledgers, claims, reader-value contracts, all under the project's
+  `.plainspoken/`) work with the sandbox on. Hooks don't run in the sandbox.
+- `setup --scope user` is the one CLI call that writes outside the project (`~/.config/plainspoken/config.toml`, or
+  `$XDG_CONFIG_HOME`). With the sandbox on, Claude Code refuses it and usually asks to run it outside the sandbox.
+  If that's turned off (`sandbox.allowUnsandboxedCommands: false`), add the folder to `sandbox.filesystem.allowWrite`
+  or run the command yourself.
+- The round-7 eval smoke (2.1.308, `claude plugin eval`) saw `Read-only file system` on every Bash write in the
+  run folder, `mkdir .plainspoken` in the cwd included, while the Write tool worked. Normal sandboxed use doesn't do
+  that, so it's the eval runner. Run evals that need Bash writes on CLI 2.1.303, where round 6 saw no such failure.
+
+## 15. What the tool-call check relies on (#124), and what's still to probe
+
+Read on 2026-10-28 from the hooks references and source, not yet probed live; each line says where it came from.
+
+- Claude Code (`https://code.claude.com/docs/en/hooks`): a matcher with characters outside letters, digits, `_`, `-`,
+  space, `,` and `|` is an unanchored regex, so `mcp__.*` matches every MCP tool, including plugin-bundled servers
+  (`mcp__plugin_<plugin>_<server>__<tool>`) and claude.ai connectors (`mcp__claude_ai_<Name>__<tool>`).
+  `additionalContext` from `PreToolUse` reaches the model next to the tool's result, after the call has run; `deny`
+  shows its reason to the model and the call doesn't run; `ask` shows its reason to the person, prompts even in auto
+  mode, and in a `-p` run counts as a deny. A timed-out or failing command hook doesn't block the call without
+  `onFailure: "block"`, so the tool-call hook has none.
+- Codex (`https://developers.openai.com/codex/hooks.md`; `codex-rs/hooks/src/events/pre_tool_use.rs`): `PreToolUse`
+  fires for MCP and local function tools, never hosted tools. `ask` is parsed but unsupported: the hook run fails and
+  the call continues, so the hook never sends it. `allow` without `updatedInput` fails the hook and drops its
+  context, so the hook never sends `allow`. A callback error or timeout lets the call go ahead. Since 0.164.0, hook
+  trust is bound to a hash of every file in the plugin, so each update needs `/hooks` again.
+- Hermes (`https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks`; `tools/mcp_tool_schema.py` at
+  v0.22.5): `pre_tool_call` fires before every tool, MCP tools included, now named `mcp__<server>__<tool>` (older
+  docs say `mcp_`); the check matches both. A callback that raises or passes `plugins.hook_callback_timeout` (30 s
+  by default) blocks the tool, so the plugin catches everything and lints in a subprocess with a 10-second limit.
+  `block` needs a non-empty message, which becomes the tool's result.
+
+Still to probe on live hosts (a paid round, with a scratch MCP server that records the arguments it receives):
+
+- Claude Code, installed copy and `--plugin-dir`: the hook fires for `mcp__outbox__send`; a deny reaches the model,
+  which resends a fixed body; the same body resent passes; `ask` prompts interactively and denies in `-p`; the
+  recorded arguments always equal what the model sent.
+- Codex 0.164.0 or later, after `/hooks` trust and again after a plugin file change: the same checks, minus `ask`.
+- Hermes: the `mcp__` naming on a live install, `block`, the posted line, and whether `transform_tool_result`
+  carries the call's `tool_call_id` (the plugin falls back to the session and tool name when it doesn't).
+- Whether an `ask` prompt reaches the person through a bridge such as Untether.
+
+Probed live on 2026-10-30 (round 8), Claude Code CLI 2.1.314, Linux, `claude -p --model sonnet` on the subscription,
+`--plugin-dir` on main b895cf8 plus eval-case commits, with a scratch stdio MCP server `outbox` (one `send(to, body)`
+tool that records the arguments it receives). Project config only (`[tool_call] mode = …`); the prompt asked for a
+52-word body with four BLOCK tells, sent verbatim.
+
+- **block-once:** the hook fired for `mcp__outbox__send` (reached through `ToolSearch` first: MCP tools load deferred).
+  The deny reached the model as the tool result, prefixed by Claude Code with `PreToolUse:mcp__outbox__send hook
+  error:` (its label for a deny reason, not a hook failure). Asked for the body verbatim, the model resent it
+  unchanged and it went through; the server recorded one call, equal to what the model sent the second time.
+- **warn:** the call ran on the first try; the findings reached the model after it, and its reply passed them on.
+- **ask:** in `-p` it counted as a deny (`permission_denials` 1, nothing recorded by the server). The reason named the
+  tally and rule IDs only, so the model had to guess the words: fixed in #152 (the reason now carries the lines).
+- **A body the model wrote itself** (asked for "warm and a bit enthusiastic", block-once): clean, no hold, one call.
+
+Still open: `ask` interactively and through a bridge such as Untether; the installed copy (the hooks get plugin
+options there, `--plugin-dir` gives them none); Codex 0.164+ and Hermes.
+
+## 16. What the chat-reply check does live (#125)
+
+Probed 2026-10-30 (round 8), the same CLI, model and `--plugin-dir`, `[chat_reply] mode = "warn"` in the project
+config.
+
+- It speaks only when the prompt asked for writing. A prompt that pasted a finished email and asked for it back
+  verbatim wrote no row (the nudge intent isn't a writing ask); a prompt asking for a 70-word email with four required
+  tell words wrote `ask: "draft"`, `outcome: "warned"`, so the UserPromptSubmit intent reached the Stop hook.
+- In `stream-json` the Stop `systemMessage` arrives as a `system` event with subtype `informational`, level `notice`,
+  each line prefixed `Stop says:` by Claude Code. It listed the BLOCK lines (three, then "… and 1 more") and the
+  `/plainspoken:check` pointer.
+- It stays out of the model's context: resumed with `--resume` and asked to quote any hook or plainspoken message
+  after its reply, the model said none reached it.
+- A clean draft (the model's own 91-word email) logged `outcome: "clean"` and showed nothing.
+
+Not probed: whether Untether forwards the notice to Telegram (it relays the final assistant text, so probably not),
+Codex `turn_id`, and Hermes.

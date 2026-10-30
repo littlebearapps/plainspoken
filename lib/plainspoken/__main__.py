@@ -1,8 +1,9 @@
 """CLI: python3 -m plainspoken {check|profile|config|paths|merge|status|justify|judge-input|agent-prompt|agent-reply|judge-record|anchors|voice-stats|
-register-checklist|claims|reader-value|kaizen|eval} …
+register-checklist|claims|reader-value|kaizen|setup|doctor|eval} …
 Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
 invalid justifications or nothing to review (justify), a lint BLOCK or WARN left
-without --keep (judge-input), claims findings, gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
+without --keep (judge-input; 3 while the draft's claim ledger isn't current, unless --ignore-claims), claims findings,
+gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
 (checker-input, record), reader-value or action-module findings, a delivery record or status other than a
 current PASS (every self-check), a stale delivery reply or a contract that doesn't validate (deliver-input,
 deliver, status), or a kaizen refusal (no current check or snapshot, no finding, a bad hunk number, capture off, a
@@ -11,10 +12,11 @@ JSON object, a missing `deliver --reviewer`, a reader-value contract that can't 
 kind or pattern), or no current / an INCOMPLETE report (justify), an unreadable anchor (anchors, unless
 --skip-missing) or too little sample text (voice-stats). `kaizen report` exits 0 even on an empty or damaged
 ledger (2 only for a bad --since/--until or [kaizen] config). `kaizen calibrate` and `kaizen review` exit 0 with or
-without proposals (2 for a bad --now or config); `kaizen apply` exits 1 when it refuses (no approval, rejected, a
+without proposals (2 for a bad --now or config); `kaizen apply` (one id, or --all-approved, which stops at its
+first refusal) exits 1 when it refuses (no approval, rejected, a
 review proposal, a stale proposal (marked superseded outside a dry run), a changed, already-applied or superseded
 proposal, an installed plugin's ruleset, a target the proposal doesn't allow) or when the edit is in but the changelog
-couldn't be written, and 2 for an unknown proposal id.
+couldn't be written, and 2 for an unknown proposal id, or for both or neither of an id and --all-approved.
 `kaizen calibrate` still exits 0 when a proposal couldn't be emitted through the adapter, or was sent but its file
 couldn't record the ref (it says so; the next calibrate sends unsent proposals again). `kaizen decisions` never sends:
 it exits 0 when proposals are waiting to be sent (it says how many), 1 when any adapter fails (a missing setting or
@@ -22,7 +24,8 @@ credential variable, a `gh` or Trello error, a damaged proposal file; nothing is
 off, and 2 for bad config. `kaizen mine` exits 0 with or without candidates (they're queued through the file adapter only) and 2
 for bad input: no drafts, no model with at least 10 drafts, a draft folder that isn't a model id, no human corpus, no
 briefs, a briefs folder that holds a `.heldout` marker, or a file it can't read or lint. `config profile-for` exits 3 when no profile is named for the
-file (nothing printed) and 2 for a bad project config or a profile path that doesn't exist. `eval` exit codes are
+file (nothing printed) and 2 for a bad project config or a profile path that doesn't exist. `doctor` exits 0 with or
+without warnings (2 only for bad arguments), and setup's host checks never change its exit code. `eval` exit codes are
 in evalcli.py. Never a traceback."""
 import argparse
 import json
@@ -32,11 +35,11 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, evalcli,
+from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, doctor, evalcli,
                          extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
-                         reader_value, register, report, setup, voice)
+                         reader_value, register, reply, report, setup, toolcall, voice)
 from plainspoken.doc import CONTENT_TYPES
-from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError
+from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
 from plainspoken.registry import load_config
 
 # Bad input (a bad profile, unreadable or non-UTF-8 file, a directory, malformed frontmatter YAML) exits 2 with one
@@ -90,16 +93,42 @@ def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
 
 
 def _setup(args: argparse.Namespace, root: Path) -> int:
-    wanted = {"nudge": args.nudge, "rule": args.rule, "lint_watch": args.lint_watch}
+    """setup's own work, then the host checks' WARN lines after it (#113). A check never changes setup's output above
+    them, its file or its exit code."""
+    code = _setup_run(args, root)
+    try:
+        sys.stdout.flush()
+        lines = doctor.setup_lines(args.host, doctor.run_checks(args.host, root, os.environ))
+        # Chat hosts: stderr, so the block can't be copied into the app's instructions with the paste-in text.
+        doctor.write_lines(lines, sys.stderr if args.host in doctor.CHAT_NAMES else sys.stdout)
+    except Exception:  # noqa: BLE001 - warnings only: nothing here may change setup's exit code (doctor shows it)
+        pass
+    return code
+
+
+def _doctor(args: argparse.Namespace, root: Path) -> int:
+    checks = doctor.run_checks(args.host, root, os.environ, plugin_profile=args.plugin_profile,
+                               plugin_locale=args.plugin_locale)
+    if args.json:
+        doctor.write_lines([json.dumps([c.as_dict() for c in checks], indent=2)], sys.stdout)
+        return 0
+    doctor.write_lines([doctor.heading(args.host), *doctor.format(checks), doctor.summary(checks)], sys.stdout)
+    return 0
+
+
+def _setup_run(args: argparse.Namespace, root: Path) -> int:
+    wanted = {"nudge": args.nudge, "rule": args.rule, "lint_watch": args.lint_watch, "chat_reply": args.chat_reply}
     wanted = {k: (None if v is None else v == "on") for k, v in wanted.items()}
     if args.status:
         print("\n".join(setup.status(root, os.environ)))
         return 0
-    if args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove:
-        print(setup.paste_text(args.host), end="")
+    if (args.host not in setup.FILE_HOSTS and not any(v is not None for v in wanted.values()) and not args.remove
+            and args.tool_call is None):
+        _util.write_safe(setup.paste_text(args.host, args.locale), sys.stdout)  # its "→" mustn't crash ascii
         return 0
     try:
-        path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove)
+        path, before, after = setup.plan(args.host, args.scope, wanted, root, os.environ, remove=args.remove,
+                                         locale=args.locale, tool_call=args.tool_call)
     except (setup.SetupError, OSError) as e:
         print(f"plainspoken: setup: {e}", file=sys.stderr)
         return 2
@@ -150,19 +179,29 @@ def _profile(args: argparse.Namespace, root: Path) -> Profile:
     return _profile_ex(args, root)[0]
 
 
-def _profile_summary(p: Profile, cfg, plugin_default: bool = False) -> str:
+def _locale(args: argparse.Namespace, prof: Profile, root: Path) -> config.Locale:
+    return config.resolve_locale(prof, root, os.environ, getattr(args, "plugin_locale", None))
+
+
+def _profile_summary(p: Profile, cfg, plugin_default: bool = False, locale: config.Locale | None = None) -> str:
     over = ", ".join(f"{k}={v}" for k, v in sorted(p.thresholds.items())) or "none"
     tag = " (plugin default)" if plugin_default else ""
     deprecated = sorted(r.id for r in cfg.rules.values() if r.status == "deprecated" and r.applies_to(p))
     return "\n".join([
         f"plainspoken profile: {p.name}{tag} ({p.source})",
-        f"locale {p.locale} · flags: {', '.join(sorted(p.flags)) or 'none'} · ruleset {cfg.version}",
+        f"locale {_locale_text(p, locale)} · flags: {', '.join(sorted(p.flags)) or 'none'} · ruleset {cfg.version}",
         f"threshold overrides: {over}",
         f"extra bans: {len(p.extra_bans)} · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
         f" · deprecated rules: {', '.join(deprecated) or 'none'}",
         f"calibration notes: {p.calibration_notes or 'none'}",
         *voice.summary_lines(p),
     ])
+
+
+def _locale_text(p: Profile, locale: config.Locale | None) -> str:
+    if locale is None:
+        return p.locale or "not set"
+    return f"{locale.variant} ({locale.label})"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,6 +231,7 @@ def _main(argv: list[str] | None) -> int:
     pr.add_argument("path", nargs="?", type=Path, help="the article the profile is for (its [engine] profiles entry)")
     pr.add_argument("--profile")
     pr.add_argument("--plugin-profile")
+    pr.add_argument("--plugin-locale", help="the Claude Code locale option (skills pass ${user_config.locale})")
     pr.add_argument("--voice", action="store_true", help="print the voice sections the skills draft and check from")
     pr.add_argument("--type", help="with --voice: only this content type's blend and formatting "
                                    f"({', '.join(CONTENT_KINDS)})")
@@ -214,6 +254,7 @@ def _main(argv: list[str] | None) -> int:
     rc.add_argument("--register")
     rc.add_argument("--profile")
     rc.add_argument("--plugin-profile")
+    rc.add_argument("--plugin-locale")
     vs = sub.add_parser("voice-stats", help="measure sentence rhythm in samples; prints a [rhythm] table")
     vs.add_argument("paths", nargs="+", type=Path)
     ln = sub.add_parser("length", help="count characters (as a reader sees them), words and lines in a draft")
@@ -253,7 +294,11 @@ def _main(argv: list[str] | None) -> int:
     ji.add_argument("--plugin-profile")
     ji.add_argument("--keep", action="append", default=[], metavar="RULE",
                     help="a rule whose open lint BLOCK or WARN you leave (repeat, or comma-separate); without it, "
-                         "judge-input exits 1 while the lint has one")
+                         "judge-input exits 1 while the lint has one, and a rule with no open line exits 2")
+    ji.add_argument("--ignore-claims", action="store_true",
+                    help="judge even when the draft's claim ledger isn't current (a check on its own; write never "
+                         "passes it); without it, judge-input exits 3 while `claims status` is stale, INCOMPLETE or "
+                         "BLOCKED on anything but claims held for the owner")
     ag = sub.add_parser("agent-prompt", help="print an agent's self-contained prompt with stdin as its input, for "
                                              "hosts without plugin agents (Codex, Hermes)")
     ag.add_argument("name", choices=list(hosts.AGENTS))
@@ -272,17 +317,30 @@ def _main(argv: list[str] | None) -> int:
     jr.add_argument("--from", dest="reply_file", type=Path,
                     help="read the reply from this file; the `reply` path from `paths` is deleted afterwards, "
                          "any other file is kept")
-    su = sub.add_parser("setup", help="turn the writing nudge, the drafting rule and lint after edits on or off for "
-                                      "one host (or print the text to paste into claude.ai or ChatGPT)")
+    su = sub.add_parser("setup", help="turn the writing nudge, the drafting rule, lint after edits and the chat-reply "
+                                      "check on or off for one host (or print the text to paste into claude.ai or "
+                                      "ChatGPT)")
     su.add_argument("--host", required=True, choices=setup.HOSTS)
     su.add_argument("--scope", choices=("project", "user"), default="project",
                     help="project: .plainspoken/config.toml here; user: ~/.config/plainspoken/config.toml")
     for name, what in (("nudge", "the writing nudge"), ("rule", "the drafting rule (Claude Code)"),
-                       ("lint-watch", "lint after each edit")):
+                       ("lint-watch", "lint after each edit"),
+                       ("chat-reply", "the chat-reply check (on writes [chat_reply] mode = \"warn\")")):
         su.add_argument(f"--{name}", choices=("on", "off"), help=f"{what}; unset leaves it as it is")
+    su.add_argument("--locale", choices=sorted(locales()),
+                    help="the English variant to write in: sets [locale] variant, or for claude.ai and ChatGPT adds "
+                         "one sentence to the paste-in text")
+    su.add_argument("--tool-call", choices=toolcall.MODES,
+                    help="the tool-call check: off, warn, block-once or ask (Claude Code); unset leaves it as it is")
     su.add_argument("--dry-run", action="store_true", help="print the change without writing it")
     su.add_argument("--remove", action="store_true", help="delete every setting setup wrote to this file first")
     su.add_argument("--status", action="store_true", help="print what is on now")
+    dr = sub.add_parser("doctor", help="check whether this host can run what plainspoken needs: ok, WARN or not "
+                                       "checked for each (changes nothing; exit 0 with warnings)")
+    dr.add_argument("--host", required=True, choices=setup.HOSTS)
+    dr.add_argument("--json", action="store_true", help="print the checks as a JSON list")
+    dr.add_argument("--plugin-profile")
+    dr.add_argument("--plugin-locale")
     _claims_parser(sub)
     _reader_value_parser(sub)
     _kaizen_parser(sub)
@@ -292,6 +350,8 @@ def _main(argv: list[str] | None) -> int:
 
     if args.cmd == "setup":
         return _setup(args, root)
+    if args.cmd == "doctor":
+        return _doctor(args, root)
     if args.cmd == "check" and str(args.path) == "-":
         return _check_stdin(args, root)
     if args.cmd == "check":
@@ -344,10 +404,7 @@ def _main(argv: list[str] | None) -> int:
         except _INPUT_ERRORS as e:
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2
-        if args.voice:
-            print("\n".join(voice.voice_lines(prof, args.type)))
-            return 0
-        if args.json:  # the stamps `check` and `merge` bind a report to (docs/report-contract.md)
+        if args.json:  # the stamps `check` and `merge` bind a report to (docs/report-contract.md); never the locale
             try:
                 version = load_config().version
             except _INPUT_ERRORS as e:
@@ -357,10 +414,18 @@ def _main(argv: list[str] | None) -> int:
                               "ruleset_version": version, "root": str(root)}, indent=2))
             return 0
         try:
+            locale = _locale(args, prof, root)
+        except _INPUT_ERRORS as e:  # ConfigError: a bad [locale] variant, named by file and key
+            print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
+            return 2
+        if args.voice:
+            print("\n".join(voice.voice_lines(prof, args.type, f"{locale.variant} ({locale.label})")))
+            return 0
+        try:
             gate = "{} ({})".format(*config.gate_strictness(root, os.environ))
         except _INPUT_ERRORS as e:
             gate = f"can't read ({_first_line(e)})"
-        print(_profile_summary(prof, load_config(), plugin_default) + f"\ngate: {gate}")
+        print(_profile_summary(prof, load_config(), plugin_default, locale) + f"\ngate: {gate}")
         return 0
     if args.cmd == "config":
         try:
@@ -415,6 +480,11 @@ def _main(argv: list[str] | None) -> int:
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "prepare judge input for")
         keep = {k.strip() for arg in args.keep for k in arg.split(",") if k.strip()}
+        stray = judges.stray_keeps(args.path, reports_dir, root, keep)
+        if stray:  # #162: a keep names a line this pass's lint printed, never one typed before it was read
+            print(f"plainspoken: --keep {', '.join(stray)}: the current lint has no open BLOCK or lint-owned WARN for "
+                  "that rule. Read the lint (`check`) and keep only the rules it prints.", file=sys.stderr)
+            return 2
         held = judges.open_lint(args.path, reports_dir, root, keep)
         if held:
             print("plainspoken: the lint still has lines the judges can't clear (merge fails them whatever the "
@@ -424,6 +494,23 @@ def _main(argv: list[str] | None) -> int:
             print("Fix them and run `check` again, or rerun with --keep <rule> for each one you leave (a WARN you'll "
                   "justify after merge).", file=sys.stderr)
             return 1
+        hold = [] if args.ignore_claims else claims_tools.judge_hold(
+            args.path, root, report.report_paths(args.path, reports_dir, root)["claims-check"],
+            extraction.platform_names(root))
+        if hold:  # #160: a claims fix after the judges would send all four round again
+            print("plainspoken: the claims step isn't finished for this draft, so its fixes could still change what "
+                  "the judges read:", file=sys.stderr)
+            for line in hold:
+                print(f"  {line}", file=sys.stderr)
+            print("Finish it first (the claims skill's steps 4 to 6, the checker in the foreground) until `claims "
+                  "status` says PASS, or BLOCKED only on claims held for the owner. A check on its own can rerun with "
+                  "--ignore-claims.", file=sys.stderr)
+            return 3
+        kept = [f for f in judges.open_lint(args.path, reports_dir, root) if f not in held]
+        if kept:  # shown here too, so a kept line is read even when the lint's own output wasn't
+            print("plainspoken: open lint lines kept with --keep (merge still counts each one):", file=sys.stderr)
+            for f in kept:
+                print(f"  {f['severity']:5} r{f['rule']:<4} L{f.get('line', '?')}", file=sys.stderr)
         for item in items:
             print(json.dumps(item, ensure_ascii=False))
         return 0
@@ -498,7 +585,8 @@ def _main(argv: list[str] | None) -> int:
         return 0
     if args.cmd == "register-checklist":
         try:
-            items = register.checklist(args.kind, _profile(args, root), args.register)
+            prof = _profile(args, root)
+            items = register.checklist(args.kind, prof, args.register, _locale(args, prof, root).variant)
         except _INPUT_ERRORS as e:  # ProfileError is a ValueError
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2
@@ -875,9 +963,9 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
         if ledger is None:
             raise FileNotFoundError("no ledger")
         owner = claims.needs_owner(claims.load_ledger(ledger))
-        owner_lines = [f"needs the owner: {len(owner) or 'none'}", *(f"  {o}" for o in owner)]
+        owner_lines = [f"{reply.OWNER_MARKER} {len(owner) or 'none'}", *(f"  {o}" for o in owner)]
     except _INPUT_ERRORS:
-        owner_lines = ["needs the owner: unknown (no readable ledger)"]
+        owner_lines = [f"{reply.OWNER_MARKER} unknown (no readable ledger)"]
     contract = reader_value.default_contract(args.path, root)
     shown = claims_tools.display_path(contract, root)
     counted = f"words: {words} (body text; headings, tables, code and numbers not counted)"  # #63: say what it counts
@@ -1108,14 +1196,18 @@ def _kaizen_parser(sub) -> None:
     rp.add_argument("--until", help="only events before this ISO date or datetime (a date is 00:00 UTC)")
     rp.add_argument("--json", action="store_true", help="the metrics as JSON")
     rp.add_argument("--share", action="store_true", help="anonymised counts (JSON) to paste into an upstream issue")
-    ca = ks.add_parser("calibrate", help="propose at most 3 ruleset changes from the ledger and send them through "
-                                         "the adapter, re-sending any that weren't sent (never applies them)")
+    ca = ks.add_parser("calibrate", help="propose at most 3 ruleset changes from the ledger (fewer under --max or "
+                                         "[kaizen] monthly_cap) and send them through the adapter, re-sending any "
+                                         "that weren't sent (never applies them)")
     ca.add_argument("--now", help="calibrate as of this ISO date or datetime (default: now)")
     ca.add_argument("--corpus", nargs="+", metavar="GLOB",
                     help="files to measure each proposal's effect on (default: [kaizen] corpus)")
     ca.add_argument("--json", action="store_true", help="the new proposals as JSON")
+    ca.add_argument("--max", type=_count, metavar="N", help="store at most N new proposals this run (only ever "
+                                                         "lowers the limit; [kaizen] monthly_cap still applies)")
     mn = ks.add_parser("mine", help="compare model drafts written from the fixed briefs with a human corpus and "
-                                    "queue at most 5 model-tagged proposals locally (never sends or applies them)")
+                                    "queue at most 5 model-tagged proposals locally (fewer under --max or [kaizen] "
+                                    "monthly_cap; never sends or applies them)")
     mn.add_argument("--drafts", type=Path, required=True, metavar="DIR",
                     help="the drafts, as DIR/<model id>/*.md (relative to the project root)")
     mn.add_argument("--corpus", nargs="+", metavar="GLOB",
@@ -1126,16 +1218,42 @@ def _kaizen_parser(sub) -> None:
                                                                 "is refused")
     mn.add_argument("--json", action="store_true", help="the full result as JSON")
     mn.add_argument("--dry-run", action="store_true", help="show the candidates; store and log nothing")
+    mn.add_argument("--max", type=_count, metavar="N", help="keep at most N candidates this run (only ever lowers "
+                                                         "the limit; [kaizen] monthly_cap still applies)")
     ks.add_parser("decisions", help="record the APPROVE:/REJECT: decisions people made through the adapter "
                                     "(never sends anything)")
     rv = ks.add_parser("review", help="the proposals waiting for a decision or for `kaizen apply`")
     rv.add_argument("--json", action="store_true")
-    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the profile it was made for")
-    ap_.add_argument("id")
+    ap_ = ks.add_parser("apply", help="apply an approved proposal to a ruleset checkout or the profile it was made "
+                                      "for, or every approved one with --all-approved")
+    ap_.add_argument("id", nargs="?")
+    ap_.add_argument("--all-approved", action="store_true",
+                     help="apply every approved proposal to the ruleset, oldest first, stop at the first refusal "
+                          "and print a commit message naming the ids")
     ap_.add_argument("--rules", type=Path, help="the rules.toml to edit (default: the plugin's own, if it's a "
                                                 "git checkout)")
     ap_.add_argument("--target", choices=proposals.TARGETS, default="ruleset")
     ap_.add_argument("--dry-run", action="store_true", help="print the diff and write nothing")
+
+
+def _count(text: str) -> int:
+    """A whole number, 0 or more (`--max`)."""
+    try:
+        n = int(text)
+    except ValueError:
+        n = -1
+    if n < 0:
+        raise argparse.ArgumentTypeError(f"expected a whole number, 0 or more, got {text!r}")
+    return n
+
+
+def _cap_line(cmd: str, limits: dict) -> str | None:
+    """One line on the monthly cap when `[kaizen] monthly_cap` is set: how much of it this month has used."""
+    if limits.get("cap") is None:
+        return None
+    left = max(0, limits["cap"] - limits["used"])
+    return (f"kaizen {cmd}: monthly cap {limits['cap']}: {limits['used']} stored in {limits['month']} before this "
+            f"run, room for {left}" + ("" if left else " (no new proposals until next month)"))
 
 
 def _kaizen_line(e: dict) -> str:
@@ -1175,11 +1293,22 @@ def _kaizen_report(args: argparse.Namespace, root: Path) -> int:
         return 0
     patterns = kaizen.pattern_metrics(events)
     friction = kaizen.friction_summary(rows, ledger.distinct(events))
+    calls, bad_calls = ledger.read_rows(settings, "tool-calls.jsonl", window["since"], window["until"])
+    try:
+        min_words = config.tool_call_settings(root, os.environ)["min_words"]
+    except (ValueError, OSError):
+        min_words = toolcall.MIN_WORDS
+    tool_calls = kaizen.tool_call_summary(calls, min_words)
+    replies, bad_replies = ledger.read_rows(settings, "chat-replies.jsonl", window["since"], window["until"])
+    chat_replies = kaizen.chat_reply_summary(replies)
+    bad_rows = bad + bad_friction + bad_calls + bad_replies
     if args.json:
-        print(json.dumps({"window": window, "rules": metrics, "patterns": patterns, "bad_lines": bad + bad_friction,
-                          "friction": friction}, indent=2, ensure_ascii=False))
+        print(json.dumps({"window": window, "rules": metrics, "patterns": patterns, "bad_lines": bad_rows,
+                          "friction": friction, "tool_calls": tool_calls, "chat_replies": chat_replies}, indent=2,
+                         ensure_ascii=False))
         return 0
-    print("\n".join(kaizen.report_lines(metrics, bad + bad_friction, friction, patterns)))
+    print("\n".join(kaizen.report_lines(metrics, bad_rows, friction, patterns)
+                    + kaizen.tool_call_lines(tool_calls) + kaizen.chat_reply_lines(chat_replies)))
     return 0
 
 
@@ -1201,8 +1330,9 @@ def _kaizen_calibrate(args: argparse.Namespace, root: Path) -> int:
     if settings is None:
         return 2
     resent: list[dict] = []
+    limits: dict = {}
     try:
-        made = calibrate.run(root, settings, now, args.corpus, resent=resent)
+        made = calibrate.run(root, settings, now, args.corpus, resent=resent, max_new=args.max, limits=limits)
     except (ValueError, OSError) as e:
         print(f"plainspoken: kaizen calibrate: {_first_line(e)}", file=sys.stderr)
         return 2
@@ -1216,6 +1346,9 @@ def _kaizen_calibrate(args: argparse.Namespace, root: Path) -> int:
     for p in resent:
         print(f"{p['id']}: sent again: " + (f"emitted to {adapters.describe(p.get('adapter'), p['ref'])}"
                                             if p.get("ref") else f"not emitted: {p.get('emit_error', 'unknown')}"))
+    cap = _cap_line("calibrate", limits)
+    if cap:
+        print(cap)
     if not made:
         print("kaizen calibrate: no proposals" + (" (no new ones)" if resent else ""))
         return 0
@@ -1253,21 +1386,25 @@ def _kaizen_review(args: argparse.Namespace, root: Path) -> int:
     events = ledger.read(settings)[0]
     # A superseded proposal is listed for one calibrate cycle after apply refused it, so the person sees why it went.
     recent = datetime.now(timezone.utc) - timedelta(days=settings["triggers"]["cycle_days"])
+    use = proposals.in_use()
     rows = []
     for p in proposals.stored(settings):
-        state = proposals.status(p["id"], events)
+        state = proposals.status(p["id"], events, use)
         if state == proposals.SUPERSEDED:
             try:
                 if datetime.fromisoformat(proposals.superseded(p["id"], events)["ts"]) < recent:
                     continue
             except (TypeError, ValueError, KeyError):
                 continue
-        if state in ("pending", "approved", proposals.SUPERSEDED):
+        if state in ("pending", "approved", proposals.SUPERSEDED, proposals.AWAITING):
             d = proposals.decision(p["id"], events)
             by = (d or {}).get("facets", {}).get("by", "unknown")
-            note = {"pending": "awaiting decision", "approved": f"approved by {by}, not applied",
-                    proposals.SUPERSEDED: f"superseded (approved by {by}, then stale at apply; closed, nothing "
-                                          "to do)"}[state]
+            if state == proposals.AWAITING:
+                note = _awaiting_note(p["id"], events, use)
+            else:
+                note = {"pending": "awaiting decision", "approved": f"approved by {by}, not applied",
+                        proposals.SUPERSEDED: f"superseded (approved by {by}, then stale at apply; closed, "
+                                              "nothing to do)"}[state]
             rows.append({**p, "status": note, "state": state})
     if args.json:
         print(json.dumps(rows, indent=2, ensure_ascii=False))
@@ -1280,10 +1417,72 @@ def _kaizen_review(args: argparse.Namespace, root: Path) -> int:
     return 0
 
 
+def _awaiting_note(pid: str, events: list[dict], use: tuple) -> str:
+    """The review line for an apply awaiting release: the version it wrote and the version in use."""
+    e = max((e for e in events if e.get("event") == "apply" and e.get("outcome") == "applied"
+             and e.get("proposal") == pid), key=lambda e: str(e.get("ts", "")))
+    return (f"applied as ruleset {e.get('ruleset_version')} on {str(e.get('ts', ''))[:10]}, awaiting release "
+            f"(the ruleset in use is {use[0] or 'unknown'})")
+
+
+def _kaizen_apply_all(args: argparse.Namespace, root: Path, settings: dict) -> int:
+    """`kaizen apply --all-approved`: 0 when every approved proposal applied (or none was waiting), 1 at the first
+    refusal (the ones before it stay applied, and the commit message names them)."""
+    try:
+        out = proposals.apply_all(root, settings, args.rules, args.dry_run)
+    except (ValueError, OSError) as e:
+        print(f"plainspoken: kaizen apply: refused: {_first_line(e)}", file=sys.stderr)
+        return 1
+    for pid, why in out["skipped"]:
+        print(f"kaizen apply: {pid} skipped: {why}")
+    for r in out["applied"]:
+        print(f"kaizen apply: {r['id']}: rule {r.get('rule')}, {r.get('action')}")
+        print(r["diff"].rstrip("\n"))
+        for note in r.get("rubric_notes") or ():
+            print(f"kaizen apply: {note}")
+        if r.get("rebased"):
+            print(f"kaizen apply: {r['id']}: rebased onto the current ruleset (it changed since calibrate; "
+                  "every edit still applies)")
+        if not args.dry_run and not r["logged"]:
+            print(f"plainspoken: kaizen apply: {r['id']}: the apply event couldn't be written to the ledger",
+                  file=sys.stderr)
+    refused = out["refused"]
+    if refused:
+        print(f"plainspoken: kaizen apply: {refused['id']} refused: {refused['error']}", file=sys.stderr)
+        if out["applied"] and not args.dry_run:
+            print(f"plainspoken: kaizen apply: stopped there; the {len(out['applied'])} before it stay applied",
+                  file=sys.stderr)
+    if not out["applied"]:
+        if not refused:
+            print("kaizen apply: no approved proposals to apply")
+        return 1 if refused else 0
+    n = len(out["applied"])
+    if args.dry_run:
+        print(f"kaizen apply: dry run, nothing written: {n} proposal{'s' if n != 1 else ''} would apply, each diff "
+              "against the current file (a later one may turn stale once an earlier one is in)")
+        return 1 if refused else 0
+    last = out["applied"][-1]
+    print(f"kaizen apply: {n} proposal{'s' if n != 1 else ''} applied to {last['path']} (ruleset {out['before']} "
+          f"to {last['version']}); changelog {last['changelog']}")
+    print("kaizen apply: commit message:")
+    print()
+    print(proposals.commit_message(out["applied"], out["before"]), end="")
+    return 1 if refused else 0
+
+
 def _kaizen_apply(args: argparse.Namespace, root: Path) -> int:
+    if args.all_approved == (args.id is not None):
+        print("plainspoken: kaizen apply: give one proposal id, or --all-approved", file=sys.stderr)
+        return 2
+    if args.all_approved and args.target != "ruleset":
+        print("plainspoken: kaizen apply: --all-approved applies to a ruleset only; apply a profile proposal by its "
+              "id", file=sys.stderr)
+        return 2
     settings = _kaizen_settings("apply", root)
     if settings is None:
         return 2
+    if args.all_approved:
+        return _kaizen_apply_all(args, root, settings)
     try:
         out = proposals.apply(args.id, root, settings, args.rules, args.target, args.dry_run)
     except proposals.UnknownProposal as e:
@@ -1312,6 +1511,10 @@ def _kaizen_apply(args: argparse.Namespace, root: Path) -> int:
         return 1
     print(f"kaizen apply: {out['id']} applied to {out['path']} (ruleset {out['version']}); changelog "
           f"{out['changelog']}")
+    if out["target"] == "ruleset" and not proposals.released(
+            {"ruleset_version": out["version"], "proposal": out["id"], "facets": {"kind": "ruleset"}}):
+        print(f"kaizen apply: {out['id']} is awaiting release: the ruleset in use is older, so `kaizen review` lists "
+              "it until a release with this change is installed")
     return 0
 
 
@@ -1357,7 +1560,7 @@ def _kaizen_mine(args: argparse.Namespace, root: Path) -> int:
             raise mining.MiningError("no human corpus: " + (f"{' '.join(globs)} matched no files under {root}" if globs
                                                             else "pass --corpus GLOB or set [kaizen] human_corpus"))
         drafts = args.drafts if args.drafts.is_absolute() else root / args.drafts  # like --corpus: from the root
-        out = mining.mine(drafts, files, briefs, cfg, prof, settings, dry_run=args.dry_run)
+        out = mining.mine(drafts, files, briefs, cfg, prof, settings, dry_run=args.dry_run, max_new=args.max)
     except (ValueError, OSError) as e:  # MiningError, ConfigError and ProfileError are ValueErrors
         print(f"plainspoken: kaizen mine: {_first_line(e)}", file=sys.stderr)
         return 2
@@ -1369,6 +1572,9 @@ def _kaizen_mine(args: argparse.Namespace, root: Path) -> int:
               + (f" (skipped: {m['skipped']})" if m.get("skipped") else ""))
     print(f"human corpus: {out['corpus']['files']} file{'s' if out['corpus']['files'] != 1 else ''}, "
           f"{out['corpus']['words']} words")
+    cap = _cap_line("mine", out["limits"])
+    if cap:
+        print(cap)
     if not out["candidates"]:
         print("kaizen mine: no candidates")
         return 0

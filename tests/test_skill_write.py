@@ -91,18 +91,36 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("`RUN status '<draft>' --plugin-profile '${user_config.profile}'`", step)
         block = [line.strip() for line in step.splitlines() if line.startswith("    ")]
         self.assertEqual([line.split(":", 1)[0] for line in block],
-                         ["Draft", "<every line `status` printed", "Reader value", "Anchors", "For kaizen"])
+                         ["Draft", "<every line `status` printed", "Reader value (outline)", "Anchors", "For kaizen"])
         self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
-        self.assertIn("Reader value: <READY|PARKED|INCOMPLETE> (<contract path>)", block)
+        # #108: READY is the outline contract, not a delivery pass, and only a READY line gets the deliver tail
+        self.assertIn("Reader value (outline): READY (<contract path>); delivery not checked: "
+                      "you run /plainspoken:reader-value deliver <draft>", block)  # the block is for a drafted piece
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
         flat = " ".join(step.split())
         self.assertIn("copied exactly as printed, never from memory or in other words", flat)
         self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
         self.assertIn("A piece step 2 parked, or left INCOMPLETE, gets only", flat)
+        self.assertIn("gets only `Reader value (outline): PARKED (<contract path>)` (or `INCOMPLETE`) "
+                      "and the reason, with no delivery tail", flat)  # #108: the other shape, given literally
         self.assertIn("<every (skipped anchor …) line>", flat)  # step 4's skipped anchors are reported
         self.assertIn("Ask the owner to check nothing that the `needs the owner` lines don't list", flat)
         self.assertIn("hold it `blocking` or cut it, never only ask in the report", " ".join(self.step(6).split()))
+        # #75: invented warmth in the owner's voice is a new fact, and an ask goes back to step 6, not into the report
+        self.assertIn("A line the sources don't give that speaks for the owner (thanks, a reassurance, a promise, a "
+                      "feeling) is a new fact, however warm: cut it or hold it `blocking` too",
+                      " ".join(self.step(6).split()))
+        self.assertIn("for a line you'd want them to check, go back to step 6, cut it or hold it `blocking`", flat)
+
+    def test_prose_copies_the_engine_lines(self):  # #163: "about 270 words" for 272; "passed" beside BLOCKED
+        flat = " ".join(self.text.split("### 8. Report", 1)[1].split())
+        self.assertIn("Every figure and status the prose gives is copied from the block's lines as printed, never "
+                      "rounded or summarised", flat)
+        self.assertIn('`words: 272` is 272 words, not "about 270"', flat)
+        self.assertIn("`claims: BLOCKED` stays BLOCKED, even when the checker's own result was PASS", flat)
+        self.assertIn("Say no fixes were made only when no step edited the draft (lint-only passes and claims fixes "
+                      "are edits too)", flat)
 
     def test_report_starts_with_the_block(self):  # #41: no prose before the block, and the shortfall comes after it
         flat = " ".join(self.text.split("### 8. Report", 1)[1].split())
@@ -128,6 +146,23 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("rerun the claims skill's steps 4 to 6 once", check)
         self.assertIn("tell the user to run `/plainspoken:claims <draft>` again", check)
         self.assertIn("list for step 6", " ".join(self.step(2).split()))
+
+    def test_judges_start_only_on_a_current_claims_status(self):  # #160: a later claims block cost four judges
+        claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
+        self.assertIn("Start its checker in the foreground, never in the background, and read its reply", claims)
+        self.assertIn("Step 7 starts only once `RUN claims status '<draft>'` prints PASS, or BLOCKED only on "
+                      "`blocking:` lines (claims held for the owner)", claims)
+        self.assertIn("so no claims fix lands after the judges", claims)
+        self.assertIn("holds the judges back (exit 3) until it does", check)
+        self.assertIn("Pass `--ignore-claims` only once the claims skill has stopped", check)
+        notes = " ".join((REFS / "claude-code.md").read_text(encoding="utf-8").split())
+        self.assertIn("in the foreground: never `run_in_background`", notes)
+
+    def test_lint_is_read_and_the_two_passes_are_the_whole_allowance(self):  # #162: 4 to 9 lint-only passes
+        claims = " ".join(self.step(6).split())
+        self.assertIn("read in full (never sent to `/dev/null`)", claims)
+        self.assertIn("Those two are the run's whole lint-only allowance: once they're spent, check step 1 makes no "
+                      "more", claims)
 
     def test_lint_only_passes_before_claims(self):  # #42: a lint fix after claims would stale the ledger
         claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())
@@ -167,6 +202,46 @@ class WriteSkill(SkillBasics, unittest.TestCase):
             for n, line in enumerate(f.splitlines(), start=1):
                 self.assertLessEqual(len(line), 118, f"line {n}")
 
+    def test_replies_answer_every_question(self):  # a reply's agenda is the incoming message
+        af = (REPO / "skills" / "write" / "references" / "answer-first.md").read_text(encoding="utf-8")
+        self.assertIn("## Replies", af)
+        section = af.split("## Replies", 1)[1].split("\n## ", 1)[0]
+        for phrase in ("each question", "acknowledge", "settle"):
+            self.assertIn(phrase, section.lower(), phrase)
+
+    def test_a_decision_changing_limit_sits_beside_its_claim(self):
+        af = (REPO / "skills" / "write" / "references" / "answer-first.md").read_text(encoding="utf-8")
+        close = af.split("## Close with the next step", 1)[1]
+        self.assertIn("beside the claim", close)
+        for n, line in enumerate(af.splitlines(), start=1):
+            self.assertLessEqual(len(line), 118, f"line {n}")
+
     def test_blend_references(self):
         self.assertIn("references/answer-first.md", self.text)
         self.assertIn("references/narrative.md", self.text)
+
+
+class ReaderValueGrader(unittest.TestCase):  # #108: the smoke grader finds the relabelled line, and only that one
+    def pattern(self):
+        import re
+        text = (REPO / "evals" / "smoke" / "write--smoke" / "graders" / "reader-value-line.md").read_text(encoding="utf-8")
+        line = next(x for x in text.splitlines() if x.startswith("pattern:"))
+        return re.compile(line.split(":", 1)[1].strip().strip("'"), re.I)
+
+    def test_matches_the_outline_line(self):
+        for line in ("Reader value (outline): READY (.plainspoken/reader-value/post.reader-value.toml); delivery not "
+                     "checked: you run /plainspoken:reader-value deliver post.md",
+                     "**Reader value (outline)**: READY (x.toml); delivery not checked: you run "
+                     "/plainspoken:reader-value deliver post.md",
+                     "Reader value (outline): **PARKED** (x.toml)", "reader value (outline): `INCOMPLETE` (x.toml)",
+                     "Reader value (outline): PARKED (x.toml)", "Reader value (outline): INCOMPLETE (x.toml)"):
+            self.assertRegex(line, self.pattern())
+
+    def test_the_old_unscoped_line_no_longer_passes(self):
+        self.assertNotRegex("Reader value: READY (x.toml)", self.pattern())
+
+    def test_ready_without_the_deliver_tail_fails(self):
+        self.assertNotRegex("Reader value (outline): READY (x.toml)", self.pattern())
+
+    def test_the_template_echo_fails(self):
+        self.assertNotRegex("Reader value (outline): <READY|PARKED|INCOMPLETE> (<contract path>)", self.pattern())

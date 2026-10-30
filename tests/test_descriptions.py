@@ -21,10 +21,12 @@ CAPS = {
     "skills/reader-value/SKILL.md": 250,
     "skills/kaizen/SKILL.md": 250,
     "skills/setup/SKILL.md": 250,
+    "skills/doctor/SKILL.md": 250,
     "agents/tells-judge.md": 160,
     "agents/cold-reader.md": 140,
     "agents/claims-checker.md": 140,
     "agents/delivery-checker.md": 80,  # the always-on budget had ~35 tokens left when it was added
+    "agents/mining-drafter.md": 30,  # ~10 tokens were left; it's only ever started by name, from kaizen mine
 }
 
 

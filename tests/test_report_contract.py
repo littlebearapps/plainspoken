@@ -321,3 +321,33 @@ class ReportContract(unittest.TestCase):
         self.assertEqual(merged["status"], "INCOMPLETE")
         self.assertTrue(any(p.startswith("J1: bad verdict entry") for p in merged["problems"]), merged["problems"])
         self.assertEqual(schema.validate(merged, self._schema()), [])
+
+
+class LocaleOutOfTheStamps(unittest.TestCase):  # #121: no check reads the locale, so it can't stale a report
+    def test_lint_is_identical_under_every_locale(self):  # all but its own `generated` time
+        cwd = Path(tempfile.mkdtemp())
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, cwd, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, home, ignore_errors=True)
+        (cwd / ".git").mkdir()
+        art = cwd / "post.md"
+        art.write_text("Furthermore, we delve into the robust landscape. I fixed the colour on Friday.\n\n"
+                       "We organized the color chart — it was crucial.\n", encoding="utf-8")
+        base = {k: v for k, v in os.environ.items() if not k.startswith(("PLAINSPOKEN_", "CLAUDE_PLUGIN_OPTION_"))}
+        base.update(PYTHONPATH=str(REPO / "lib"), HOME=str(home), XDG_CONFIG_HOME=str(home / ".config"))
+        outputs = set()
+        for variant in ("en-AU", "en-GB", "en-US"):
+            (cwd / ".plainspoken").mkdir(exist_ok=True)
+            (cwd / ".plainspoken" / "config.toml").write_text(f'[locale]\nvariant = "{variant}"\n', encoding="utf-8")
+            r = subprocess.run([sys.executable, "-m", "plainspoken", "check", "post.md", "--profile", "default",
+                                "--json", "--no-record"], cwd=cwd, capture_output=True, text=True,
+                               env={**base, "CLAUDE_PLUGIN_OPTION_LOCALE": variant})
+            self.assertIn(r.returncode, (0, 1), r.stderr)
+            lint = json.loads(r.stdout)
+            lint.pop("generated")  # the run's own timestamp
+            outputs.add(json.dumps(lint, sort_keys=True))
+            stamp = subprocess.run([sys.executable, "-m", "plainspoken", "profile", "--json", "--profile", "default",
+                                    "--plugin-locale", variant], cwd=cwd, capture_output=True, text=True, env=base)
+            self.assertEqual(stamp.returncode, 0, stamp.stderr)
+            outputs.add(json.loads(stamp.stdout)["profile_sha256"])
+        self.assertEqual(len(outputs), 2, "the lint or the profile stamp changed with the locale")

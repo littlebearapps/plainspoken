@@ -857,6 +857,26 @@ evidence = [{line = 3, quote = "By Friday the ache was gone."}]
 # ================================================================ REJECT: metric
 
 [[case]]
+id = "JR-7d-003"
+rule = "7d"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "the JR-7d-002 narrative, kept as a 7d metric; a join in the sentences' own words clears it, so the reason fails. Contrast: JR-7d-001"
+text = '''
+## Why I switched to a standing desk
+
+My back hurt. Sitting made it worse. I tried a cushion first. That didn't help. Then I borrowed a friend's standing desk for a week. By Friday the ache was gone. I ordered one that night.
+
+It cost $640, and I still sit for about half the day.
+'''
+kind = "metric"
+reason = "Clearing the rhythm warning would mean padding these short sentences, so the run is kept as written."
+evidence = [{line = 3, quote = "By Friday the ache was gone."}]
+
+
+[[case]]
 id = "JR-12d-002"
 rule = "12d"
 label = "reject"

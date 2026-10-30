@@ -123,7 +123,7 @@ class FirstCall(unittest.TestCase):
             {"name": "adapt--smoke", "arms": {"with": [{"tracePath": str(good)}]}},
             {"name": "check--smoke", "arms": {"with": [{"tracePath": str(bad)}]}},
             {"name": "voice--smoke", "arms": {"with": [{"tracePath": str(self.tmp / "gone" / "trace.jsonl")}]}},
-            {"name": "humanize--smoke", "arms": {"with": [{"tracePath": str(bad)}]}},
+            {"name": "setup--smoke", "arms": {"with": [{"tracePath": str(bad)}]}},
             {"name": "rewrite--email", "arms": {"with": [{"tracePath": str(bad)}]}}]}
         d = evaltrace.audit(result)
         self.assertEqual([(r["case"], r["passed"]) for r in d["rows"]],
@@ -133,7 +133,7 @@ class FirstCall(unittest.TestCase):
         text = evaltrace.summarise(d)
         self.assertIn("check--smoke with #1: FAIL · first engine call (tool call 1 of 1) was run.py check garden.md, "
                       "not run.py profile", text)
-        self.assertIn("exempt: humanize--smoke: it has no profile step", text)
+        self.assertIn("exempt: setup--smoke: it reads no profile", text)
         self.assertIn("missing traces (run with --keep-temp): voice--smoke with #1", text)
         path = self.tmp / "smoke.json"
         path.write_text(json.dumps(result), encoding="utf-8")
@@ -169,7 +169,9 @@ class SmokeGraders(unittest.TestCase):
                 g = parse_frontmatter(graders[0].read_text(encoding="utf-8"))
                 self.assertEqual((g["type"], g["target"]), ("regex", "trace"))
                 self.assertEqual(g["pattern"], evaltrace.grader_pattern(first))
-                step = skill_md.split("First, before any other step:", 1)[1][:200]
+                # humanize loads the profile only when it's used on its own (#98); check has loaded it otherwise
+                marker = "Used on its own, first run" if skill == "humanize" else "First, before any other step:"
+                step = skill_md.split(marker, 1)[1][:200]
                 self.assertRegex(step, r"lib/run\.py " + first + r"\b", "the skill's documented first call")
 
 

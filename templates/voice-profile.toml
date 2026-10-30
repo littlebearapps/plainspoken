@@ -9,7 +9,7 @@
 
 [profile]
 name = "my-voice"          # checker: names the profile in reports. Lowercase letters, digits, - and _.
-locale = "en-AU"           # checker: spelling and date conventions. Must match a file in data/locales.
+# locale = "en-AU"         # drafting, register-check: only if you always spell one way. The project's [locale] wins.
 flags = []                 # checker: "narrative" relaxes the sentence-rhythm rules for story writing.
 
 [identity]
@@ -57,7 +57,9 @@ comprehension_floor = 7    # drafting: the school year a reader needs to follow 
 knows = ["seasons", "watering"]   # not read by any skill yet (v0.2): what the reader already knows.
 
 [blends]
-# drafting: "answer-first" or "narrative", per kind of writing (article, page, email, social).
+# drafting: "answer-first" or "narrative", per kind of writing (article, page, email, social). Four fixed slots:
+# email = emails, texts, DMs; social = posts; page = web pages; article = blog posts, reports, proposals, guides.
+# A habit for every kind goes in [voice] principles instead (guides/voice-profiles.md).
 article = "answer-first"
 social = "narrative"
 
@@ -106,6 +108,9 @@ source = "newsletter, May"
 
 # [thresholds]
 # checker: override a numeric limit for this profile, by the name the ruleset uses. Leave empty to keep the defaults.
+# Applies to every content type; on social posts the stricter of this and the social cap wins for any *_max key.
+# em_dash_max = 0
+# en_dash_max = 0     # default -1, no limit; once set, every en dash counts, ranges like 9am–6pm included
 
 # [document]
 # checker: how documents are read. These are the defaults.

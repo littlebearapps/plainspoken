@@ -1,9 +1,10 @@
 """Markdown document model for the anti-AI linter.
 
 Visible text = body prose + the profile's visible frontmatter fields (and its FAQ frontmatter key, if set).
+Inline image alt text (`![alt](url)`) stays in the prose and is linted; only the `(url)` part goes.
 Not prose: fenced code, inline code, HTML comments, raw HTML/SVG block lines (any line whose
-stripped form starts with `<`, plus whole <svg>/<script>/<style> blocks), inline HTML tags, URLs,
-link targets, image syntax, headings (headings are kept separately on Section for rule 13).
+stripped form starts with `<`, so `<img alt=…>` too, plus whole <svg>/<script>/<style> blocks), inline HTML tags,
+URLs, link targets, image URLs, headings (headings are kept separately on Section for rule 13).
 """
 import re
 from dataclasses import dataclass, field
@@ -120,6 +121,17 @@ class Doc:
         for i, (ln, title) in enumerate(h2):
             if any(p.match(title) for p in self.profile.resource_list_headings):
                 out.update(range(ln, h2[i + 1][0] if i + 1 < len(h2) else len(self.lines) + 1))
+        return out
+
+    def fields_read(self) -> list[str]:
+        """`body` plus each frontmatter field the parser read, in the order read: the profile's visible keys the
+        file has as a string, then its FAQ key once if any question or answer was read."""
+        faq = self.profile.faq_frontmatter_key
+        out = ["body"]
+        for span in self.visible_frontmatter:
+            name = faq if faq and span.label.startswith(f"{faq}[") else span.label
+            if name not in out:
+                out.append(name)
         return out
 
     def is_allowed(self, rule: str, phrase: str, line: int) -> bool:

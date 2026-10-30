@@ -62,6 +62,7 @@ it does, then stop and let the person pick.
 
 1. `RUN kaizen review`: every proposal awaiting a decision, or approved and not yet applied, with its rule, trigger,
    action and one-line summary. A superseded one (stale at apply) is listed for one calibrate cycle; it's closed.
+   One applied to a checkout is listed as awaiting release until the ruleset in use has the change.
 2. For a pending proposal, tell the person where to decide it: the proposal's `.md` file under
    `.plainspoken/kaizen/proposals/` (file adapter), or the issue or card it names. The decision format is printed in
    that file, issue or card; point the person to it rather than writing the line out for them.
@@ -72,7 +73,9 @@ it does, then stop and let the person pick.
 1. Read `[kaizen] adapter` in `.plainspoken/config.toml` (unset means `file`). If it's `github` or `trello`, confirm
    with the person first (core rule 3).
 2. `RUN kaizen calibrate`. It reads the ledger, finds the triggers, stores at most 3 new proposals and sends them
-   through the adapter (it also re-sends any that weren't sent). It never applies anything.
+   through the adapter (it also re-sends any that weren't sent). It never applies anything. With `[kaizen]
+   monthly_cap` set, it stores no more than the cap leaves this month and prints a line saying so; `--max N` lowers
+   one run's limit.
 3. Show each proposal's id, summary and diff as printed. A `not emitted` line names the adapter problem: report it;
    the next calibrate run sends that proposal again, so confirm again before it.
 
@@ -131,6 +134,9 @@ it does, then stop and let the person pick.
    `RUN kaizen apply <id>` once without `--dry-run`. It writes nothing but marks the proposal superseded, and
    **calibrate** can propose for the rule again once new evidence builds. For an installed plugin, offer
    **report** with `--share` so the person can send the evidence upstream.
+5. To apply every approved proposal to a ruleset checkout at once, `RUN kaizen apply --all-approved --rules <path>`
+   (try `--dry-run` first). It applies them oldest first, stops at the first refusal and prints a commit message
+   naming the ids it applied. Show it to the person; never commit or push for them unless they ask.
 
 ### report
 

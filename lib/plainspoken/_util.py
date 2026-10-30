@@ -8,7 +8,7 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-__all__ = ["clip", "graphemes", "is_absolute", "now_iso", "path_key", "safe_relative"]
+__all__ = ["clip", "graphemes", "is_absolute", "now_iso", "path_key", "safe_relative", "write_safe"]
 
 _DRIVE = re.compile(r"^[A-Za-z]:")
 
@@ -82,3 +82,11 @@ def graphemes(text: str) -> int:
         ri_open = ri and not join
         prev = ch
     return count
+
+
+def write_safe(text: str, stream) -> None:
+    """Write `text` to `stream`, replacing any character the stream's encoding can't take (an arrow, a path) with
+    `?`, so a console that can't print UTF-8 (ascii, cp1252) never turns output into a crash."""
+    encoding = getattr(stream, "encoding", None) or "utf-8"
+    stream.write(text.encode(encoding, errors="replace").decode(encoding, errors="replace"))
+    stream.flush()

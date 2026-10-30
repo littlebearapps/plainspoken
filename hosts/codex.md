@@ -11,8 +11,11 @@ Codex; the skill still decides *what* to do.
   command. `RUN` in the skills is `python3 <root>/lib/run.py`.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
   literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
+  `--plugin-locale '${user_config.locale}'` works the same way: the literal counts as unset. To write in British or
+  American English, set `[locale] variant` in a config file (`RUN setup --host codex --locale <variant>`).
 - `allowed-tools`, `argument-hint` and `disable-model-invocation` in the frontmatter are Claude Code settings. Codex
-  ignores them. The manual-only skills (`claims`, `reader-value`, `kaizen`) still start only when the user asks.
+  ignores them. The nine manual-only skills (`adapt`, `claims`, `copy-audit`, `doctor`, `kaizen`, `reader-value`,
+  `register-check`, `setup`, `voice`) still start only when the user asks.
 - Another skill named as `/plainspoken:<name>` is `$plainspoken:<name>` here. If it doesn't load, read
   `<root>/skills/<name>/SKILL.md` and follow it.
 - Run every engine call from the project root, as the skills say. Report files are keyed to it.
@@ -29,7 +32,7 @@ the skills' rule that you don't award your own pass holds here too.
 
    ```bash
    T=$(mktemp -d)
-   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1: see check step 2
+   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1 or 3: see check step 2
    RUN agent-prompt tells-judge --line 1 < "$T/input.jsonl" > "$T/J1.prompt"    # and --line 2, 3, 4
    ```
 
@@ -55,12 +58,36 @@ the skills' rule that you don't award your own pass holds here too.
 ## What's different from Claude Code
 
 - Hooks (`hooks/codex.json`): after each `apply_patch` edit, the lint and the claims integrity check report on the
-  patched files; the optional writing nudge names the right step when a prompt asks for writing. Codex runs them only
-  after the user trusts them (`/hooks`). There's no publish gate and no kaizen nudge, so run `$plainspoken:check`
-  yourself before anything goes out.
+  patched files; the optional writing nudge names the right step when a prompt asks for writing. Before each shell
+  command, the publish gate checks a `git push` and the write guard stops a shell write to a reply file or the claims
+  ledger (write those with `apply_patch`). At the end of a turn, the kaizen nudge tells the person when proposals
+  wait or calibrate is due; Claude Code's report guard (write's step 8 owner asks) isn't wired here. Codex runs
+  them only after the user trusts them (`/hooks`), and calls tool hooks a guardrail, not a complete boundary, so
+  still run `$plainspoken:check` yourself before anything goes out.
+- Re-trust after every update. Since Codex 0.164.0, the trust is tied to a hash of every file in the plugin, so any
+  plainspoken update, not only a change to its hooks, puts all of them back to "needs review". Until the user opens
+  `/hooks`, reviews them and trusts them again, Codex skips them: nothing blocks, but nothing lints either.
+- The tool-call check (off unless `[tool_call] mode` is set): before an MCP tool call, the writing in its arguments
+  is linted. `warn` shows the person one line and gives you the findings, which you read next to the tool's result,
+  after the call has run. `block-once` holds the first try back with the findings: remove what's flagged, never add
+  facts, and call again; the same text sent again goes through. `ask` works as `block-once` here. A tool named
+  `…draft…` is only warned.
+- The chat-reply check (off unless `[chat_reply] mode = "warn"`): when the person asked for writing and your final
+  reply holds a draft, a second `Stop` hook lints it and shows the person one warning. It never reaches you and never
+  continues the turn, so fix a draft only when the person asks. Codex asks the person to trust this new hook once in
+  `/hooks`.
+- The publish gate takes its strictness only from `[gate] strictness` in `.plainspoken/config.toml` (Codex has no
+  plugin options): `block` denies the push, `warn` shows a message and lets it go, and with no file it does nothing.
+  `warn` and `block` need `[gate] paths`; with none set, the gate only shows a message that nothing is gated.
+- No kaizen backstop: Codex starts the agents with `spawn_agent` or `codex exec`, and a plugin can't add agent types,
+  so no hook sees a plainspoken agent finish. `kaizen report` shows 0 judge replies returned here; the recorded
+  count still holds.
 - A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
   `RUN check - < draft`, run `$plainspoken:check` on a long one, and remove what's flagged without adding facts.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
   `.plainspoken/config.toml` (see the README); turn the nudge on with `$plainspoken:setup` (`RUN setup --host codex
   …`). Kaizen records go to `.plainspoken/` in the project.
 - Agents run on your Codex model, not the model the agent file names.
+- `$plainspoken:doctor` (or `RUN doctor --host codex`) checks python3, the plugin files, the config and whether
+  `codex` is on PATH, and lists what it can't see for you to confirm (hook trust, sandbox writes, the judges'
+  tools). It only reports; the person decides what to change.

@@ -370,3 +370,109 @@ def parse_when(text: str) -> str:
     if when.tzinfo is None:
         when = when.replace(tzinfo=timezone.utc)
     return when.astimezone(timezone.utc).replace(microsecond=0).isoformat()
+
+
+# --- the tool-call check (#124) ------------------------------------------------------------------------------------
+# Read from `tool-calls.jsonl` (`ledger.read_rows`): one row per field the check looked at, with no text. Proposals
+# are lines for a person to weigh, never applied.
+
+TC_LINTED = ("clean", "warned", "blocked", "asked", "resent-changed", "resent-unchanged")
+TC_FINDINGS = ("warned", "blocked", "asked", "resent-changed", "resent-unchanged")
+TC_HOLDS = ("blocked", "asked")
+TC_RAISE_HOLDS, TC_RAISE_SHARE = 30, 0.5  # raise min_words: 30+ holds, over half of the lowest band's resent unchanged
+TC_LOWER_NEAR, TC_LOWER_RATE, TC_LOWER_RESENT = 20, 0.3, 0.2
+TC_SKIP_HOLDS, TC_SKIP_SHARE = 10, 0.6  # a skip glob for a tool: 10+ holds, 60%+ resent unchanged
+
+
+def tool_call_summary(rows: Iterable[dict], min_words: int) -> dict:
+    """Counts by word band (linted, with findings, holds, resent unchanged), near misses (under the cut-off, at
+    least half of it), the band just above the cut-off, and holds by tool."""
+    bands = {name: {"linted": 0, "findings": 0, "holds": 0, "resent_unchanged": 0} for _, name in ledger.BUCKETS}
+    above = {"linted": 0, "findings": 0, "holds": 0, "resent_unchanged": 0}
+    tools: dict[str, dict[str, int]] = {}
+    near = total = 0
+    for r in rows:
+        total += 1
+        outcome = r["outcome"]
+        if outcome == "below-cutoff" and r["words"] >= min_words / 2:
+            near += 1
+        if outcome not in TC_LINTED:
+            continue
+        cells = [bands[r["bucket"]]] + ([above] if r["words"] < 2 * min_words else [])
+        tool = tools.setdefault(r["tool_name"], {"holds": 0, "resent_unchanged": 0})
+        for c in cells:
+            c["linted"] += 1
+            c["findings"] += outcome in TC_FINDINGS
+            c["holds"] += outcome in TC_HOLDS
+            c["resent_unchanged"] += outcome == "resent-unchanged"
+        tool["holds"] += outcome in TC_HOLDS
+        tool["resent_unchanged"] += outcome == "resent-unchanged"
+    return {"rows": total, "min_words": min_words, "near_misses": near, "above_cutoff": above,
+            "bands": {k: v for k, v in bands.items() if v["linted"]},
+            "tools": {k: v for k, v in sorted(tools.items()) if v["holds"]}}
+
+
+def tool_call_proposals(summary: Mapping) -> list[str]:
+    """Proposals from the starting tuning rules; a person decides, nothing changes on its own."""
+    out = []
+    bands, n = summary["bands"], summary["min_words"]
+    holds = sum(b["holds"] for b in bands.values())
+    lowest = next((name for name, b in bands.items() if b["holds"]), None)
+    if holds >= TC_RAISE_HOLDS and lowest:
+        b = bands[lowest]
+        if b["resent_unchanged"] > TC_RAISE_SHARE * b["holds"]:
+            out.append(f"raise [tool_call] min_words from {n}: {b['resent_unchanged']} of {b['holds']} holds in the "
+                       f"{lowest}-word band were sent again unchanged")
+    a = summary["above_cutoff"]
+    if (summary["near_misses"] >= max(TC_LOWER_NEAR, a["linted"]) and a["linted"]
+            and a["findings"] >= TC_LOWER_RATE * a["linted"]
+            and a["resent_unchanged"] < TC_LOWER_RESENT * max(a["holds"], 1)):
+        out.append(f"lower [tool_call] min_words from {n}: {summary['near_misses']} fields fell just under it, and "
+                   f"{a['findings']} of {a['linted']} just over it had findings")
+    for tool, t in summary["tools"].items():
+        if t["holds"] >= TC_SKIP_HOLDS and t["resent_unchanged"] >= TC_SKIP_SHARE * t["holds"]:
+            out.append(f"add a [tool_call] skip glob for *__{tool}: {t['resent_unchanged']} of {t['holds']} holds "
+                       "were sent again unchanged")
+    return out
+
+
+def tool_call_lines(summary: Mapping) -> list[str]:
+    """The `kaizen report` section for the tool-call check; [] when it hasn't recorded anything."""
+    if not summary.get("rows"):
+        return []
+    out = ["", f"tool-call check (min_words {summary['min_words']}):"]
+    for name, b in summary["bands"].items():
+        out.append(f"  {name:>8} words: {_plural(b['linted'], 'field')} linted, {b['findings']} with findings, "
+                   f"{b['holds']} held, {b['resent_unchanged']} sent again unchanged")
+    out.append(f"  near misses (half the cut-off up to it): {summary['near_misses']}")
+    for tool, t in summary["tools"].items():
+        out.append(f"  {tool}: {t['holds']} held, {t['resent_unchanged']} sent again unchanged")
+    out += [f"  proposal: {p}" for p in tool_call_proposals(summary)]
+    return out
+
+
+# --- the chat-reply check (#125) -----------------------------------------------------------------------------------
+# Read from `chat-replies.jsonl`: one row per draft looked at after a writing ask, or per turn with none. Counts only,
+# so a person can see which shapes it lints and how often each has findings; no proposals yet.
+
+def chat_reply_summary(rows: Iterable[dict]) -> dict:
+    """Counts by outcome, and by shape for the drafts it linted (`clean` or `warned`)."""
+    outcomes: dict[str, int] = {}
+    shapes: dict[str, dict[str, int]] = {}
+    for r in rows:
+        outcomes[r["outcome"]] = outcomes.get(r["outcome"], 0) + 1
+        if r["outcome"] in ("clean", "warned"):
+            cell = shapes.setdefault(r["shape"], {"linted": 0, "warned": 0})
+            cell["linted"] += 1
+            cell["warned"] += r["outcome"] == "warned"
+    return {"rows": sum(outcomes.values()), "outcomes": outcomes, "shapes": dict(sorted(shapes.items()))}
+
+
+def chat_reply_lines(summary: Mapping) -> list[str]:
+    """The `kaizen report` section for the chat-reply check; [] when it hasn't recorded anything."""
+    if not summary.get("rows"):
+        return []
+    out = ["", f"chat-reply check ({summary['rows']} decisions after a writing ask):",
+           "  " + ", ".join(f"{n} {name}" for name, n in summary["outcomes"].items())]
+    out += [f"    {shape}: {c['linted']} linted, {c['warned']} with findings" for shape, c in summary["shapes"].items()]
+    return out

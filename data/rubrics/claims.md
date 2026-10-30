@@ -51,6 +51,10 @@ What the ledger already says:
 - **A status is a label, not support.** A claim marked `opinion_or_inference` or `hypothetical` that states a
   checkable fact about the writer, their history or the business (who, what, when, where, how long, what they did)
   and that no pinned passage holds is `unsupported_claim`. A real opinion, value or plan ("I'd start with…") is fine.
+- **A pinned claim is judged on its passage.** When the claim's `text` and each of its locations say no more than
+  its pinned passages (the same offer, number, period, audience, scope and cause, however it's reworded), it passes.
+  Don't file a finding because you'd word it differently or a stricter reading is possible. A finding against a
+  pinned claim quotes the article's words that go beyond the passage; when you can't point to them, file nothing.
 - **A `human_signoff` covers only the locations whose text matches its `wording`.** It records that a person
   accepted the listed findings for that exact wording, so don't re-file those findings where the article says
   those words. A location of the same claim that says something else gets checked as usual.
@@ -76,8 +80,14 @@ What counts as support, and what doesn't:
 - **First-hand markers cover one claim each.** "In my experience" or "on my own site" in front of one sentence
   doesn't make the next sentence's figure first-hand. Each first-hand claim needs its own ledger entry and scope.
 - **A brief speaks only for the person who gave it.** A source with `kind = "brief"` is the person's brief, saved
-  verbatim. It supports what they can speak for (their own organisation, work, prices and plans), never a figure or
-  statement about a platform, a law or anyone else.
+  verbatim. It supports what they can speak for (their own organisation, work, prices, offers and plans), never a
+  figure or statement about a platform, a law or anyone else. Its lines about the piece itself are the owner's word
+  as well: the call to action, the offer, who it's for and the tone. A call to action pinned to such a line may ask
+  every reader to take that step, in the article's own words, unless the line itself narrows who it's for. It's a
+  finding only for a term the line doesn't give: a price, length, deadline, a promise of what follows, or a wider
+  offer than the line makes. Any result for a client, named or not, needs the owner's approval: from a brief it's
+  `first_hand` with `sensitive = true` (which needs no finding; `claims status` holds it for the owner). Ledgered
+  `verified` instead, it's `other`, blocking.
 - **Citation proximity isn't support.** A link next to a sentence supports only what that link's pinned passage
   says. A sentence that sits beside a citation but says more than the passage is unsupported for the difference.
 - **Judgement is labelled.** A recommendation, estimate or hypothesis is fine when the article frames it as one
@@ -90,8 +100,8 @@ What counts as support, and what doesn't:
   a location that says more than the claim's ledger `text` (`scope_stretch`), even when the claim itself is
   supported; a fact about the writer or the business labelled as opinion or inference with no pinned passage; a
   fabricated quote or figure; an unledgered material statistic, price or quotation; a first-hand claim
-  stretched past its scope; a claim resting on an aggregator; a quote that isn't verbatim at its source; a
-  regulated-matrix class the matrix marks as blocking.
+  stretched past its scope; a client's result ledgered `verified` rather than sensitive; a claim resting on an
+  aggregator; a quote that isn't verbatim at its source; a regulated-matrix class the matrix marks as blocking.
 - **`warning`**: worth fixing, but the claim isn't wrong as worded. A missing hedge on a contested first, an undated
   availability claim, unlabelled judgement, wording slightly looser than the passage, an unledgered minor fact.
 

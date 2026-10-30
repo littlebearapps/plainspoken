@@ -37,7 +37,9 @@ sequence, a cause or a real contrast. If they're stacked only for punch, rewrite
 ## Over-correction guardrails
 
 - **Don't stretch short sentences to hit a number.** Padding a plain idea into a long sentence fails the reader a
-  different way.
+  different way. When the checker's rhythm flag asks for a longer sentence, join two neighbours with "and", "but", a
+  comma or a semicolon in their own words, or leave the flag. Never add a word, a fact said again or a reason just
+  to get over the line.
 - **Don't join unrelated ideas.** A comma or "and" between two things that have nothing to do with each other is
   worse than two sentences.
 - **Don't add to make a join.** A join adds no clause, detail or reason: use "because" or "so" only where the text

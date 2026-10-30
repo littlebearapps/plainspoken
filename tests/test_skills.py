@@ -46,6 +46,20 @@ class CheckSkill(unittest.TestCase):
     def test_profile_read_first(self):  # #12: an explicit first step, not a load-time command
         assert_first_step(self, self.text, PROFILE_CALL)
 
+    def test_report_only_route(self):  # #107: findings without edits, never described as a pass
+        m = __import__("re").search(r"(?ms)^#+ [^\n]*Report only[^\n]*\n(.*?)(?=^#+ |\Z)", self.text)
+        self.assertIsNotNone(m, "no 'Report only' heading in skills/check/SKILL.md")
+        route = " ".join(m.group(1).split())
+        for needle in ("--keep", "step 6", "step 7", "humanize", "PASS"):
+            self.assertIn(needle, route)
+        self.assertRegex(route, r"(?i)unchanged|same bytes|byte for byte|never edit")
+        self.assertRegex(route, r"(?i)nothing (was|is) (fixed|changed)")
+        self.assertRegex(route, r"(?i)overrides the fixing in the core rules")
+        self.assertRegex(route, r"(?i)skip step 6 \(fix pass\) and step 7")
+        self.assertRegex(route, r"(?i)never call `/plainspoken:humanize`")
+        self.assertRegex(route, r"(?i)judge-input`'s exit-1 list")  # the lint's own list is cut short at 15 a severity
+        self.assertRegex(route, r"(?i)never call it a PASS")
+
     def test_no_ban_list_words(self):  # lists live in the checker
         lists = __import__("plainspoken.registry", fromlist=["load_config"]).load_config().lists
         for word in lists["ban_literal"]:
@@ -96,13 +110,29 @@ class CheckSkill(unittest.TestCase):
         step = " ".join(self.text[self.text.index("1. **Lint.**"):self.text.index("2. **Judge input.**")].split())
         self.assertIn("on its own: read it before step 2", step)
         self.assertIn("Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again "
-                      "(at most two lint-only passes)", step)
+                      "(at most two lint-only passes, counting a caller's, such as write step 6's)", step)  # #162
         self.assertIn("so the judges read a lint-clean draft", step)
         self.assertIn("one still there after two, or any once the judges have started) goes to step 2 as "
                       "`--keep <rule>`", step)  # #74: judge-input holds an open lint line back without it
         self.assertIn("Justify a kept WARN in step 7 rather than fix it", step)
         step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
         self.assertIn("Exit 1 → it names lint lines still open: fix them (step 1) or keep them.", step2)
+
+    def test_the_lint_is_read_and_keeps_name_only_what_it_printed(self):  # #162: `check … >/dev/null; … --keep r7d`
+        step = " ".join(self.text[self.text.index("1. **Lint.**"):self.text.index("2. **Judge input.**")].split())
+        self.assertIn("read it before step 2, in full. Never send it to `/dev/null` or cut it with a pipe.", step)
+        self.assertIn("`--keep <rule>`, only for a rule this pass's lint printed", step)
+        step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
+        self.assertIn("a `--keep` for a rule with no open line lands here too", step2)
+
+    def test_judges_wait_for_a_current_claims_status(self):  # #160: judge-input exits 3 on an open claims step
+        step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
+        self.assertIn("Exit 3 → FILE has a claim ledger that isn't current", step2)
+        self.assertIn("From write, finish the claims step", step2)
+        self.assertIn("On its own, rerun step 2 with `--ignore-claims` and say so in step 8", step2)
+        self.assertIn("exit 3 always means rerun with `--ignore-claims`", " ".join(self.text.split()))  # report only
+        notes = (REPO / "skills" / "claims" / "references" / "claude-code.md").read_text(encoding="utf-8")
+        self.assertIn("in the foreground (never `run_in_background`)", " ".join(notes.split()))
 
     def test_report_reads_status_and_reruns_when_stale(self):  # #29: no clean finish after an uncounted edit
         step = " ".join(self.text[self.text.index("8. **Report.**"):].split())
@@ -133,6 +163,15 @@ class HumanizeSkill(unittest.TestCase):
         self.assertIn("never add a fact", lower)
         self.assertNotIn("fiction is exempt", lower)
 
+    def test_used_on_its_own_it_reads_the_voice_profile(self):  # #98: item 4 named notes it never loaded
+        body = " ".join(self.text.split())
+        self.assertIn("Used on its own, first run `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --voice --type "
+                      "<type> --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'`", body)
+        self.assertIn("If the call fails, carry on without it.", body)
+        self.assertIn("the profile's voice notes for replacements", body)
+        self.assertNotIn("calibration notes", body)
+        self.assertNotIn("First, before any other step", body)  # standalone only: check has already loaded it
+
     def test_all_26_patterns_kept_in_reference(self):
         for n in range(1, 27):
             self.assertRegex(self.patterns, rf"(?m)^### {n}\. ")
@@ -145,8 +184,19 @@ class HumanizeSkill(unittest.TestCase):
 
 
 PROFILE_SUBCOMMANDS = {"check", "profile", "anchors", "register-checklist", "merge", "justify", "judge-input",
-                       "status"}
+                       "status", "doctor"}
+LOCALE_SUBCOMMANDS = {"profile", "register-checklist", "doctor"}  # #121: the commands that print the locale
 CLI_SPAN = re.compile(r"`([^`\n]*\b(?:RUN|run\.py) ([a-z-]+)\b[^`\n]*)`")
+
+
+def cli_spans(path: Path):
+    """(line, span, subcommand) for each CLI call in a file, paragraph by paragraph, so a call wrapped onto a second
+    line (to keep a skill inside its line width) is still seen whole."""
+    line = 1
+    for para in path.read_text(encoding="utf-8").split("\n\n"):
+        for span, sub in CLI_SPAN.findall(" ".join(para.split())):
+            yield line, span, sub
+        line += para.count("\n") + 2
 
 
 class ProfileFlagEverywhere(unittest.TestCase):  # without the flag, a settings-only profile is lost
@@ -159,13 +209,31 @@ class ProfileFlagEverywhere(unittest.TestCase):  # without the flag, a settings-
     def test_every_profile_loading_call_passes_the_plugin_profile(self):
         missing = []
         for path in sorted((REPO / "skills").glob("*/SKILL.md")):
-            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                for span, sub in CLI_SPAN.findall(line):
-                    explicit = re.search(r"--profile\b", span)  # an explicit file (voice Build) needs no fallback
-                    if sub in PROFILE_SUBCOMMANDS and "--plugin-profile '${user_config.profile}'" not in span \
-                            and not explicit:
+            for n, span, sub in cli_spans(path):
+                explicit = re.search(r"--profile\b", span)  # an explicit file (voice Build) needs no fallback
+                if sub in PROFILE_SUBCOMMANDS and "--plugin-profile '${user_config.profile}'" not in span \
+                        and not explicit:
+                    missing.append(f"{path.parent.name}/SKILL.md:{n}: {span}")
+        self.assertEqual(missing, [])
+
+
+class LocaleFlagEverywhere(unittest.TestCase):  # #121: skills' Bash calls never see CLAUDE_PLUGIN_OPTION_LOCALE
+    def test_subcommand_set_matches_the_cli(self):
+        src = (REPO / "lib" / "plainspoken" / "__main__.py").read_text(encoding="utf-8")
+        parsers = dict(re.findall(r'(\w+) = sub\.add_parser\("([a-z-]+)"', src))
+        flagged = {parsers[v] for v in re.findall(r'(\w+)\.add_argument\("--plugin-locale"', src)}
+        self.assertEqual(flagged, LOCALE_SUBCOMMANDS)
+
+    def test_every_locale_printing_call_passes_the_plugin_locale(self):
+        missing, seen = [], 0
+        for path in sorted((REPO / "skills").glob("*/SKILL.md")):
+            for n, span, sub in cli_spans(path):
+                if sub in LOCALE_SUBCOMMANDS:
+                    seen += 1
+                    if "--plugin-locale '${user_config.locale}'" not in span:
                         missing.append(f"{path.parent.name}/SKILL.md:{n}: {span}")
         self.assertEqual(missing, [])
+        self.assertGreater(seen, 20)
 
 
 class PerFileProfile(unittest.TestCase):
@@ -215,3 +283,21 @@ class JoinRemedy(unittest.TestCase):  # #73: a 7d join padded a sentence or adde
                           'reason (such as "because …")', texts[name], name)
         self.assertIn("at most twice (a join adds no clause, detail or reason)", texts["write"])
         self.assertIn("A join adds no clause, detail or reason", texts["rhythm"])
+
+    def test_a_rhythm_fix_never_pads_and_keeps_what_it_cannot_clear(self):  # #73 round 8: pads to cross 25 words
+        def flat(path: Path) -> str:
+            return " ".join(path.read_text(encoding="utf-8").split())
+        check, humanize = (" ".join(skill(n)[1].split()) for n in ("check", "humanize"))
+        rhythm = flat(REPO / "skills" / "plain-language" / "references" / "rhythm.md")
+        guide = flat(REPO / "guides" / "checking.md")
+        self.assertIn('A rhythm fix (7, 7d) joins two neighbouring sentences with "and", "but", a comma or a semicolon, '
+                      "keeping their own words, or splits one. It never pads or restates to reach a length", check)
+        self.assertIn('no "so" or "because"', check)
+        self.assertIn("keep the WARN (`--keep`, then step 7)", check)
+        self.assertIn("a 7d line the rhythm rule can't clear", check)  # step 1: kept, not lengthened
+        self.assertIn("a 7 or 7d WARN the rhythm rule can't clear goes to step 7 instead, never lengthened", check)
+        self.assertIn('A rhythm finding (7, 7d) is fixed only by joining two neighbouring sentences with "and", "but", '
+                      "a comma or a semicolon in their own words, or by splitting one. Never pad a sentence", humanize)
+        self.assertIn("never by padding", humanize)
+        self.assertIn("in their own words, or leave the flag", rhythm)
+        self.assertIn("never pad a sentence to reach a length", guide)

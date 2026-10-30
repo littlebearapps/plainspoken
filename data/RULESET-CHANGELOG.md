@@ -2,6 +2,61 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## Claims rubric revision (2026-10-30; ruleset version unchanged)
+
+- **A pinned claim is judged on its passage (#77):** a claim whose text and locations say no more than its pinned
+  passages passes, however it's reworded. A finding against a pinned claim quotes the article's words that go
+  beyond the passage, and wording the checker would only have put differently isn't one. In the round-8 long-form
+  runs the same offer wording passed in one piece and was blocked in two others, and an unchanged sentence passed
+  one checker run and was blocked in the next.
+- **A brief's lines about the piece are sources (#77):** its call to action, offer, audience and tone lines are the
+  owner's word. A call to action pinned to such a line may invite every reader in the article's own words, unless
+  the line narrows who it's for; only a term the line doesn't give (a price, length, deadline, what follows, a
+  wider offer) is a finding. A round-8 checker blocked a call to action the brief named as the piece's call to
+  action. The claims skill's evidence rules now say to pin the call to action to that line.
+- New golden cases `CL-brief-005` and `CL-brief-006` (provisional). The rubric's hash changes, so an earlier
+  `<key>.claims-check.json` reads as `checker result stale (rubric changed)` until the checker runs again. Not yet
+  measured with `eval claims` (a paid run). The owner approves by merging the pull request.
+
+## Engine change (2026-10-28; ruleset version unchanged)
+
+- **Social caps merge as the stricter value (#104):** a cap (a `*_max` key) in a content type's layer, such as
+  `[thresholds.social]`, now merges with the profile's value as the stricter of the two. Before, it replaced it, so
+  a profile with `em_dash_max = 0` got the social cap of 1 in every short post, including every draft under 300
+  words piped to `check -`. A profile that loosens a cap still never lifts a social one. Social keys that aren't
+  caps (`conversational_block`, `uniform_sentence_run`, `staccato_short_run`, `staccato_short_len`) still replace
+  the profile's value, and no `*_min` floor is in a content-type layer. Default-profile results don't change.
+- **New threshold `en_dash_max` (#104):** rule 1 also counts en dashes against their own cap, separately from
+  `em_dash_max`. The default is -1 (any negative value means no limit), so no result changes until a profile sets
+  it. Once set, every en dash counts, number ranges included (`9am–6pm`, `2020–2026`): a writer who caps en dashes
+  at 0 doesn't use them, and the issue asks for `9am–6pm` to be flagged then. A profile that keeps en-dash ranges
+  sets a cap with room for them. The key is added to `[thresholds."default"]` by hand, not through `kaizen apply`,
+  because it starts at no limit and changes no result; the owner approves by merging the fix PR. The file's bytes
+  change, so a pending proposal's `base_sha256` no longer matches and `kaizen apply` rebases it.
+
+## Register checklist change (2026-10-27; ruleset version unchanged)
+
+`data/register-checklist.toml` isn't part of the ruleset, so `kaizen apply` doesn't govern it and the version stays.
+A checklist change goes in by ordinary pull request, with a line here per changed item and at least one text it
+should flag and one it shouldn't in `tests/test_register.py`. The owner approved these changes on 27 Oct 2026.
+
+- **R7 First contact, the easy no:** judged by the message's shape. It passes when any ask is small, specific and
+  optional, or there's no ask. It flags when declining is made awkward (a big or vague ask, a deadline, guilt) or
+  stock reassurance is stacked ("no cost, no obligation, no reply needed"). One plain "no worries if not" stays
+  fine. "Has no easy no" is gone from `flag_when`.
+- **R7 First contact, sales scaffolding:** also flags a message that runs observation → credentials → offer → ask
+  even though each sentence passes, holds back the useful part to get a reply, or asks for more than it gives.
+  New worked example 4 in `skills/register-check/references/examples.md`; example 2 now names its stacked
+  reassurance.
+- **R8 Follow-up:** the same two clauses for a later note: it holds back the useful part to get a reply, or asks
+  for more than it gives.
+- **R7 First contact, a preference stated as an error:** also flags a message that presents the writer's taste
+  about the reader's material as a mistake. The write skill's research gate
+  (`skills/write/references/research-gate.md`) now checks that premise before such a message is drafted.
+- **R2 Outcome promises:** also flags an outcome outside the writer's control presented as waiting only on more
+  evidence ("not until I've seen the numbers"). The matching line is in the control principle,
+  `skills/copy-audit/references/principle.md` "Truth and control".
+
 ## Engine change (2026-10-21; ruleset version unchanged)
 
 - **Rule 12f, opening repetition scales with length (#25):** the limit is now `opening_top3_max` plus 3/n, where

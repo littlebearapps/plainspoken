@@ -52,6 +52,58 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual(kept.returncode, 0, kept.stderr)
         self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
+    def test_keep_names_only_open_lines(self):  # #162: a keep typed before the lint was read is refused
+        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks.\n",
+                            encoding="utf-8")
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        stray = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,7d,HM,r2", cwd=self.cwd)
+        self.assertEqual((stray.returncode, stray.stdout), (2, ""), stray.stderr)
+        self.assertIn("--keep r2:", stray.stderr)
+        self.assertIn("keep only the rules it prints", stray.stderr)
+        kept = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,r7d,HM", cwd=self.cwd)
+        self.assertEqual(kept.returncode, 0, kept.stderr)
+        self.assertIn("kept with --keep", kept.stderr)  # the kept lines are shown even if the lint went unread
+        for line in ("WARN  r4b", "WARN  r7d", "WARN  rHM"):
+            self.assertIn(line, kept.stderr)
+        self.art.write_text("Text.\n", encoding="utf-8")  # fixed since: last pass's keep names nothing open now
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(cli("judge-input", "post.md", "--profile", "default", "--keep", "7d", cwd=self.cwd).returncode,
+                         2)
+        clean = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual((clean.returncode, clean.stderr), (0, ""))
+
+    def test_report_only_keeps_a_block_and_never_edits(self):  # #107: skills/check/SKILL.md "Report only"
+        import hashlib
+        import re
+        # 16 r2 BLOCKs fill the lint's 15-line BLOCK list, so the r4a BLOCK after them is hidden behind "… N more".
+        lines = [f"Line {i} has to delve into the plan." for i in range(16)] + ["Furthermore, the vans run late."]
+        self.art.write_text("\n\n".join(lines) + "\n", encoding="utf-8")
+        before = hashlib.sha256(self.art.read_bytes()).hexdigest()
+        lint = cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(lint.returncode, 1, lint.stderr)
+        self.assertRegex(lint.stdout, r"BLOCK\s+… \d+ more")
+        self.assertNotIn("r4a", lint.stdout)
+        held = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual((held.returncode, held.stdout), (1, ""), held.stderr)
+        listed = re.findall(r"(?m)^\s+(BLOCK|WARN)\s+(\S+)\s+L\d+", held.stderr)
+        rules = sorted({rule for _, rule in listed})
+        self.assertIn(("BLOCK", "r4a"), listed, "judge-input's exit-1 list names the rule the lint hid")
+        kept = cli("judge-input", "post.md", "--profile", "default", "--keep", ",".join(rules), cwd=self.cwd)
+        self.assertEqual(kept.returncode, 0, kept.stderr)
+        inputs = [json.loads(x) for x in kept.stdout.splitlines()]
+        self.assertEqual([i["group"] for i in inputs], ["J1", "J2", "J3", "J4"])
+        replies = [{"group": i["group"], "article_sha256": before, "input_digest": i["input_digest"], "judged_at": "t",
+                    "verdicts": [{"rule": r, "verdict": "pass", "severity": i["severities"][r], "evidence": []}
+                                 for r in i["rules"]]} for i in inputs]  # all four judges pass everything
+        rec = cli("judge-record", "post.md", "--all", "--from", str(self._scratch("\n".join(map(json.dumps, replies)))),
+                  cwd=self.cwd)
+        self.assertEqual(rec.returncode, 0, rec.stderr)
+        merged = cli("merge", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(merged.returncode, 1, merged.stderr)
+        self.assertRegex(merged.stdout, r"^FAIL\b")  # a kept BLOCK can't reach PASS, whatever the judges say
+        self.assertRegex(merged.stdout, r"BLOCK [^·]*\b4a\b")
+        self.assertEqual(hashlib.sha256(self.art.read_bytes()).hexdigest(), before)
+
     def test_judge_record_valid_and_invalid(self):
         import hashlib
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
@@ -381,3 +433,58 @@ class ConfigCli(unittest.TestCase):  # `config profile-for`
         other.write_text("We delve into it.\n", encoding="utf-8")
         r = cli("check", "post.md", "--no-save", cwd=self.cwd)
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+
+class LocaleCli(unittest.TestCase):  # #121: the locale option is read, and shown with where it came from
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+        (self.cwd / ".git").mkdir()
+        self.env = {"HOME": str(self.home), "XDG_CONFIG_HOME": str(self.home / ".config")}
+
+    def run_cli(self, *args, env=None):
+        return cli(*args, cwd=self.cwd, env={**self.env, **(env or {})})
+
+    def test_summary_names_the_locale_and_its_source(self):
+        r = self.run_cli("profile", "--plugin-profile", "default", "--plugin-locale", "en-US")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("locale en-US (plugin option) · flags: none", r.stdout)
+        r = self.run_cli("profile", "--plugin-profile", "default", "--plugin-locale", "${user_config.locale}")
+        self.assertIn("locale en-AU (default) · flags", r.stdout)
+
+    def test_env_beats_the_flag(self):  # hooks get CLAUDE_PLUGIN_OPTION_LOCALE; skills pass the flag
+        r = self.run_cli("profile", "--profile", "default", "--plugin-locale", "en-US",
+                         env={"CLAUDE_PLUGIN_OPTION_LOCALE": "en-GB"})
+        self.assertIn("locale en-GB (plugin option)", r.stdout)
+
+    def test_project_config_names_the_file(self):
+        (self.cwd / ".plainspoken").mkdir()
+        (self.cwd / ".plainspoken" / "config.toml").write_text('[locale]\nvariant = "en-GB"\n', encoding="utf-8")
+        r = self.run_cli("profile", "--profile", "default", "--plugin-locale", "en-US")
+        self.assertIn("locale en-GB (project config, .plainspoken/config.toml)", r.stdout)
+
+    def test_bad_config_value_exits_2_naming_file_and_key(self):
+        (self.cwd / ".plainspoken").mkdir()
+        (self.cwd / ".plainspoken" / "config.toml").write_text('[locale]\nvariant = "en-NZ"\n', encoding="utf-8")
+        r = self.run_cli("profile", "--profile", "default")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("[locale] variant", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_voice_prints_the_locale_line(self):
+        r = self.run_cli("profile", "--voice", "--plugin-profile", "default", "--plugin-locale", "en-GB")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("locale: en-GB (plugin option)", r.stdout.splitlines())
+
+    def test_json_stamps_unchanged(self):
+        r = self.run_cli("profile", "--json", "--plugin-profile", "default", "--plugin-locale", "en-US")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(set(json.loads(r.stdout)), {"name", "path", "profile_sha256", "ruleset_version", "root"})
+
+    def test_register_checklist_uses_the_resolved_locale(self):
+        r = self.run_cli("register-checklist", "--kind", "email", "--profile", "default", "--plugin-locale", "en-US")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r11 = next(line for line in r.stdout.splitlines() if line.startswith("R11 "))
+        self.assertIn("Is it consistently en-US?", r11)

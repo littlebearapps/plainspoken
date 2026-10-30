@@ -24,7 +24,8 @@ Capture happens as you work, without a separate step:
   `kaizen missed` (a tell the check didn't flag, picked from the `kaizen diff` hunks), and `kaizen published`
   (which findings are still in the article you published).
 - The backstop hook counts each run of a plainspoken agent once, so `kaizen report` can compare the judge replies
-  that came back with the ones that were recorded.
+  that came back with the ones that were recorded. It runs in Claude Code only: in Codex and Hermes no hook sees a
+  plainspoken agent, so the returned count stays at 0 there.
 
 Every other skill ends with a reminder: if you disagree with a finding, or Claude had to work around a step, record
 it or say so.
@@ -36,13 +37,15 @@ holds hashes (of the finding's text, the article and its project-relative path),
 or a decision, cut to 200 characters. Short excerpts (up to 120 characters) are stored only when you switch them on
 with `[kaizen] excerpts = true` (or the plugin option, when the project config doesn't say).
 
-**What's never stored.** Your article text (unless excerpts are on), judge evidence, justification reasons, the
-judges' replies, and file paths. Friction lines hold an engine message with any file names and values taken out.
+**What's never stored in the ledger.** Your article text (unless excerpts are on), judge evidence, justification
+reasons, the judges' replies, and file paths. Friction lines hold an engine message with any file names and values
+taken out. The report files do hold your text: [What stays on disk](../README.md#what-stays-on-disk).
 
 `[kaizen] capture = false` in `.plainspoken/config.toml` turns capture off. To keep some sources and drop others, list
-the ones to keep in `[kaizen] capture_sources` (default all four: `check`, `merge`, `judge` and `lint-watch`; `judge`
-covers `judge-record`'s rejected replies and the agent-run count). For example, `capture_sources = ["check",
-"merge", "judge"]` stops the lint-watch hook recording `fired` events for every Markdown file you save. A capture
+the ones to keep in `[kaizen] capture_sources` (default all six: `check`, `merge`, `judge`, `lint-watch`,
+`tool-call` and `chat-reply`; `judge` covers `judge-record`'s rejected replies and the agent-run count). For example,
+`capture_sources = ["check", "merge", "judge"]` stops the lint-watch hook recording `fired` events for every Markdown
+file you save, and the tool-call and chat-reply checks recording their findings. A capture
 problem never changes what a command prints or its exit code: it adds one `plainspoken: kaizen capture skipped: …`
 line on stderr.
 
@@ -101,6 +104,18 @@ after that, because calibrate also re-sends any proposal it couldn't send before
 
 `kaizen review` lists what's waiting.
 
+**A monthly cap.** Calibrate and mining each have their own per-run limit (3 and 5), so one month can bring 8
+proposals. To share one limit between them, set `[kaizen] monthly_cap` in `.plainspoken/config.toml`:
+
+    [kaizen]
+    monthly_cap = 5   # calibrate and mine together store at most 5 proposals a calendar month
+
+Each run counts the proposals either command stored this calendar month (UTC) and stores no more than what's left,
+so whichever runs first can use the whole month's room. When the cap is set, both commands print a line saying how
+much of it is used. `--max N` lowers one run's limit (`kaizen calibrate --max 1`); it never raises it above the
+command's own limit or the room the cap leaves. Proposals that aren't stored this month aren't lost: the evidence
+stays in the ledger, and the next run with room proposes them.
+
 ## 5. Decisions
 
 You decide a proposal by posting your decision as its own comment on the issue or card, or as its own line below
@@ -157,6 +172,19 @@ proposal names no profile (calibrate had none to resolve), apply refuses, naming
 If you use the installed plugin, send the evidence upstream instead (section 9). It never edits the rubrics: when it
 removes a judged rule, it names the rubric section left behind, for you to delete in the same change.
 
+**Applied isn't released.** With `--rules`, apply edits a checkout's file, not the one your checks read. The ledger
+notes the version it wrote, and until the copy in use reaches that number (or its `RULESET-CHANGELOG.md` holds the
+entry), `kaizen review` shows the change as awaiting release, with both versions. Meanwhile its evidence still counts
+and calibrate leaves that rule alone. Once a release carrying the edit is installed, it's done: calibrate treats the
+earlier evidence as spent. Writing straight to the rules in use, or to a profile, is released at once.
+
+**Every approved proposal at once.** `kaizen apply --all-approved --rules <checkout>/data/rules.toml` applies each
+approved proposal in the order calibrate or mining made them, oldest first, each with its own version bump and
+changelog entry. It stops at the first refusal; the ones before it stay applied. A review proposal is skipped with a
+note, since it carries no edit. At the end it prints a commit message in the repository's convention: a `ruleset:`
+commit naming every id it applied, with one line each for the rule, the change and who approved it. Run the tests in
+the checkout, then commit with that message. `--dry-run` shows each diff against the current file and writes nothing.
+
 ## 7. Retiring a rule
 
 A dormant rule is retired in steps, one per calibrate cycle (28 days) after the last step was applied:
@@ -174,7 +202,20 @@ becomes a review proposal instead. Those need a pull request by hand.
 subagents write drafts from the fixed briefs in `evals/briefs/` (the brief and nothing else, each brief twice, since a
 model needs at least 10 drafts to be mined), saves them by month and model, then compares them with a human corpus
 you supply (`--corpus`, or `[kaizen] human_corpus`). For now the drafts come from Claude models only; other vendors'
-models come later. At most 5 candidates are kept, each tagged with the
+models come later.
+
+In Claude Code the drafts come from the `mining-drafter` agent. It has no tools and skips your `CLAUDE.md` files
+(Claude Code 2.1.308 or later), so writing rules you keep there don't tidy the drafts and hide the tells mining is
+looking for.
+
+The human corpus is your own writing, done without a model's help: a model draft you edited doesn't count. Keep
+it in a folder of your project, for example `writing/human/`, and point the config at it once:
+
+    [kaizen]
+    human_corpus = ["writing/human/*.md"]
+
+The globs are relative to the project root. At most 5 candidates are kept (fewer under `--max` or the monthly cap in
+section 4), each tagged with the
 model it came from. Mined proposals stay local: they're never sent to github or trello, and you approve them in
 their `.md` file. The recipe is in the skill's `references/mining.md`.
 

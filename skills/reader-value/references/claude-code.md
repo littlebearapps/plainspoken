@@ -9,8 +9,10 @@
   `delivery-reply` path, then record it; never paste the reply into a shell command (Claude Code's shell check
   refuses JSON in a heredoc). On a second round the reply file already exists, and Write refuses to overwrite a
   file not read this session: read it first, then write the new reply over it.
-- Make one Bash call per command: one Bash call per RUN line, no `&&` chains, no shell loops. Each call's exit code is
-  what the step acts on.
+- Chain one step's CLI calls with `&&` in one Bash call: `paths` and `deliver-input` in one chain for deliver step 3.
+  The CLI grant covers each part, so the chain runs without a prompt. `&&` stops at the first call that fails, so the
+  exit code and the last lines are that call's: act on them, then run the rest again. No `;`, no pipes, no shell
+  loops, and nothing else chained onto a CLI call (no `; echo`, `; ls` or `; cat`).
 - Save the contract with the Write tool under `.plainspoken/reader-value/`, and fix it with the Edit tool. Both are
   allowed without a prompt there, and so is writing the reviewer's reply under `.plainspoken/reports/`. A contract
   in a file the user names elsewhere, and any edit to the draft itself, asks for permission as usual.

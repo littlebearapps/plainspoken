@@ -22,7 +22,24 @@ A heading is a short statement of the section's point, so the headings alone rea
 - Instead of "Contract terms", write "Check your exit fee before you switch".
 - Instead of "Timeline", write "Most switches take five working days".
 
+## Replies
+
+When the piece answers a message, that message sets the agenda. Before you draft, list each question or request in it.
+
+- Answer each question, in the order it was asked unless another order is clearer. If you can't answer one yet, say
+  when you'll know, or that it's out of scope and who can answer it. A broad sentence that covers two questions
+  answers neither.
+- If the message raises a worry or a complaint, acknowledge it plainly in the first lines, before any explanation.
+  Acknowledge what they raised without conceding anything the sources don't support.
+- If the answer depends on a fact the sources don't have, ask the one question that would settle it. Don't guess,
+  and don't answer every possibility.
+
+> Yes, the hall is free on the 14th, and the hire fee hasn't changed. I can't confirm the kitchen yet; I'll know by
+> Friday.
+
 ## Close with the next step
 
-End on the one thing the reader does next, and when. Don't restate the article. If there's a real limit (when this
-advice stops applying, or when to get a professional), say it plainly just before the close.
+End on the one thing the reader does next, and when, and don't restate the article.
+
+Put a real limit (when this advice stops applying, or when to get a professional) beside the claim it limits, because
+one that would change the reader's decision can't wait for the end. A general one can sit just before the close.

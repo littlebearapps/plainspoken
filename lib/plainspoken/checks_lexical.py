@@ -215,7 +215,8 @@ def _separator_lines(doc: Doc) -> set[int]:
 
 def em_dashes(doc: Doc, cfg: Config) -> list[Finding]:
     """Em dashes in all visible text, quotations included, except the dash that marks a quote's attribution
-    and the label separator of a resource-list item (the house format, not prose)."""
+    and the label separator of a resource-list item (the house format, not prose). En dashes are counted
+    separately, against their own cap (`_en_dashes`)."""
     limit = cfg.thresholds_for(doc)["em_dash_max"]
     tails = _attribution_tails(doc)
     separators = _separator_lines(doc)
@@ -229,11 +230,31 @@ def em_dashes(doc: Doc, cfg: Config) -> list[Finding]:
             separators.discard(line)
             n -= 1
         hits += [(line, text)] * n
+    out = []
+    if len(hits) > limit:
+        lines = sorted({ln for ln, _ in hits})
+        out.append(Finding("1", "BLOCK", lines[0], f"lines {lines[:12]}",
+                           f"{len(hits)} em dashes (limit {limit} for profile {doc.profile.name}). "
+                           "Use a hyphen, comma or full stop."))
+    return out + _en_dashes(doc, cfg)
+
+
+def _en_dashes(doc: Doc, cfg: Config) -> list[Finding]:
+    """En dashes against `en_dash_max` (#104). The default, -1, means no limit, so nothing changes until a profile
+    sets a cap. Once one is set, every en dash counts, number ranges (`9am–6pm`, `2020–2026`) included: a writer
+    who caps en dashes at 0 doesn't use them, and a range reads as well with a hyphen or "to". A profile that keeps
+    ranges sets a cap that leaves room for them. The attribution and resource-separator exemptions above are
+    em-dash forms, so they don't apply here."""
+    limit = cfg.thresholds_for(doc)["en_dash_max"]
+    if limit < 0:
+        return []
+    hits = [line for line, text, _ in text_units(doc) for _ in range(text.count("–"))]
     if len(hits) <= limit:
         return []
-    lines = sorted({ln for ln, _ in hits})
+    lines = sorted(set(hits))
     return [Finding("1", "BLOCK", lines[0], f"lines {lines[:12]}",
-                    f"{len(hits)} em dashes (limit {limit} for profile {doc.profile.name}). Use a hyphen, comma or full stop.")]
+                    f"{len(hits)} en dashes (limit {limit} for profile {doc.profile.name}). "
+                    "Use a hyphen, comma, full stop or \"to\".")]
 
 
 def narrative_em_dash(doc: Doc, cfg: Config) -> list[Finding]:

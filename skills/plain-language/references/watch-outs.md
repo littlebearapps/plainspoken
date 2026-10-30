@@ -23,6 +23,25 @@ After:
 
 > Your sales data is updated every night, and 95 in 100 requests for it are answered in under 300 milliseconds.
 
+## Naming the part before its job
+
+A finding about a system, page or process opens with the technical name of the part, so the reader has to learn a
+term before they know why it matters.
+
+Explain it in the order the reader meets it: what the reader would see, what it's for, what's there now and why it
+matters to the people it affects, then name the technical part if the reader will need the word to ask for a fix.
+Skip any link in that chain the reader already has: the person who runs a form knows what it's for.
+
+Before:
+
+> The booking form's submit handler has no client-side validation, so malformed dates return a 500 error.
+
+After:
+
+> If someone types a date the booking form can't read, they get an error page. The form should check the date
+> before it's sent, and right now nothing does. [Writer: say what this costs, such as bookings lost.] For whoever
+> fixes it: there's no client-side validation, and the error is a 500.
+
 ## Overclaim
 
 A verb that promises a result the writer can't control. The writer influences the outcome but doesn't decide it, so
@@ -59,6 +78,24 @@ After:
 
 When the source gives no concrete fact, leave the gap marked. A rewrite can't invent one.
 
+## Familiar shorthand
+
+An everyday word that sounds exact and hides its scope: "capacity", "implementation", "reporting", "support". The
+reader knows each word, so nothing makes them stop, and two readers of the same sentence can come away picturing
+quite different amounts of work.
+
+Ask "what exactly?" of each one: capacity to do what, and reporting that answers which question. Swap the word for
+the shortest concrete phrase the source supports, or mark a gap for the writer when it doesn't say. Never trade
+precision for brevity: a shorter line that drops the scope has changed what it means.
+
+Before:
+
+> The library has limited capacity for school visits this term.
+
+After:
+
+> The library can take [Writer: how many school visits, how often and how many children each time] this term.
+
 ## Benefit mush
 
 Copy that is nominally about the reader but stays generic. Adding more benefit doesn't fix it; adding specifics does.
@@ -87,6 +124,10 @@ puts them on the defensive. Describe your own way plainly and let them draw the 
 A short line that recognises the reader's own words is fine if it is a possibility they own ("if enquiries have gone
 quiet") and turns straight to the gain. A deficit verdict about their current work is not.
 
+The exception is a reader who asked for the assessment: a review, an audit, a reply to "what's wrong?". Then the
+finding is what they came for. Say the problem plainly, about the work rather than the person, and don't soften it
+into an after-state or leave it out.
+
 Before:
 
 > Unlike the usual firms, there are no handoffs. Your site is slow and out of date.
@@ -95,6 +136,12 @@ After:
 
 > You deal with the same person from start to finish. [Writer: say what the reader's site will do for them, in
 > place of the verdict on its current state.]
+
+## Assumed goal
+
+The writer states the reader's objective as fact when the source never gave it, and a reader with another aim stops
+trusting advice that was built for someone else. When the source doesn't say what the reader wants, write the
+consequence as a condition: "if the club wants more members, the sign-up form is the page to fix first."
 
 ## Audience-noun drift
 

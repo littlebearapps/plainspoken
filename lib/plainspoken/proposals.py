@@ -19,6 +19,11 @@ A stale refusal (not a dry run) records the proposal as `superseded`: one ledger
 outcome `superseded`). A superseded proposal is closed, like an applied one: its key is free, so calibrate may
 propose for the rule again once the evidence builds, and no later decision reopens it. Nothing is written to the
 proposal file, so a store written before the state existed reads as it did.
+
+An apply to a checkout (`--rules`) isn't in use until that checkout's change is released and installed: until the
+ruleset in use reaches the version the apply wrote (the `applied` event's `ruleset_version`), or its changelog has the
+proposal's entry, the proposal is `awaiting_release` (`released`). Nothing new is written for this: every `applied`
+event has always recorded the version it wrote, so older ledgers read the same way.
 """
 from __future__ import annotations
 
@@ -168,21 +173,123 @@ def superseded(pid: str, events: Iterable[dict]) -> dict | None:
     return best
 
 
-def status(pid: str, events: list[dict]) -> str:
-    """`applied`, `superseded` (approved, then refused as stale; closed), `approved` (not applied yet), `rejected` or
-    `pending` (no decision)."""
-    if applied(pid, events):
-        return "applied"
+AWAITING = "awaiting_release"
+
+
+def _semver(v: object) -> tuple[int, int, int] | None:
+    m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", v) if isinstance(v, str) else None
+    return None if m is None else (int(m[1]), int(m[2]), int(m[3]))
+
+
+def in_use(path: Path | None = None) -> tuple[str | None, str]:
+    """The ruleset in use (`PLAINSPOKEN_RULES`, else the plugin's own): its version (None when it can't be read) and
+    the text of the `RULESET-CHANGELOG.md` beside it ("" when there's none)."""
+    path = Path(path) if path is not None else default_rules()
+    try:
+        version = tomllib.loads(path.read_text(encoding="utf-8")).get("version")
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        version = None
+    try:
+        log = (path.parent / CHANGELOG).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        log = ""
+    return (version if isinstance(version, str) else None), log
+
+
+def released(e: Mapping, use: tuple[str | None, str] | None = None) -> bool:
+    """An `applied` event's change has reached the ruleset in use (`use`, from `in_use`). A ruleset apply records the
+    version it wrote as the event's `ruleset_version` (it always has), so the change is released once the ruleset in
+    use is at that version or later, or once the changelog beside it has the proposal's entry. A profile apply edits
+    a project file, so it's in use at once. An event whose version, or a ruleset whose version, isn't
+    MAJOR.MINOR.PATCH counts as released, as every apply did before this state existed."""
+    if (e.get("facets") or {}).get("kind") == "profile":
+        return True
+    version, log = in_use() if use is None else use
+    want, have = _semver(e.get("ruleset_version")), _semver(version)
+    if want is None or have is None or have >= want:
+        return True
+    pid = e.get("proposal")
+    return isinstance(pid, str) and re.search(rf"(?m)^- {re.escape(pid)}:", log) is not None
+
+
+def awaiting_release(events: Iterable[dict], use: tuple[str | None, str] | None = None) -> list[dict]:
+    """The `applied` events whose change hasn't reached the ruleset in use: applied to a checkout (`--rules`) that
+    hasn't been released and installed yet."""
+    use = in_use() if use is None else use
+    return [e for e in events if e.get("event") == "apply" and e.get("outcome") == "applied" and not released(e, use)]
+
+
+def status(pid: str, events: list[dict], use: tuple[str | None, str] | None = None) -> str:
+    """`applied` (and in the ruleset in use), `awaiting_release` (applied to a checkout whose change hasn't reached
+    the ruleset in use yet), `superseded` (approved, then refused as stale; closed), `approved` (not applied yet),
+    `rejected` or `pending` (no decision). `use` is `in_use()`, read when needed."""
+    done = [e for e in events if e.get("event") == "apply" and e.get("outcome") == "applied"
+            and e.get("proposal") == pid]
+    if done:
+        use = in_use() if use is None else use
+        return "applied" if any(released(e, use) for e in done) else AWAITING
     if superseded(pid, events) is not None:
         return SUPERSEDED
     d = decision(pid, events)
     return "pending" if d is None else d["outcome"]
 
 
+OPEN = ("pending", "approved", AWAITING)
+
+
+def open_keys(settings: Mapping, events: list[dict], use=None) -> set[str]:
+    """Keys of stored proposals still open: no decision yet, approved and not applied, or applied to a checkout and
+    awaiting release. Calibrate skips a candidate whose key is open."""
+    if not settings.get("proposals_dir"):
+        return set()
+    use = in_use() if use is None else use
+    return {p.get("key") for p in stored(settings) if status(p["id"], events, use) in OPEN}
+
+
 def pending(settings: Mapping, events: list[dict] | None = None) -> list[dict]:
     """Stored proposals with no decision yet."""
     events = ledger.read(settings)[0] if events is None else events
     return [p for p in stored(settings) if decision(p["id"], events) is None]
+
+
+# --- the monthly cap -----------------------------------------------------------------------------------------------
+
+_MADE = ("calibrate", "mine")  # the events that log a stored proposal (outcome `proposed`)
+
+
+def _month(when: datetime) -> str:
+    return when.astimezone(timezone.utc).strftime("%Y-%m")
+
+
+def made_in_month(settings: Mapping, events: Iterable[dict], now: datetime) -> int:
+    """How many proposals calibrate and mine stored in `now`'s calendar month (UTC), between them: the distinct ids
+    of the month's `proposed` events, together with the stored proposals made that month (a proposal whose ledger
+    line couldn't be written still counts)."""
+    month = _month(now)
+    ids = {e.get("proposal") for e in events
+           if e.get("event") in _MADE and e.get("outcome") == "proposed" and e.get("proposal")
+           and str(e.get("ts", ""))[:7] == month}
+    if settings.get("proposals_dir"):
+        for p in stored(settings):
+            try:
+                if _month(datetime.fromisoformat(str(p.get("created")))) == month:
+                    ids.add(p["id"])
+            except ValueError:
+                continue
+    return len(ids)
+
+
+def run_limit(settings: Mapping, events: Iterable[dict], now: datetime, run_max: int,
+              asked: int | None = None) -> dict:
+    """How many new proposals this calibrate or mine run may store: `{"limit", "cap", "used", "month"}`. The limit is
+    the command's own per-run maximum, lowered by `asked` (its `--max`), and by what's left of `[kaizen]
+    monthly_cap` after the proposals already stored this month. `cap` and `used` are None when no cap is set."""
+    limit = run_max if asked is None else max(0, min(run_max, asked))
+    cap, used = settings.get("monthly_cap"), None
+    if cap is not None:
+        used = made_in_month(settings, events, now)
+        limit = min(limit, max(0, cap - used))
+    return {"limit": limit, "cap": cap, "used": used, "month": _month(now)}
 
 
 # --- apply ---------------------------------------------------------------------------------------------------------
@@ -427,8 +534,8 @@ def rubric_notes(edits: Iterable[Mapping], rules_path: Path) -> list[str]:
 
 def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = None, target: str = "ruleset",
           dry_run: bool = False, *, now: datetime | None = None) -> dict:
-    """Apply an approved proposal. Returns `{"id", "target", "path", "diff", "version", "changelog", "dry_run",
-    "logged", "changelog_error", "rebased", "rubric_notes"}` (`rebased`: the ruleset changed since calibrate and the
+    """Apply an approved proposal. Returns `{"id", "target", "path", "diff", "version", "approver", "changelog",
+    "dry_run", "logged", "changelog_error", "rebased", "rubric_notes"}` (`rebased`: the ruleset changed since calibrate and the
     edits still applied; `rubric_notes`: the rubric sections a removed rule leaves behind). Raises `Refused`
     (nothing written), `Stale` (nothing written to the target; outside a dry run the proposal is recorded as
     superseded) or `UnknownProposal`."""
@@ -481,8 +588,8 @@ def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = Non
         raise _supersede(p, e, seen, approver, settings, now, dry_run) from None
     out_path, old_text, new, version, changelog, title, heading = made
     result = {"id": pid, "target": target, "path": str(out_path), "diff": rulesedit.diff(old_text, new, out_path.name),
-              "version": version, "changelog": str(changelog), "dry_run": dry_run, "logged": False,
-              "changelog_error": None, "rebased": rebased,
+              "version": version, "approver": approver, "changelog": str(changelog), "dry_run": dry_run,
+              "logged": False, "changelog_error": None, "rebased": rebased,
               "rubric_notes": rubric_notes(p["edits"], path) if target == "ruleset" else []}
     if dry_run:
         return result
@@ -514,3 +621,66 @@ def apply(pid: str, root: Path, settings: Mapping, rules_path: Path | None = Non
         result["changelog_error"] = _first_line(e)
     result["logged"] = _log_apply(p, version, approver, settings, now, target)
     return result
+
+
+# --- apply every approved proposal ---------------------------------------------------------------------------------
+
+def approved_queue(settings: Mapping, events: list[dict]) -> tuple[list[dict], list[tuple[str, str]]]:
+    """The approved proposals not yet applied, oldest first (by `created`, then id), and the approved ones `apply`
+    can't take as `(id, why)`: a review proposal carries no edit, so it goes in by hand and never blocks the rest."""
+    queue, skipped = [], []
+    for p in sorted(stored(settings), key=lambda p: (str(p.get("created", "")), p["id"])):
+        if status(p["id"], events) != "approved":
+            continue
+        if p.get("action") == "review" or not p.get("edits"):
+            skipped.append((p["id"], "a review proposal with no edits: make the change by hand in a PR"))
+        else:
+            queue.append(p)
+    return queue, skipped
+
+
+def apply_all(root: Path, settings: Mapping, rules_path: Path | None = None, dry_run: bool = False, *,
+              now: datetime | None = None) -> dict:
+    """`kaizen apply --all-approved`: apply every approved proposal to the ruleset, oldest first, and stop at the
+    first refusal. Returns `{"applied": [apply results, each with its proposal's "rule", "action" and "summary"],
+    "skipped": [(id, why)], "refused": {"id", "error", "stale"} or None, "before" (the ruleset version it started
+    from), "dry_run"}`. Each apply is the same as `apply` on its own: its own changelog entry, version bump
+    and ledger event, so the ones before a refusal stay applied. An edit that went in without its changelog entry
+    stops the run too (`refused` names it). A dry run applies nothing, so each diff is against the current file."""
+    events = ledger.read(settings)[0]
+    queue, skipped = approved_queue(settings, events)
+    try:
+        before = registry.load_config(Path(rules_path) if rules_path is not None else default_rules()).version
+    except (ValueError, OSError):
+        before = None
+    out: dict = {"applied": [], "skipped": skipped, "refused": None, "before": before, "dry_run": dry_run}
+    for p in queue:
+        try:
+            result = apply(p["id"], root, settings, rules_path, "ruleset", dry_run, now=now)
+        except Refused as e:
+            out["refused"] = {"id": p["id"], "error": _first_line(e), "stale": isinstance(e, Stale)}
+            break
+        result.update({k: p.get(k) for k in ("rule", "action", "summary")})
+        out["applied"].append(result)
+        if result["changelog_error"]:
+            out["refused"] = {"id": p["id"], "error": f"applied, but the changelog wasn't written "
+                                                      f"({result['changelog_error']})", "stale": False}
+            break
+    return out
+
+
+def commit_message(results: list[Mapping], before: str | None = None) -> str:
+    """The commit message for the ruleset changes `apply_all` made, in the repository's convention: a `ruleset:`
+    commit (its own Ruleset section in the release notes) naming every proposal id, then one line per proposal with
+    its rule, action, summary and approver, oldest first. `before` is the ruleset version the first apply started
+    from."""
+    ids = [r["id"] for r in results]
+    lines = [f"ruleset: apply kaizen proposal{'s' if len(ids) != 1 else ''} {', '.join(ids)}", ""]
+    if results:
+        lines += [f"Ruleset {before or 'unknown'} to {results[-1]['version']}.", ""]
+    for r in results:
+        line = f"- {r['id']}: rule {r.get('rule', '?')}, {r.get('action', '?')}"
+        if r.get("summary"):
+            line += f". {rulesedit._one_line(r['summary'])}"
+        lines.append(line + (f" (approved by {r['approver']})" if r.get("approver") else ""))
+    return "\n".join(lines).rstrip("\n") + "\n"

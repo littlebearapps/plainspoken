@@ -1,15 +1,19 @@
 """PreToolUse publish gate (opt-in): `git push` needs a current PASS for every pushed file in [gate] paths.
 
-strictness: watch = off · warn = a warning message, push goes ahead · block = deny. It comes from `[gate] strictness`
-in .plainspoken/config.toml, else the plugin option, else watch (lib/plainspoken/config.py gate_strictness). A config
-it can't use gives a warning and the push goes ahead, unless block is known (the file's own readable strictness, else
+strictness: watch = off · warn = a warning message, push goes ahead · block = deny. With no `[gate] paths`, warn and
+block only say on each push that nothing is gated. Strictness comes from `[gate] strictness` in
+.plainspoken/config.toml, else the plugin option, else watch (lib/plainspoken/config.py gate_strictness). A config it
+can't use gives a warning and the push goes ahead, unless block is known (the file's own readable strictness, else
 the plugin option): someone who never opted in to block is never denied (config.gate_strictness_safe). Registered
 without onFailure (an opt-in gate must not block every Bash call if python3 is missing); once block is known every
 error here is a deny, never a traceback.
 
 Registered without an `if` filter (docs/claude-code-facts.md section 6): the harness filter misses `env git push` and
 `sudo git push`. So the first lines below exit fast, using only sys/os/json, for any command without the word "push"
-or "git" (git aliases can hide a push), and for watch mode when the project has no config file."""
+or "git" (git aliases can hide a push), and for watch mode when the project has no config file.
+
+`--host codex` writes the check command in the message as Codex's `$plainspoken:check`, and `--host hermes` as
+Hermes' `plainspoken:check` (nudge.py's host map)."""
 import json
 import os
 import sys
@@ -19,11 +23,12 @@ if _HOOKS not in sys.path:  # once, at import: main() may run more than once in 
     sys.path.insert(0, _HOOKS)
 
 
-def _decide(strictness: str, problems: list[str]) -> None:
+def _decide(strictness: str, problems: list[str], host: str = "claude-code") -> None:
     if not problems:
         return
     from _common import clip
-    msg = clip("plainspoken gate: " + "; ".join(problems))
+    from nudge import _skill
+    msg = clip(("plainspoken gate: " + "; ".join(problems)).replace("/plainspoken:", _skill(host, "")))
     if strictness == "block":
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                                  "permissionDecisionReason": msg}}))
@@ -31,7 +36,9 @@ def _decide(strictness: str, problems: list[str]) -> None:
         print(json.dumps({"systemMessage": msg}))
 
 
-def main() -> int:
+def main(argv: list[str] = ()) -> int:
+    argv = list(argv)
+    host = argv[argv.index("--host") + 1] if "--host" in argv[:-1] else "claude-code"
     env_strictness = (os.environ.get("CLAUDE_PLUGIN_OPTION_STRICTNESS") or "watch").strip()
     try:
         event = json.load(sys.stdin)
@@ -62,17 +69,22 @@ def main() -> int:
             if strictness != "watch" and (command is None or _gate.involves_push(command, project)):
                 tail = [] if strictness == "block" else ["not checking this push"]
                 _decide("block" if strictness == "block" else "warn",
-                        [f"can't read the gate settings: {problem}", *tail])
+                        [f"can't read the gate settings: {problem}", *tail], host)
             return 0
         if strictness not in ("warn", "block"):
             return 0
         if command is None:
             raise ValueError("hook input was not valid JSON")
-        _decide(strictness, _gate.check(command, project, Path(cwd) if cwd else None))
+        if not config.gate_paths(project):  # nothing to gate: say so on a push, never deny
+            if _gate.involves_push(command, project):
+                _decide("warn", [f"strictness is {strictness} but no [gate] paths are set in "
+                                 ".plainspoken/config.toml, so nothing is gated"], host)
+            return 0
+        _decide(strictness, _gate.check(command, project, Path(cwd) if cwd else None), host)
     except Exception as e:
-        _decide(strictness, [f"gate error: {type(e).__name__}: {e}"])
+        _decide(strictness, [f"gate error: {type(e).__name__}: {e}"], host)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

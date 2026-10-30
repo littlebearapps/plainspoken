@@ -119,6 +119,46 @@ class WriteGuard(unittest.TestCase):
             self.assertDenied(f"python3 missing.py {LEDGER}", cwd=d)
             self.assertDenied(f"python3 -m some_tool {LEDGER}", cwd=d)
 
+    def test_a_chain_of_claims_calls_is_read_call_by_call(self):  # #78: claims/references/claude-code.md allows && chains
+        run = "python3 /p/lib/run.py"
+        pins = " && ".join(f"{run} claims pin --source .plainspoken/sources/brief.md --passage '{p}' --article a.md"
+                           for p in ("We print a sheet.", "It'\\''s $1,000 && more > x.claims.toml", "Run build.py."))
+        self.assertAllowed(pins)
+        self.assertAllowed(f"{run} claims stamp a.md && {run} claims validate {LEDGER} && {run} claims recheck {LEDGER}")
+        self.assertDenied(f"{pins} && printf x > {LEDGER}")
+        self.assertDenied(f"{run} claims gaps a.md && sed -i 's/false/true/' {LEDGER} && {run} claims stamp a.md")
+
+    def test_a_chain_of_reader_value_calls_is_read_call_by_call(self):  # #92: reader-value allows && chains too
+        run = "python3 /p/lib/run.py"
+        contract = "'.plainspoken/reader-value/a.reader-value.toml'"
+        step3 = f"{run} paths 'a.md' && {run} reader-value deliver-input 'a.md' --contract {contract}"
+        self.assertAllowed(step3)
+        self.assertDenied(f"{step3} && printf '%s' '{REPLY_JSON}' > {DELIVERY_REPLY}")
+        self.assertDenied(f"{run} paths 'a.md' && echo '{REPLY_JSON}' | tee {DELIVERY_REPLY} && "
+                          f"{run} reader-value deliver 'a.md' --from {DELIVERY_REPLY} --reviewer delivery-checker")
+
+    def test_a_literal_assigned_earlier_in_the_command_is_expanded(self):  # #161: python3 $R read as unseen
+        self.assertAllowed(f"R=/x/lib/run.py; L='{LEDGER}'; python3 $R claims validate \"$L\"")
+        self.assertAllowed(f"R=\"/x/lib/run.py\"\nL={LEDGER}\npython3 \"${{R}}\" claims gaps a.md && "
+                           f"python3 $R claims validate \"$L\"")
+        self.assertAllowed(f"export R=/x/lib/run.py && echo \"$(python3 $R claims validate {LEDGER})\"")
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "build.py").write_text(f"open('{LEDGER}', 'w').write('x')\n", encoding="utf-8")
+            Path(d, "count.py").write_text(f"print(open('{LEDGER}').read())\n", encoding="utf-8")
+            self.assertDenied(f"S=build.py; L='{LEDGER}'; python3 $S \"$L\"", cwd=d)
+            self.assertDenied("S=./build.py; python3 \"$S\"", cwd=d)  # read now, so its write is seen
+            self.assertAllowed(f"S=count.py; L='{LEDGER}'; python3 $S \"$L\"", cwd=d)
+
+    def test_an_assignment_the_guard_cant_read_stays_unseen(self):  # #161: fails closed
+        for setup in ("R=$(command -v run.py)", "R=`which run.py`", "R=\"$HOME/lib/run.py\"", "R=${P}/run.py",
+                      "R='/x/lib/*.py'", "R=/x/lib/run.py | cat", "(R=/x/lib/run.py)", "false || R=/x/lib/run.py",
+                      "R=/x/lib/run.py; unset R", "R=/x/lib/run.py; R=$(mktemp)", "R=/x/lib/run.py; read R",
+                      "R=/x/lib/run.py & true"):
+            with self.subTest(setup=setup):
+                self.assertDenied(f"{setup}; L='{LEDGER}'; python3 $R claims validate \"$L\"")
+        self.assertDenied(f"R=/x/lib/run.py python3 $R claims validate {LEDGER}")  # $R expands before R= applies
+        self.assertDenied(f"R=/x/lib/run.py; bash -c 'python3 $R claims validate {LEDGER}'")  # not exported to it
+
     def test_an_unparseable_command_naming_a_reply_is_refused(self):
         self.assertDenied(f"printf '{{ > {CLAIMS_REPLY}")
 

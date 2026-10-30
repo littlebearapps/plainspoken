@@ -1,10 +1,11 @@
-"""`setup`: turn the optional pieces (the writing nudge, the drafting rule, lint after edits) on or off for one host.
+"""`setup`: turn the optional pieces (the writing nudge, the drafting rule, lint after edits, the chat-reply check) on
+or off for one host, and set the spelling locale (`--locale`) and the tool-call check's mode (`--tool-call`).
 
 It edits one config file: the project's `.plainspoken/config.toml` (scope `project`) or the user-wide
 `~/.config/plainspoken/config.toml` (scope `user`). Every line it writes ends with MARK, and `--remove` deletes only
 marked lines (and a section header it added, once that section is empty), so a hand-written setting is never lost.
 The rest of the file is kept byte for byte. claude.ai and ChatGPT chat can't run hooks, so for them it prints the text
-to paste into the app's instructions and writes nothing.
+to paste into the app's instructions and writes nothing; `--locale` adds one sentence naming the variant to it.
 """
 from __future__ import annotations
 
@@ -23,7 +24,9 @@ RULE_HOSTS = ("claude-code",)
 # (section, key, value for "on", value for "off")
 SETTINGS = {"nudge": ("nudge", "mode", '"on"', '"off"'),
             "rule": ("rule", "enabled", "true", "false"),
-            "lint_watch": ("lint_watch", "mode", '"on"', '"off"')}
+            "lint_watch": ("lint_watch", "mode", '"on"', '"off"'),
+            "chat_reply": ("chat_reply", "mode", '"warn"', '"off"')}
+LOCALE_NAMES = {"en-AU": "Australian English", "en-GB": "British English", "en-US": "American English"}
 _HEADER = re.compile(r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$")
 
 PASTE = {
@@ -33,8 +36,8 @@ PASTE = {
                 "or a Project's instructions. Paste:"),
 }
 AFTER = {
-    "codex": ("Codex runs plugin hooks only after you trust them: run /hooks in Codex and trust plainspoken's. "
-              "ChatGPT Work uses the same hooks."),
+    "codex": ("Codex runs plugin hooks only after you trust them, and asks again after every plainspoken update: "
+              "run /hooks in Codex and trust plainspoken's. ChatGPT Work uses the same hooks."),
     "hermes": "Start a new Hermes session (or reload the gateway) so the change takes effect.",
     "claude-code": "Start a new Claude Code session (or run /reload-plugins) so the change takes effect.",
 }
@@ -114,8 +117,9 @@ def _validate(path: Path, text: str, scope: str) -> None:
 
 
 def plan(host: str, scope: str, wanted: dict[str, bool], root: Path, env: Mapping[str, str],
-         remove: bool = False) -> tuple[Path, str, str]:
-    """(path, text before, text after) for this request. Raises SetupError for a request that can't apply."""
+         remove: bool = False, locale: str | None = None, tool_call: str | None = None) -> tuple[Path, str, str]:
+    """(path, text before, text after) for this request. `locale` sets `[locale] variant`; `tool_call` sets
+    `[tool_call] mode`. Raises SetupError for a request that can't apply."""
     if host not in FILE_HOSTS:
         raise SetupError(f"{host} chat can't run hooks or read a config file: use `setup --host {host}` with no "
                          "other options to print the text to paste")
@@ -134,6 +138,10 @@ def plan(host: str, scope: str, wanted: dict[str, bool], root: Path, env: Mappin
             continue
         section, key, yes, no = SETTINGS[name]
         after = set_key(after, section, key, yes if on else no)
+    if locale is not None:
+        after = set_key(after, "locale", "variant", f'"{locale}"')
+    if tool_call is not None:
+        after = set_key(after, "tool_call", "mode", f'"{tool_call}"')
     if after != before:
         _validate(path, after, scope)
     return path, before, after
@@ -147,9 +155,16 @@ def apply(path: Path, after: str) -> None:
         path.unlink()
 
 
-def paste_text(host: str) -> str:
+def locale_sentence(variant: str) -> str:
+    """The paste-in line for chat hosts, which can't read a config file."""
+    name = LOCALE_NAMES.get(variant)
+    return f"Spell in {name} ({variant})." if name else f"Spell in the {variant} variant of English."
+
+
+def paste_text(host: str, locale: str | None = None) -> str:
     rule = (config_root() / "data" / "drafting-rule-chat.md").read_text(encoding="utf-8").strip()
-    return f"{PASTE[host]}\n\n{rule}\n"
+    extra = f"\n\n{locale_sentence(locale)}" if locale else ""
+    return f"{PASTE[host]}\n\n{rule}{extra}\n"
 
 
 def config_root() -> Path:
@@ -162,10 +177,27 @@ def status(root: Path, env: Mapping[str, str]) -> list[str]:
     try:
         nudge, rule = config.nudge_mode(root, env), config.rule_enabled(root, env)
         lint = config.lint_watch(root, env)["mode"]
+        tool_call = config.tool_call_settings(root, env)["mode"]
+        chat_reply = config.chat_reply_settings(root, env)["mode"]
     except config.ConfigError as e:
         return [f"config problem: {e}"]
     return [f"project: {root}",
             f"user-wide config: {user}{'' if user.is_file() else ' (none)'}",
             f"writing nudge: {nudge}",
             f"drafting rule: {'on' if rule else 'off'} (Claude Code and Cowork)",
-            f"lint after edits: {lint}"]
+            f"spelling locale: {_locale_status(root, env)}",
+            f"lint after edits: {lint}",
+            f"tool-call check: {tool_call}",
+            f"chat-reply check: {chat_reply}"]
+
+
+def _locale_status(root: Path, env: Mapping[str, str]) -> str:
+    """The `[locale] variant` setup writes, from the project file, else the user-wide one. setup can't see the voice
+    profile's or the plugin option's (`profile` shows the resolved locale), so the line says so."""
+    found = config._project_config(root)
+    if found and "variant" in found[1].get("locale", {}):
+        return f"{found[1]['locale']['variant']} (project config)"
+    user = config._user_config(env)
+    if user and "variant" in user[1].get("locale", {}):
+        return f"{user[1]['locale']['variant']} (user-wide config; a voice profile that sets one wins over it)"
+    return "not set in a config file (the voice profile, the plugin option or en-AU applies; profile shows which)"

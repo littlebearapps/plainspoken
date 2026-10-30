@@ -159,6 +159,11 @@ class ClaimsReferences(unittest.TestCase):
         for lead in leads:
             self.assertIn(lead.rstrip("."), ours, lead)
 
+    def test_any_client_result_is_sensitive(self):  # #76: "a result" was read as "a named client's result"
+        text = " ".join(self.read("evidence-rules.md").split())
+        self.assertIn("Any result for a client, named or not, is sensitive, even one the brief calls typical", text)
+        self.assertIn("Ledger each one `first_hand` with `sensitive = true`, never `verified`", text)
+
     def test_ledger_format_lists_the_closed_status_list(self):
         statuses = schema.load("claim-ledger")["$defs"]["claim"]["properties"]["status"]["enum"]
         text = self.read("ledger-format.md")
@@ -201,7 +206,10 @@ class ClaimsReferences(unittest.TestCase):
     def test_claude_code_specifics(self):
         text = self.read("claude-code.md")
         self.assertIn("/plainspoken:claims", text)
-        self.assertIn("one Bash call per command", text)
+        flat = " ".join(text.split())
+        self.assertNotIn("one Bash call per command", text)  # #78: one call per pin doubled the turns
+        self.assertIn("every `claims pin` in one chain", flat)
+        self.assertIn("stops at the first call that fails", flat)
         self.assertIn("no shell loops", text.lower())
         self.assertIn("claims stamp ARTICLE", text)  # the hash and the clock come from the CLI
         self.assertIn("never a heredoc", text)

@@ -1,0 +1,57 @@
+name: Bug report
+description: Something broke, or doesn't do what the docs say
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Please don't paste private text (drafts, voice profiles, sources, ledgers):
+        anonymise it, or write a made-up example that shows the same thing. If a check flagged writing that's
+        fine or missed a tell, use the False positive or Missed tell form instead. Security problems go
+        privately, as SECURITY.md describes.
+  - type: input
+    id: version
+    attributes: { label: plainspoken version, placeholder: "from .claude-plugin/plugin.json, e.g. 0.12.0" }
+    validations: { required: true }
+  - type: dropdown
+    id: host
+    attributes:
+      label: Host
+      options:
+        - Claude Code
+        - Cowork
+        - Codex
+        - Hermes Agent
+        - Other
+    validations: { required: true }
+  - type: input
+    id: host_version
+    attributes: { label: Host version, placeholder: "e.g. the output of claude --version" }
+    validations: { required: true }
+  - type: input
+    id: python
+    attributes: { label: Python version, placeholder: "python3 --version" }
+    validations: { required: true }
+  - type: textarea
+    id: doctor
+    attributes:
+      label: /plainspoken:doctor output
+      description: Run /plainspoken:doctor (or python3 lib/run.py doctor --host <host>) and paste what it prints.
+      render: text
+    validations: { required: false }
+  - type: textarea
+    id: happened
+    attributes: { label: What happened }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: What you expected }
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations: { required: true }

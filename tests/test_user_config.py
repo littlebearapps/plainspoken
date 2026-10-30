@@ -57,6 +57,11 @@ class UserConfig(unittest.TestCase):
             config.nudge_mode(self.project, self.env)
         self.assertIn(str(path), str(ctx.exception))
 
+    def test_user_config_accepts_locale(self):  # #121: Codex and Hermes have no plugin options
+        self.write_user('[locale]\nvariant = "en-US"\n[nudge]\nmode = "on"\n')
+        self.assertEqual(config.nudge_mode(self.project, self.env), "on")
+        self.assertEqual(config.resolve_locale(None, self.project, self.env).variant, "en-US")
+
     def test_bad_nudge_mode_is_an_error(self):
         self.write_project('[nudge]\nmode = "sometimes"\n')
         with self.assertRaises(config.ConfigError):

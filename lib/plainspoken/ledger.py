@@ -1,7 +1,9 @@
 """The kaizen ledger: an append-only record of what the engine flagged and what people did about it (Phase 5).
 
 One JSON object per line, UTF-8, `\\n`-terminated, at most 4,096 bytes, in `<ledger_dir>/<YYYY-MM>.jsonl` (the month
-of the event's own `ts`, UTC). `friction.jsonl` in the same folder, not month-split, records engine friction.
+of the event's own `ts`, UTC). `friction.jsonl` in the same folder, not month-split, records engine friction, and
+`tool-calls.jsonl` and `chat-replies.jsonl` record the tool-call and chat-reply checks' decisions (`append_row`), with
+no text.
 
 Schema v1, defined by the code below: `make_event` builds and validates an event,
 `validate` lists what's wrong with one. Every event carries an `id`, the first 16 hex of the sha256 of the canonical
@@ -31,7 +33,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plainspoken import config, justify, pinning
+from plainspoken import config, justify, pinning, prose, reply, toolcall
 
 SCHEMA_VERSION = 1
 MAX_LINE = 4096
@@ -53,7 +55,22 @@ FACET_KEYS = ("term", "section", "metric", "form", "agree", "kind", "pattern", "
 FACET_SECTIONS = ("faq", "question", "intro", "other")
 FACET_METRICS = ("mattr", "burstiness", "ttr", "slop")
 FACET_FORMS = ("no-long", "short-run")
-FRICTION_KINDS = ("merge_incomplete", "judge_reply_rejected", "agent_handback", "capture_error", "skill")
+FRICTION_KINDS = ("merge_incomplete", "judge_reply_rejected", "agent_handback", "capture_error", "skill", "tool_call")
+# Per-check decision logs, one row per field a check looked at: counts and outcomes, never text. A local server's
+# name can name a client, so the server is an 8-hex hash; the tool's own name (`send_message`) is kept for tuning.
+BUCKETS = ((20, "0-20"), (40, "20-40"), (60, "40-60"), (80, "60-80"), (120, "80-120"), (200, "120-200"),
+           (400, "200-400"), (None, "400+"))
+TOOL_CALL_OUTCOMES = ("below-cutoff", "clean", "warned", "blocked", "asked", "resent-unchanged", "resent-changed",
+                      "too-long")
+_TOOL_CALL_ROW = frozenset(("v", "ts", "host", "tool_server_hash", "tool_name", "field", "words", "bucket", "prose",
+                            "outcome", "mode"))
+_HEX8 = re.compile(r"[0-9a-f]{8}")
+# The chat-reply check (#125): one row per draft it looked at after a writing ask (or one per turn with no draft to
+# look at), with the draft's shape and size and a hash `doc` that joins its finding events (`ledger.label_id`).
+CHAT_REPLY_OUTCOMES = ("no-draft", "write-report", "seen", "repeat", "clean", "warned", "too-long")
+CHAT_REPLY_ASKS = ("draft", "draft-long", "rewrite")
+_CHAT_REPLY_ROW = frozenset(("v", "ts", "host", "ask", "shape", "words", "bucket", "outcome", "doc"))
+_HEX16 = re.compile(r"[0-9a-f]{16}")
 
 _REQUIRED = ("v", "id", "ts", "ruleset_version", "profile", "event", "actor", "outcome", "rule", "severity",
              "doc_id", "doc_sha", "span_hash", "facets")
@@ -487,6 +504,84 @@ def friction(kind: str, source: str, detail: str, settings: Mapping) -> None:
         _write_line(_safe_target(settings, "friction.jsonl"), line, settings.get("root"))
     except Exception:  # deliberate: friction is the sink for capture errors, so nothing may escape it
         return
+
+
+def word_bucket(words: int) -> str:
+    """The word band a count falls in: 0-20, 20-40, 40-60, 60-80, 80-120, 120-200, 200-400 or 400+."""
+    for top, name in BUCKETS:
+        if top is None or words < top:
+            return name
+    return BUCKETS[-1][1]
+
+
+def valid_tool_call_row(row: object) -> bool:
+    """`row` is a `tool-calls.jsonl` line `append_row` could have written: exactly the schema's fields, a known host,
+    mode, bucket and outcome, an 8-hex server hash and short strings."""
+    if not (isinstance(row, dict) and set(row) == _TOOL_CALL_ROW):
+        return False
+    outcome = row["outcome"]
+    known = outcome in TOOL_CALL_OUTCOMES or (isinstance(outcome, str) and outcome.startswith("not-prose:")
+                                              and outcome.split(":", 1)[1] in prose.REASONS)
+    words = row["words"]
+    return (known and not isinstance(row["v"], bool) and row["v"] == SCHEMA_VERSION and valid_ts(row["ts"])
+            and row["host"] in toolcall.HOSTS and row["mode"] in toolcall.MODES
+            and isinstance(row["tool_server_hash"], str) and _HEX8.fullmatch(row["tool_server_hash"]) is not None
+            and _short(row["tool_name"]) and isinstance(row["field"], str) and len(row["field"]) <= MAX_FACET
+            and isinstance(words, int) and not isinstance(words, bool) and words >= 0
+            and row["bucket"] in {name for _, name in BUCKETS} and isinstance(row["prose"], bool))
+
+
+def valid_chat_reply_row(row: object) -> bool:
+    """`row` is a `chat-replies.jsonl` line `append_row` could have written: exactly the schema's fields, a known host,
+    ask, shape (or `-`), bucket and outcome, and a 16-hex `doc` (or `-`)."""
+    if not (isinstance(row, dict) and set(row) == _CHAT_REPLY_ROW):
+        return False
+    words = row["words"]
+    return (not isinstance(row["v"], bool) and row["v"] == SCHEMA_VERSION and valid_ts(row["ts"])
+            and row["host"] in toolcall.HOSTS and row["ask"] in CHAT_REPLY_ASKS
+            and row["shape"] in (*reply.SHAPES, "-") and row["outcome"] in CHAT_REPLY_OUTCOMES
+            and isinstance(words, int) and not isinstance(words, bool) and words >= 0
+            and row["bucket"] in {name for _, name in BUCKETS}
+            and isinstance(row["doc"], str) and (row["doc"] == "-" or _HEX16.fullmatch(row["doc"]) is not None))
+
+
+ROW_LOGS = {"tool-calls.jsonl": valid_tool_call_row, "chat-replies.jsonl": valid_chat_reply_row}
+
+
+def append_row(settings: Mapping, name: str, row: Mapping) -> None:
+    """Append one decision row (`v` and `ts` added) to `<ledger_dir>/<name>`, a known log in ROW_LOGS. A row that
+    doesn't validate, capture off, or any error: nothing is written. Never raises."""
+    try:
+        valid = ROW_LOGS.get(name)
+        if valid is None or not settings.get("capture", True):
+            return
+        out = {"v": SCHEMA_VERSION, "ts": _now(), **row}
+        for key in ("tool_name", "field"):
+            if isinstance(out.get(key), str):
+                out[key] = out[key][:MAX_FACET]
+        if not valid(out):
+            return
+        line = _encode(out)
+        if len(line) <= MAX_LINE:
+            _write_line(_safe_target(settings, name), line, settings.get("root"))
+    except Exception:  # deliberate: a decision log never breaks the check that writes it
+        return
+
+
+def read_rows(settings: Mapping, name: str, since: str | None = None,
+              until: str | None = None) -> tuple[list[dict], int]:
+    """(the rows of decision log `name` with `since <= ts < until`; the number of bad lines). Never raises."""
+    valid = ROW_LOGS.get(name)
+    folder = _readable_folder(settings)
+    if valid is None or folder is None:
+        return [], 0
+    path = folder / name
+    try:
+        if path.is_symlink() or not path.is_file():
+            return [], 0
+    except OSError:
+        return [], 0
+    return _read_jsonl(path, valid, since, until)
 
 
 def valid_friction(row: object) -> bool:

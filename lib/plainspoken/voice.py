@@ -93,8 +93,9 @@ def summary_lines(p: Profile) -> list[str]:
     ]
 
 
-def voice_lines(p: Profile, content_type: str | None = None) -> list[str]:
-    """Everything the skills draft and check from, as plain lines (`profile --voice`)."""
+def voice_lines(p: Profile, content_type: str | None = None, locale: str | None = None) -> list[str]:
+    """Everything the skills draft and check from, as plain lines (`profile --voice`). `locale` is the resolved
+    spelling locale with its source, e.g. `en-US (plugin option)`; None leaves the line out."""
     v = p.voice
     ident, voice_t, rhythm = v.get("identity", {}), v.get("voice", {}), v.get("rhythm", {})
     reader, lex, avoid = v.get("reader", {}), v.get("lexicon", {}), v.get("avoid", {})
@@ -106,6 +107,7 @@ def voice_lines(p: Profile, content_type: str | None = None) -> list[str]:
     kinds = [content_type] if content_type else list(v.get("blends", {}) | v.get("formatting", {}))
     out = [
         f"voice profile: {p.name}",
+        *([f"locale: {locale}"] if locale else []),
         f"writer: {ident.get('writer') or 'not set'} (pronoun {p.pronoun})",
         f"reader: {p.reader_persona or 'not set'} (Year {p.comprehension_floor} floor) · glossary: {glossary_path}",
         "principles:", *[f"- {x}" for x in voice_t.get("principles", [])],

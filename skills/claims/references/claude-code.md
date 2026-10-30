@@ -2,15 +2,17 @@
 
 - The skill is manual-only (`disable-model-invocation: true`): run it as `/plainspoken:claims <article>`. It never
   triggers on its own.
-- The checker is the `plainspoken:claims-checker` subagent. Start it with the Agent tool, one agent per run, and
-  give it only the prompt SKILL.md step 6 names. It's read-only (Read, Grep, Glob) and runs without the project's
-  CLAUDE.md. Save only the JSON object of its reply (first `{` to last `}`) with the Write tool, then record it;
-  never paste the reply into a shell command (Claude Code's shell check refuses JSON in a heredoc). On a second
-  round the reply file already exists, and Write refuses to overwrite a file not read this session: read it first,
-  then write the new reply over it.
-- Make one Bash call per command: one Bash call per RUN line, no shell loops, no `&&` chains over several
-  claims, no `for` over sources, and nothing chained onto a CLI call (no `; echo`, `; ls` or `; cat`). Each call's
-  exit code is what the step acts on.
+- The checker is the `plainspoken:claims-checker` subagent. Start it with the Agent tool in the foreground (never
+  `run_in_background`), one agent per run, and give it only the prompt SKILL.md step 6 names. It's read-only
+  (Read, Grep, Glob) and runs without the project's CLAUDE.md. Save only the JSON object of its reply (first `{`
+  to last `}`) with the Write tool, then record it; never paste the reply into a shell command (Claude Code's
+  shell check refuses JSON in a heredoc). On a second round the reply file already exists, and Write refuses to
+  overwrite a file not read this session: read it first, then write the new reply over it.
+- Chain one step's CLI calls with `&&` in one Bash call: every `claims pin` in one chain for step 3, and
+  `claims stamp`, `validate` and `recheck` in another for step 5. The CLI grant covers each part, so the chain runs
+  without a prompt. `&&` stops at the first call that fails, so the exit code and the last lines are that call's:
+  act on them, then run the rest again. No `;`, no pipes, no shell loops (no `for` over sources), and nothing else
+  chained onto a CLI call (no `; echo`, `; ls` or `; cat`).
 - Edit the ledger with the Edit tool only, one claim at a time: never a heredoc, a helper script or a `python3 -`
   call, even to move several anchors at once (the ledger is yours to read back). plainspoken's Bash hook refuses a
   shell command that writes the ledger or a reply file.

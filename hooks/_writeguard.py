@@ -4,6 +4,7 @@ Uses the publish gate's shell lexer (`_pushcmd.lex`, `segments`), so quotes, `$(
 heredoc bodies are read the same way in both hooks."""
 from __future__ import annotations
 
+import dataclasses
 import os
 import re
 
@@ -190,17 +191,83 @@ def _segment(seg: _pushcmd.Segment, hit: _Hits, depth: int) -> tuple[str, str] |
     return None
 
 
-def _scan(toks: list, hit: _Hits, depth: int = 0) -> tuple[str, str] | None:
-    segs, _ = _pushcmd.segments(toks)
-    for seg in segs:
+def _segments(toks: list) -> list[tuple[_pushcmd.Segment, bool]]:
+    """`_pushcmd.segments`, plus whether each segment runs in the current shell, unconditionally enough that an
+    assignment it makes holds for the commands after it: at the top level (not in `( … )`), not in a pipeline or in
+    the background, and not after `||` or a `case` `;;`."""
+    out, cur, before, depth = [], _pushcmd.Segment(), None, 0
+    for t in toks + [None]:
+        if t is None or isinstance(t, str):
+            if cur.words or cur.redirs:
+                out.append((cur, depth == 0 and before in (None, ";", "&&") and t in (None, ";", "&&", "||")))
+            cur = _pushcmd.Segment()
+            depth += (t == "(") - (t == ")")
+            before = t
+        elif isinstance(t, _pushcmd.Redir):
+            cur.redirs.append(t)
+        else:
+            cur.words.append(t)
+    return out
+
+
+_LITERAL = re.compile(r"[^\s$`*?\[\]]*")  # a value that can't expand, split or glob when it's used
+
+
+def _assign(seg: _pushcmd.Segment, held: bool, env: dict[str, str]) -> None:
+    """Update `env`, the simple literal assignments in force (#161), for the commands after `seg`.
+
+    A segment that's nothing but `NAME=value` words (or `export NAME=value`), held in the current shell, sets each
+    one whose value is a plain literal. Any other mention of a known name, as an assignment the guard can't read or
+    as a bare word (`unset R`, `read R`, `for R in …`), drops it, so it reads as unseen again: fail closed."""
+    texts = [w.text for w in seg.words]
+    plain = texts[1:] if texts[:1] == ["export"] else texts
+    if held and plain and not seg.redirs and all(_pushcmd._is_assignment(t) for t in plain):
+        for w in seg.words[len(texts) - len(plain):]:
+            name, _, value = w.text.partition("=")
+            if not w.subs and _LITERAL.fullmatch(value):
+                env[name] = value
+            else:
+                env.pop(name, None)
+        return
+    for t in texts:
+        name = t.partition("=")[0] if _pushcmd._is_assignment(t) else t
+        env.pop(name, None)
+
+
+def _expand(seg: _pushcmd.Segment, env: dict[str, str]) -> _pushcmd.Segment:
+    """`seg` with `$NAME` and `${NAME}` replaced by the literal values in `env`, in words without whitespace. The
+    lexer drops quotes, so a word with a space in it was quoted and may be code (`bash -c '… $R …'`, where the inner
+    shell, not this one, expands `$R`): it's left as written, as are heredoc bodies. A single-quoted `'$NAME'` with
+    no space reads as expanded, a harmless miss: the shell would look for a file named `$NAME`."""
+    if not env:
+        return seg
+    names = "|".join(map(re.escape, env))
+    pat = re.compile(r"\$(?:\{(" + names + r")\}|(" + names + r")(?![A-Za-z0-9_]))")
+
+    def word(w: _pushcmd.Word | None) -> _pushcmd.Word | None:
+        if w is None or "$" not in w.text or re.search(r"\s", w.text):
+            return w
+        return dataclasses.replace(w, text=pat.sub(lambda m: env[m.group(1) or m.group(2)], w.text))
+
+    return _pushcmd.Segment([word(w) for w in seg.words],
+                            [dataclasses.replace(r, target=word(r.target)) for r in seg.redirs])
+
+
+def _scan(toks: list, hit: _Hits, depth: int = 0, env: dict[str, str] | None = None) -> tuple[str, str] | None:
+    """The first write to a protected file in `toks`. `env` holds the simple literal assignments made earlier in the
+    same shell (#161): a `$(…)` sees them, while a nested `bash -c` or script starts without them."""
+    env = dict(env or {})
+    for raw, held in _segments(toks):
+        seg = _expand(raw, env)
         found = _segment(seg, hit, depth)
         if found is not None:
             return found
         for w in seg.words + [r.target for r in seg.redirs if r.target]:
             for _kind, sub in w.subs:
-                found = _scan(sub, hit, depth)
+                found = _scan(sub, hit, depth, env)
                 if found is not None:
                     return found
+        _assign(raw, held, env)
     return None
 
 

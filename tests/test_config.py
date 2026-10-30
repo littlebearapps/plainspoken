@@ -267,10 +267,10 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
     def test_defaults(self):
         s = config.kaizen_settings(self.cwd, {})
         self.assertEqual(s, {"capture": True, "excerpts": False, "adapter": "file", "root": self.cwd,
-                             "capture_sources": ["check", "merge", "judge", "lint-watch"],
+                             "capture_sources": ["check", "merge", "judge", "lint-watch", "tool-call", "chat-reply"],
                              "ledger_dir": self.cwd / ".plainspoken" / "ledger",
                              "proposals_dir": self.cwd / ".plainspoken" / "kaizen",
-                             "corpus": [], "human_corpus": [], "approvers": [],
+                             "corpus": [], "human_corpus": [], "approvers": [], "monthly_cap": None,
                              "github": {"repo": None, "labels": ["kaizen"]},
                              "trello": {"list_id": None, "label_ids": [], "key_env": "TRELLO_API_KEY",
                                         "token_env": "TRELLO_TOKEN"}})
@@ -280,7 +280,7 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
     def test_section_loads(self):
         self.project('[kaizen]\ncapture = false\nexcerpts = true\nadapter = "github"\nledger_dir = "var/ledger"\n'
                      'proposals_dir = "var/kaizen"\ncorpus = ["posts/**/*.md"]\nhuman_corpus = ["human/*.md"]\n'
-                     'approvers = ["owner"]\n'
+                     'approvers = ["owner"]\nmonthly_cap = 5\n'
                      '[kaizen.github]\nrepo = "owner/name"\nlabels = ["kaizen", "rules"]\n'
                      '[kaizen.trello]\nlist_id = "abc123"\nlabel_ids = ["l1"]\nkey_env = "MY_KEY"\n'
                      'token_env = "MY_TOKEN"\n')
@@ -290,6 +290,7 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
         self.assertEqual((s["ledger_dir"], s["proposals_dir"]), (self.cwd / "var/ledger", self.cwd / "var/kaizen"))
         self.assertEqual((s["corpus"], s["human_corpus"], s["approvers"]),
                          (["posts/**/*.md"], ["human/*.md"], ["owner"]))
+        self.assertEqual(s["monthly_cap"], 5)
         self.assertEqual(s["github"], {"repo": "owner/name", "labels": ["kaizen", "rules"]})
         self.assertEqual(s["trello"], {"list_id": "abc123", "label_ids": ["l1"], "key_env": "MY_KEY",
                                        "token_env": "MY_TOKEN"})
@@ -352,6 +353,9 @@ class KaizenSection(unittest.TestCase):  # [kaizen], [kaizen.github], [kaizen.tr
                           ('[kaizen]\ncorpus = "posts"\n', r"\[kaizen\] corpus must be a list"),
                           ('[kaizen]\nhuman_corpus = [""]\n', r"\[kaizen\] human_corpus must be a list"),
                           ('[kaizen]\napprovers = [1]\n', r"\[kaizen\] approvers must be a list"),
+                          ('[kaizen]\nmonthly_cap = -1\n', r"\[kaizen\] monthly_cap must be a whole number"),
+                          ('[kaizen]\nmonthly_cap = 2.5\n', r"\[kaizen\] monthly_cap must be a whole number"),
+                          ('[kaizen]\nmonthly_cap = true\n', r"\[kaizen\] monthly_cap must be a whole number"),
                           ('[kaizen.github]\nrepo = "x"\n', r"\[kaizen.github\] repo must be owner/name"),
                           ('[kaizen.github]\nlabels = "kaizen"\n', r"\[kaizen.github\] labels must be a list"),
                           ('[kaizen.github]\nissue = 1\n', r"unknown key \[kaizen.github\] issue"),
@@ -489,6 +493,52 @@ class LintWatchSection(unittest.TestCase):
                     config.lint_watch(self.cwd)
 
 
+class ChatReplySection(unittest.TestCase):  # #125
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+        self.env = {"HOME": str(self.home)}
+
+    def project(self, toml: str) -> None:
+        (self.cwd / ".plainspoken").mkdir(exist_ok=True)
+        (self.cwd / ".plainspoken" / "config.toml").write_text(toml, encoding="utf-8")
+
+    def user(self, toml: str) -> None:
+        folder = self.home / ".config" / "plainspoken"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "config.toml").write_text(toml, encoding="utf-8")
+
+    def test_off_by_default(self):
+        self.assertEqual(config.chat_reply_settings(self.cwd, self.env),
+                         {"mode": "off", "min_words": 25, "source": "default"})
+
+    def test_project_then_user_wide_then_plugin_option(self):
+        option = {**self.env, "CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "true"}
+        self.assertEqual(config.chat_reply_settings(self.cwd, option)["mode"], "warn")
+        self.assertEqual(config.chat_reply_settings(self.cwd, option)["source"], "plugin option")
+        self.assertEqual(config.chat_reply_settings(self.cwd, {**self.env, "CLAUDE_PLUGIN_OPTION_CHAT_REPLY": "${x}"})
+                         ["mode"], "off")
+        self.user('[chat_reply]\nmode = "warn"\nmin_words = 30\n')
+        self.assertEqual(config.chat_reply_settings(self.cwd, self.env),
+                         {"mode": "warn", "min_words": 30, "source": "user-wide config"})
+        self.project('[chat_reply]\nmode = "off"\n')
+        self.assertEqual(config.chat_reply_settings(self.cwd, option),
+                         {"mode": "off", "min_words": 25, "source": "project config"})
+
+    def test_bad_values_fail_closed(self):
+        for toml, msg in (('[chat_reply]\nmode = "on"\n', r"\[chat_reply\] mode must be one of off, warn"),
+                          ('[chat_reply]\nmode = "block-once"\n', r"\[chat_reply\] mode must be one of off, warn"),
+                          ('[chat_reply]\nmin_words = 0\n', r"\[chat_reply\] min_words must be a whole number"),
+                          ('[chat_reply]\nmin_words = true\n', r"\[chat_reply\] min_words must be a whole number"),
+                          ('[chat_reply]\nprofile = "x"\n', r"unknown key \[chat_reply\] profile")):
+            with self.subTest(toml=toml):
+                self.project(toml)
+                with self.assertRaisesRegex(config.ConfigError, msg):
+                    config.chat_reply_settings(self.cwd, self.env)
+
+
 class CaptureSources(unittest.TestCase):
     def setUp(self):
         self.cwd = Path(tempfile.mkdtemp()).resolve()
@@ -498,9 +548,9 @@ class CaptureSources(unittest.TestCase):
         (self.cwd / ".plainspoken").mkdir(exist_ok=True)
         (self.cwd / ".plainspoken" / "config.toml").write_text(toml, encoding="utf-8")
 
-    def test_default_is_all_four(self):
+    def test_default_is_all_six(self):
         self.assertEqual(config.kaizen_settings(self.cwd, {})["capture_sources"],
-                         ["check", "merge", "judge", "lint-watch"])
+                         ["check", "merge", "judge", "lint-watch", "tool-call", "chat-reply"])
 
     def test_section_loads(self):
         self.project('[kaizen]\ncapture_sources = ["check", "merge"]\n')
@@ -510,11 +560,117 @@ class CaptureSources(unittest.TestCase):
 
     def test_unknown_capture_source_errors(self):
         for body, msg in (('capture_sources = ["check", "lint"]',
-                           r"\[kaizen\] capture_sources: unknown source 'lint' \(expected check, merge, judge or "
-                           r"lint-watch\)"),
+                           r"\[kaizen\] capture_sources: unknown source 'lint' \(expected check, merge, judge, "
+                           r"lint-watch, tool-call or chat-reply\)"),
                           ('capture_sources = "check"', r"\[kaizen\] capture_sources must be a list"),
                           ('capture_sources = [1]', r"\[kaizen\] capture_sources must be a list")):
             with self.subTest(body=body):
                 self.project(f"[kaizen]\n{body}\n")
                 with self.assertRaisesRegex(config.ConfigError, msg):
                     config.kaizen_settings(self.cwd, {})
+
+
+class LocaleResolve(unittest.TestCase):  # #121: project config → profile → user-wide → plugin option → en-AU
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
+        self.env = {"HOME": str(self.home), "XDG_CONFIG_HOME": str(self.home / ".config")}
+
+    def project(self, toml: str) -> Path:
+        (self.cwd / ".plainspoken").mkdir(exist_ok=True)
+        path = self.cwd / ".plainspoken" / "config.toml"
+        path.write_text(toml, encoding="utf-8")
+        return path
+
+    def user(self, toml: str) -> Path:
+        path = self.home / ".config" / "plainspoken" / "config.toml"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(toml, encoding="utf-8")
+        return path
+
+    def prof(self, locale: str | None = None):
+        path = self.cwd / "p.toml"
+        path.write_text('[profile]\nname = "p"\n' + (f'locale = "{locale}"\n' if locale else ""), encoding="utf-8")
+        return config.load(path)
+
+    def resolve(self, prof=None, env=None, plugin=None):
+        return config.resolve_locale(prof if prof is not None else self.prof(), self.cwd,
+                                     {**self.env, **(env or {})}, plugin)
+
+    def test_default_when_nothing_sets_it(self):
+        got = self.resolve()
+        self.assertEqual((got.variant, got.source, got.label), ("en-AU", "default", "default"))
+
+    def test_plugin_option_flag(self):
+        got = self.resolve(plugin="en-US")
+        self.assertEqual((got.variant, got.label), ("en-US", "plugin option"))
+
+    def test_env_beats_the_flag(self):
+        got = self.resolve(env={"CLAUDE_PLUGIN_OPTION_LOCALE": "en-GB"}, plugin="en-US")
+        self.assertEqual((got.variant, got.source), ("en-GB", "plugin option"))
+
+    def test_empty_or_placeholder_counts_as_unset(self):
+        for env_value in ("", "${user_config.locale}", "  "):
+            with self.subTest(env=env_value):
+                got = self.resolve(env={"CLAUDE_PLUGIN_OPTION_LOCALE": env_value}, plugin="en-US")
+                self.assertEqual((got.variant, got.source), ("en-US", "plugin option"))
+        for flag in ("", "${user_config.locale}", None):
+            with self.subTest(flag=flag):
+                got = self.resolve(plugin=flag)
+                self.assertEqual((got.variant, got.label), ("en-AU", "default"))
+
+    def test_unknown_option_falls_through_with_a_note(self):
+        got = self.resolve(plugin="en-NZ")
+        self.assertEqual((got.variant, got.source), ("en-AU", "default"))
+        self.assertEqual(got.label, "default; plugin option 'en-NZ' isn't a known variant")
+        self.user('[locale]\nvariant = "en-GB"\n')  # the note is only for the level the answer came from
+        self.assertEqual(self.resolve(plugin="en-NZ").label.count("en-NZ"), 0)
+
+    def test_user_wide_beats_the_plugin_option(self):
+        path = self.user('[locale]\nvariant = "en-GB"\n')
+        got = self.resolve(env={"CLAUDE_PLUGIN_OPTION_LOCALE": "en-US"}, plugin="en-US")
+        self.assertEqual((got.variant, got.source), ("en-GB", "user-wide config"))
+        self.assertEqual(got.label, f"user-wide config, {path}")
+
+    def test_profile_beats_user_wide(self):
+        self.user('[locale]\nvariant = "en-GB"\n')
+        got = self.resolve(prof=self.prof("en-US"), plugin="en-GB")
+        self.assertEqual((got.variant, got.label), ("en-US", "profile"))
+
+    def test_project_beats_profile(self):
+        self.project('[locale]\nvariant = "en-GB"\n')
+        self.user('[locale]\nvariant = "en-AU"\n')
+        got = self.resolve(prof=self.prof("en-US"), plugin="en-US")
+        self.assertEqual((got.variant, got.source), ("en-GB", "project config"))
+        self.assertEqual(got.label, "project config, .plainspoken/config.toml")
+
+    def test_no_profile_skips_that_level(self):
+        self.user('[locale]\nvariant = "en-US"\n')
+        got = config.resolve_locale(None, self.cwd, self.env, None)
+        self.assertEqual((got.variant, got.source), ("en-US", "user-wide config"))
+
+    def test_bad_variant_is_a_config_error_naming_file_and_key(self):
+        for writer in (self.project, self.user):
+            with self.subTest(file=writer.__name__):
+                path = writer('[locale]\nvariant = "en-NZ"\n')
+                with self.assertRaises(config.ConfigError) as cm:
+                    self.resolve()
+                self.assertIn(str(path), str(cm.exception))
+                self.assertIn("[locale] variant", str(cm.exception))
+                self.assertIn("en-NZ", str(cm.exception))
+                path.unlink()
+
+    def test_unknown_key_and_wrong_type(self):
+        self.project('[locale]\nspelling = "en-GB"\n')
+        with self.assertRaisesRegex(config.ConfigError, r"unknown key \[locale\] spelling"):
+            self.resolve()
+        self.project('[locale]\nvariant = 1\n')
+        with self.assertRaisesRegex(config.ConfigError, r"\[locale\] variant"):
+            self.resolve()
+
+    def test_locale_never_reaches_the_profile_stamp(self):  # it isn't in profile_sha256, so no report goes stale
+        before = self.prof().sha256
+        self.project('[locale]\nvariant = "en-US"\n')
+        self.assertEqual(config.resolve_profile(str(self.cwd / "p.toml"), self.cwd, self.env).sha256, before)

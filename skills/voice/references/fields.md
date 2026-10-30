@@ -9,10 +9,16 @@ doesn't print reaches no drafting skill.
 ## Profile and checker settings
 
 - `[profile]` `name`, `locale`, `flags`: the profile's name, its spelling conventions and any extra switches
-  (`narrative` relaxes the sentence-rhythm rules). Example: `name = "my-voice"`. Who reads it: the checker
-  (register-check's checklist also names the locale).
-- `[thresholds]`: numeric limits that replace the ruleset's defaults, by rule name. Example: a higher em-dash cap for
-  a writer who uses them. Who reads it: the checker.
+  (`narrative` relaxes the sentence-rhythm rules). Example: `name = "my-voice"`. Who reads it: the checker, except
+  `locale`, which only drafting and register-check read. Leave `locale` out unless the writer always spells one way.
+- `[thresholds]`: numeric limits that replace the ruleset's defaults, by the name the ruleset uses. Example: a higher
+  em-dash cap (`em_dash_max = 5`) for a writer who uses them, or `em_dash_max = 0` and `en_dash_max = 0` for one who
+  never does. `en_dash_max` defaults to -1, no limit; once set, every en dash counts, number ranges like `9am–6pm`
+  included, so a writer who keeps ranges sets a cap with room for them. The values apply to every content type. Text
+  checked as `social` (any draft under 300 words piped to `check -`) also has the ruleset's social caps: for a cap
+  (a key ending in `_max`), the stricter of your value and the social one applies, so a profile can tighten a social
+  cap but never loosen it. The other social values (run and sentence lengths) replace yours. Who reads it: the
+  checker.
 - `[lexicon]` `extra_bans`: words or names you never want in print. Example: `["Acme"]`, a former employer's name.
   Who reads it: the checker.
 - `[document]`: how a file is read (visible frontmatter keys, the FAQ key, headings that hold lists, headings that
@@ -41,13 +47,14 @@ doesn't print reaches no drafting skill.
 - `sentence_mean`, `sentence_sd`, `burstiness`, `long_share`, `short_share`: measured from the samples by
   `voice-stats`. Example: `sentence_mean = 14.2`. Who reads it: drafting and the voice check, as a guide. The checker
   ignores these.
-- `notes` (under `[rhythm]`): the pattern in words. Example: "Short answers, then one long walk-through." Who reads it:
-  drafting and the voice check.
+- `notes` (under `[rhythm]`): the pattern in words. Example: "Short answers, then one long walk-through." Who reads
+  it: drafting and the voice check.
 
 ## Reader
 
-- `persona`: who reads this writing, in a line. Example: "a neighbour who gardens on weekends". Who reads it:
-  drafting, `plain-language`, the voice check and register-check (its checklist names the reader).
+- `persona`: who reads this writing, in a line. Describe what the reader hasn't been exposed to, never their age or
+  ability. Example: "a neighbour who gardens on weekends". Who reads it: drafting, `plain-language`, the voice
+  check and register-check (its checklist names the reader).
 - `comprehension_floor`: the school year a reader needs to follow the text, 1 to 12. Example: `7`. Who reads it:
   drafting, `plain-language` and the voice check.
 - `glossary`: a file next to the profile with plain-word swaps. `profile --voice` prints its full path. Who reads
@@ -58,10 +65,15 @@ doesn't print reaches no drafting skill.
 ## Writing types
 
 - `blends`: `answer-first` or `narrative`, per kind of writing (article, page, email, social). Who reads it: drafting.
-- `formatting`: one line of layout rules per kind of writing. Example: "Plain text. One ask." Who reads it: drafting.
+  The four slots are fixed, so map each kind of writing onto one: `email` for emails, texts and direct messages,
+  `social` for posts, `page` for web and landing pages, `article` for blog posts, reports, proposals, guides and
+  newsletters (`guides/voice-profiles.md`).
+- `formatting`: one line of layout rules per kind of writing. Example: "Plain text. One ask." Who reads it: drafting,
+  for the one kind it's drafting (`profile --voice --type <kind>`). Start the line by naming what the slot covers
+  ("Emails, texts and DMs. …"). A rule for every kind belongs in `principles` instead.
 - `topics` (under `[avoid]`): subjects to stay off. Who reads it: drafting and the voice check.
-- `moves` (under `[avoid]`): things the author never does. Example: "Opens with a dictionary definition." Who reads it:
-  the voice check. `profile --voice` prints them for every skill, but drafting is told not to steer by them.
+- `moves` (under `[avoid]`): things the author never does. Example: "Opens with a dictionary definition." Who reads
+  it: the voice check. `profile --voice` prints them for every skill, but drafting is told not to steer by them.
 - `starters`, `fillers`, `closers` (under `[lexicon]`): habits seen at least twice in the samples. Who reads it:
   drafting and the voice check.
 
