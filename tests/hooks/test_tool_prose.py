@@ -153,7 +153,12 @@ class Modes(Base):
         self.config('[tool_call]\nmode = "ask"\n')
         out = self.run_hook(event())
         self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
-        self.assertIn("BLOCK", out["hookSpecificOutput"]["permissionDecisionReason"])
+        reason = out["hookSpecificOutput"]["permissionDecisionReason"]
+        self.assertIn("BLOCK", reason)
+        # the finding lines, as block-once sends them: the person sees what they approve, and a no tells the model
+        # what to fix (#152)
+        self.assertIn("field body", reason)
+        self.assertIn("Additionally", reason)
         # the same text again: the person is asked again, never waved through; a changed one is only warned
         self.assertEqual(self.run_hook(event())["hookSpecificOutput"]["permissionDecision"], "ask")
         out = self.run_hook(event(body=STIFF.replace("Additionally", "Also")))
