@@ -1174,6 +1174,122 @@ same_period = true
 same_denominator = true
 supports_strength = true
 
+[[case]]
+id = "CL-brief-005"
+rule = "brief"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #77 round 8. A call to action the owner's brief names, next to a promise about what follows that it doesn't."
+text = """## Start with a chat
+
+Whatever you need a hand with, the first step is the same: book a free 30-minute call with me. After that call, you'll have a fixed quote in your inbox within one business day.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The brief makes this call the piece's call to action and doesn't tie it to one service, so inviting any reader to book it is what the owner asked for."
+text = "Whatever you need a hand with, the first step is the same: book a free 30-minute call with me."
+claim_type = "premise"
+prominence = "high"
+status = "verified"
+locations = [{kind = "body", anchor = "Start with a chat"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 27 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "What I want readers to do at the end: book the free 30-minute intro call."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "fail"
+why = "The brief says only that quotes come after the call; a fixed quote within one business day adds a deadline and a fixed price it never gives."
+text = "After that call, you'll have a fixed quote in your inbox within one business day."
+claim_type = "premise"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Start with a chat"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 27 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "I send a quote once we've had the call."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case]]
+id = "CL-brief-006"
+rule = "brief"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "Constructed: #77 round 8. An owner's offer reworded from its pinned brief line, next to one that adds a term the line lacks."
+text = """## Behind on your books?
+
+If your records need catching up, I'll price that work separately once we've spoken. You'll get that quote on the same day we talk.
+"""
+
+[[case.claim]]
+claim_id = "C001"
+expect = "pass"
+why = "The same offer as the pinned line in other words: catch-up work priced on its own, after the first conversation."
+text = "If your records need catching up, I'll price that work separately once we've spoken."
+claim_type = "price"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Behind on your books?"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 28 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Catch-up jobs get their own quote, after the first call."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
+[[case.claim]]
+claim_id = "C002"
+expect = "fail"
+why = "The pinned line says only that the quote comes after the call; the same day is a timing promise it never makes."
+text = "You'll get that quote on the same day we talk."
+claim_type = "premise"
+prominence = "medium"
+status = "verified"
+locations = [{kind = "body", anchor = "Behind on your books?"}]
+
+[case.claim.source]
+kind = "brief"
+title = "Owner's brief, 28 October 2026"
+source_tier = "primary"
+
+[case.claim.binding]
+passage = "Catch-up jobs get their own quote, after the first call."
+same_subject = true
+same_geography = true
+same_period = true
+same_denominator = true
+supports_strength = true
+
 # ---------------------------------------------------------------- aggregators
 
 [[case]]
