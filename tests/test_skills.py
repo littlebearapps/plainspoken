@@ -283,3 +283,21 @@ class JoinRemedy(unittest.TestCase):  # #73: a 7d join padded a sentence or adde
                           'reason (such as "because …")', texts[name], name)
         self.assertIn("at most twice (a join adds no clause, detail or reason)", texts["write"])
         self.assertIn("A join adds no clause, detail or reason", texts["rhythm"])
+
+    def test_a_rhythm_fix_never_pads_and_keeps_what_it_cannot_clear(self):  # #73 round 8: pads to cross 25 words
+        def flat(path: Path) -> str:
+            return " ".join(path.read_text(encoding="utf-8").split())
+        check, humanize = (" ".join(skill(n)[1].split()) for n in ("check", "humanize"))
+        rhythm = flat(REPO / "skills" / "plain-language" / "references" / "rhythm.md")
+        guide = flat(REPO / "guides" / "checking.md")
+        self.assertIn('A rhythm fix (7, 7d) joins two neighbouring sentences with "and", "but", a comma or a semicolon, '
+                      "keeping their own words, or splits one. It never pads or restates to reach a length", check)
+        self.assertIn('no "so" or "because"', check)
+        self.assertIn("keep the WARN (`--keep`, then step 7)", check)
+        self.assertIn("a 7d line the rhythm rule can't clear", check)  # step 1: kept, not lengthened
+        self.assertIn("a 7 or 7d WARN the rhythm rule can't clear goes to step 7 instead, never lengthened", check)
+        self.assertIn('A rhythm finding (7, 7d) is fixed only by joining two neighbouring sentences with "and", "but", '
+                      "a comma or a semicolon in their own words, or by splitting one. Never pad a sentence", humanize)
+        self.assertIn("never by padding", humanize)
+        self.assertIn("in their own words, or leave the flag", rhythm)
+        self.assertIn("never pad a sentence to reach a length", guide)

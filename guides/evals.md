@@ -6,7 +6,7 @@ each one costs and the rules that keep the numbers honest. Every eval command pr
 
 ## Results so far
 
-The golden set now holds 256 cases: 232 for the judges (J1 to J4 and JR) and 24 for the claims checker
+The golden set now holds 257 cases: 233 for the judges (J1 to J4 and JR) and 24 for the claims checker
 (`eval golden validate --require-counts` prints the counts). The runs below were made on the 226 judge cases it held
 in October 2026; the full write-up is `docs/acceptance/p6-evals.md`.
 

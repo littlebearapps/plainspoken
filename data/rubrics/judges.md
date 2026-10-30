@@ -307,8 +307,10 @@ this article (it says what the text is doing, not that it "reads fine"); and the
 - `false_positive`: the rule's own text (the entry above) says this isn't a hit.
 - `format`: a structural element (FAQ, table, checklist, numbered steps) where the rule's pattern is the format
   itself.
-- `metric`: an article-level metric (12f vocabulary variety, opener share or paragraph spread; 7; 12d) where the
-  reason says why a fix pass (cut, join, split or restate) can't move it honestly.
+- `metric`: an article-level or section-level metric (12f vocabulary variety, opener share or paragraph spread; 7;
+  7d; 12d) where the reason says why a fix pass (cut, join, split or restate) can't move it honestly. For 7d the
+  reason names what joining or splitting those sentences in their own words would lose or add; a reason that only
+  says the sentences are short, or that a fix would pad them, is rejected.
 
 **Reject when** the reason is generic ("reads naturally", "stylistic choice"), covers only some of the evidence,
 contradicts the rule's entry, or excuses exactly what the rule exists to catch (e.g. `voice` for a
