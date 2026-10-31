@@ -19,7 +19,9 @@ writing. It explains the check step by step, what each result means, and what th
 
 1. **Lint.** The lint is a fixed set of pattern rules that code runs on the text, so it gives the same result every
    time: banned words, em dashes over the limit, transitions, sentence rhythm and the like. Each finding is a BLOCK
-   (must go), a WARN (fix it or give a reason) or a CANDIDATE, which a judge decides. Before the judges start, the check fixes lint findings in at most
+   (must go), a WARN (fix it or give a reason) or a CANDIDATE, which a judge decides. `judge-input`, the call that
+   gives the judges their input, runs the lint itself whenever the saved one doesn't match the text, and prints it
+   first, so there's no separate lint call to skip. Before the judges start, the check fixes lint findings in at most
    two lint-only passes, so the judges read a lint-clean draft. A line it keeps is passed on with `--keep`, and only
    for a rule that lint run printed. If the file has a claim ledger that isn't current, `judge-input` waits for it;
    a check run on its own carries on with `--ignore-claims` and says so in its report.
@@ -117,8 +119,8 @@ this order:
    checker runs in the foreground, and the claims step has to be finished before the judges start: a claims fix
    after the judges would mean all four again.
 5. **Check.** It runs the full check, and reruns the claims steps if a fix changed the draft, before any more judges.
-   `judge-input` holds the judges (exit 3) while the draft's claim ledger isn't current, unless the only open lines
-   are ones held for you.
+   `judge-input` lints the draft again if a fix changed it, and holds the judges (exit 3) while the draft's claim
+   ledger isn't current, unless the only open lines are ones held for you.
 
 Its report starts with the lines `python3 <plugin>/lib/run.py status <draft>` prints, copied exactly: the check and
 claims results, the claims that need you, the word count and the reader-value contract path. Those come from the

@@ -11,6 +11,7 @@ from tests.test_anti_ai_structural import ABOVE_GATE
 
 REPO = Path(__file__).resolve().parents[1]
 FIX = REPO / "tests" / "fixtures" / "profiles"
+ALSO = "Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks.\n"
 
 
 def cli(*args, cwd: Path, env: dict | None = None, input: str | None = None):
@@ -27,10 +28,52 @@ class JudgeCli(unittest.TestCase):
         self.art = self.cwd / "post.md"
         self.art.write_text("Text.\n", encoding="utf-8")
 
-    def test_judge_input_without_lint_exits_2(self):
+    def test_judge_input_lints_when_there_is_no_lint(self):  # #162: one call lints and prints the judge input
         r = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
-        self.assertEqual(r.returncode, 2, r.stderr)
-        self.assertIn("check", r.stderr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([json.loads(x)["group"] for x in r.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
+        self.assertIn("anti-AI lint · post.md", r.stderr)
+        self.assertTrue(list((self.cwd / ".plainspoken" / "reports").glob("*.lint.json")))
+
+    def test_judge_input_prints_the_lint_on_stderr_never_stdout(self):  # Codex and Hermes save stdout as the JSONL
+        self.art.write_text(ALSO, encoding="utf-8")
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        r = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,r7d,HM", cwd=self.cwd)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(len(lines), 4, r.stdout)
+        for x in lines:
+            json.loads(x)
+        for part in ("anti-AI lint", "WARN      r4b", "kept with --keep"):
+            self.assertIn(part, r.stderr)
+
+    def test_judge_input_relints_an_edited_draft(self):  # never passes on the lint of the text before the edit
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        self.art.write_text(ALSO, encoding="utf-8")
+        r = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual((r.returncode, r.stdout), (1, ""), r.stderr)
+        self.assertIn("can't clear", r.stderr)
+        self.assertIn("rHM", r.stderr.split("can't clear", 1)[1])
+
+    def test_judge_input_keeps_a_social_lint(self):  # a social piece stays social across the fix passes
+        cli("check", "post.md", "--profile", "default", "--content-type", "social", cwd=self.cwd)
+        r = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual({json.loads(x)["content_type"] for x in r.stdout.splitlines()}, {"social"})
+        r = cli("judge-input", "post.md", "--profile", "default", "--content-type", "article", cwd=self.cwd)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual({json.loads(x)["content_type"] for x in r.stdout.splitlines()}, {"article"})
+
+    def test_judge_input_relints_after_a_ruleset_change(self):  # a plugin update mid-draft
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        (path,) = (self.cwd / ".plainspoken" / "reports").glob("*.lint.json")
+        lint = json.loads(path.read_text(encoding="utf-8"))
+        current = lint["ruleset_version"]
+        lint["ruleset_version"] = "0"
+        path.write_text(json.dumps(lint), encoding="utf-8")
+        r = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["ruleset_version"], current)
 
     def test_judge_input_prints_four_lines(self):
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
@@ -44,12 +87,15 @@ class JudgeCli(unittest.TestCase):
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
         held = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
         self.assertEqual((held.returncode, held.stdout), (1, ""), held.stderr)
-        for line in ("WARN  r4b", "WARN  r7d", "WARN  rHM", "--keep"):
+        for line in ("WARN  r4b", "WARN  r7d", "WARN  rHM", "--keep", "run judge-input again",
+                     "at most two lint-only passes"):
             self.assertIn(line, held.stderr)
+        self.assertNotIn("run `check` again", held.stderr)
         partial = cli("judge-input", "post.md", "--profile", "default", "--keep", "r4b,7d", cwd=self.cwd)
         self.assertEqual(partial.returncode, 1)
-        self.assertIn("rHM", partial.stderr)
-        self.assertNotIn("r4b", partial.stderr)
+        hold = partial.stderr.split("can't clear", 1)[1]  # the lint above it names r4b; the hold doesn't
+        self.assertIn("rHM", hold)
+        self.assertNotIn("r4b", hold)
         kept = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,r7d", "--keep", "HM", cwd=self.cwd)
         self.assertEqual(kept.returncode, 0, kept.stderr)
         self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
@@ -72,7 +118,10 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual(cli("judge-input", "post.md", "--profile", "default", "--keep", "7d", cwd=self.cwd).returncode,
                          2)
         clean = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
-        self.assertEqual((clean.returncode, clean.stderr), (0, ""))
+        self.assertEqual(clean.returncode, 0, clean.stderr)
+        self.assertIn("anti-AI lint", clean.stderr)
+        self.assertNotIn("can't clear", clean.stderr)
+        self.assertNotIn("kept with --keep", clean.stderr)
 
     def test_report_only_keeps_a_block_and_never_edits(self):  # #107: skills/check/SKILL.md "Report only"
         import hashlib

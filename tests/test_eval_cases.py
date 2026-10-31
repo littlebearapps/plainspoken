@@ -78,7 +78,7 @@ def skill_of(fm: dict) -> str:
 
 
 REWRITE_GRADERS = {"no-flagged-words.md", "em-dash-cap.md", "no-new-numbers.md", "kept-the-facts.md"}
-NOT_CONTAINS = {"no-flagged-words.md", "em-dash-cap.md", "no-new-numbers.md"}
+NOT_CONTAINS = {"no-flagged-words.md", "em-dash-cap.md", "no-new-numbers.md", "no-lint-to-devnull.md"}
 SOCIAL = {"rewrite--linkedin-post"}  # graded with the social content type's caps; the rest are articles
 # Python-only or JS-only regex syntax. `claude plugin eval` runs the patterns as JavaScript and this test runs them
 # through Python `re`, so a pattern must mean the same in both.
@@ -427,6 +427,35 @@ class EvalCases(unittest.TestCase):
                     self.assertEqual("<<'DRAFT'" in script, tag == "fix")
                     kept = compiled(next(g for n, g, _ in graders if n == "kept-the-facts.md"))
                     self.assertTrue(kept.search(marked(facts_source(d, prompt))))
+
+    def test_longform_lint_never_sent_to_devnull(self):  # #162: `check … >/dev/null; judge-input --keep r7d`
+        """Each longform case fails a run whose trace sends a `check` call's output to /dev/null. Other redirects
+        (a claims call's stderr, a check without one) don't count."""
+        hits = [r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27 '
+                r'>/dev/null; $R judge-input"',
+                r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27 '
+                r'> /dev/null; $R judge-input"',
+                r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27 '
+                r'&>/dev/null; $R judge-input"',
+                "python3 /x/lib/run.py check a.md >/dev/null"]
+        misses = [r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27; '
+                  r'$R judge-input"',
+                  r'"command":"python3 /x/lib/run.py claims record a.md --from r.json 2>/dev/null"',
+                  "python3 /x/lib/run.py check a.md 2>/dev/null"]
+        hits = [h.replace(r"\x27", "'") for h in hits]
+        misses = [m.replace(r"\x27", "'") for m in misses]
+        for d in sorted(p for p in EXTRA[0].iterdir() if p.is_dir()):
+            with self.subTest(case=d.name):
+                g = next((g for n, g, _ in _case(d)[3] if n == "no-lint-to-devnull.md"), None)
+                self.assertIsNotNone(g, "no graders/no-lint-to-devnull.md")
+                self.assertEqual((g.get("type"), g.get("target"), g.get("match")), ("regex", "trace", "not_contains"))
+                for token in NOT_PORTABLE:
+                    self.assertNotIn(token, g["pattern"], f"{token} isn't portable JS/Python regex")
+                rx = compiled(g)
+                for h in hits:
+                    self.assertIsNotNone(rx.search(h), h)
+                for m in misses:
+                    self.assertIsNone(rx.search(m), m)
 
     def test_marker_graders_read_the_piece_only(self):
         """Every case that asks for the piece between markers grades only that piece: a report around it that

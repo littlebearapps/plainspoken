@@ -394,6 +394,33 @@ class CheckCli(unittest.TestCase):
         self.assertEqual(len(fixed), 1)
         self.assertEqual((fixed[0]["rule"], fixed[0]["span_hash"]), ("4b", ledger.span_hash("4b", "also")))
 
+    def test_judge_input_records_a_lint_only_when_it_lints(self):  # #162: reruns add no duplicate lint events
+        def judge_input(root):
+            return cli("judge-input", "post.md", "--profile", "default", cwd=root)
+
+        def shape(evs):
+            return sorted((e["event"], e["rule"], e["outcome"]) for e in evs)
+
+        self.check()
+        n = len(self.events())
+        judge_input(self.root)
+        judge_input(self.root)
+        self.assertEqual(len(self.events()), n)  # the saved lint was current: nothing re-recorded
+        self.art.write_text(EDITED, encoding="utf-8")
+        judge_input(self.root)
+        mine = self.events()[n:]
+        twin = Path(tempfile.mkdtemp())  # the same steps with `check` for the edit
+        self.addCleanup(shutil.rmtree, twin, ignore_errors=True)
+        (twin / ".git").mkdir()
+        (twin / "post.md").write_text(ARTICLE, encoding="utf-8")
+        cli("check", "post.md", "--profile", "default", cwd=twin)
+        (twin / "post.md").write_text(EDITED, encoding="utf-8")
+        before = len(ledger.read({"ledger_dir": twin / ".plainspoken" / "ledger", "root": twin})[0])
+        cli("check", "post.md", "--profile", "default", cwd=twin)
+        theirs = ledger.read({"ledger_dir": twin / ".plainspoken" / "ledger", "root": twin})[0][before:]
+        self.assertTrue(mine)
+        self.assertEqual(shape(mine), shape(theirs))
+
     def test_no_save_writes_no_fixed_and_no_snapshot(self):
         self.check("--no-save")
         self.art.write_text(EDITED, encoding="utf-8")
