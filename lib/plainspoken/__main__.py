@@ -83,6 +83,24 @@ def _same_file(a: Path, b: Path) -> bool:
         return False
 
 
+def _save_lint(lint: dict, path: Path, prof: Profile, cfg, root: Path, paths: dict[str, Path]) -> None:
+    """Save `lint` as the article's keyed <key>.lint.json (atomically: the gate and merge read it, never half a file),
+    then capture it, which rotates the snapshot. `check`'s keyed path, and `judge-input`'s when the saved lint isn't
+    current (#162). Raises OSError when the report can't be written."""
+    previous = report.read_json(paths["lint"])  # before it's overwritten
+    paths["lint"].parent.mkdir(parents=True, exist_ok=True)
+    report.write_atomic(paths["lint"], json.dumps(lint, indent=2, ensure_ascii=False) + "\n")
+    capture.for_check(lint, path, prof, cfg, root, previous=previous, snapshot=paths["checked"],
+                      reports=paths["checked"].parent)
+
+
+def _lint_current(lint: dict | None, path: Path, prof: Profile, cfg, content_type: str) -> bool:
+    """A saved lint `judge-input` can reuse: made of this text, with this profile, ruleset and content type."""
+    return (lint is not None and lint.get("article_sha256") == report.sha256(path)
+            and lint.get("profile_sha256") == prof.sha256 and lint.get("ruleset_version") == cfg.version
+            and lint.get("content_type") == content_type)
+
+
 def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
     """The profile for this command: a command with an article path resolves that file's `[engine] profiles`
     entry."""
@@ -287,8 +305,12 @@ def _main(argv: list[str] | None) -> int:
                       help="validate <stem>.justify.json and print the JR judge's input")
     j.add_argument("--profile", help="with --review-input: the voice profile whose calibration notes the JR judge gets")
     j.add_argument("--plugin-profile")
-    ji = sub.add_parser("judge-input", help="print one JSON judge-input object per group, J1 to J4")
+    ji = sub.add_parser("judge-input", help="print one JSON judge-input object per group, J1 to J4; judge-input "
+                                            "lints FILE itself when its saved lint isn't current, and prints the lint "
+                                            "on stderr; stdout is only the four JSON lines")
     ji.add_argument("path", type=Path)
+    ji.add_argument("--content-type", choices=CONTENT_TYPES,
+                    help="when it lints: the content type (default: the saved lint's, else article)")
     ji.add_argument("--reports", type=Path)
     ji.add_argument("--profile")
     ji.add_argument("--plugin-profile")
@@ -373,19 +395,16 @@ def _main(argv: list[str] | None) -> int:
             print(f"plainspoken: --no-record saves no report: --out {target} is this article's lint report; drop "
                   f"--out or name another file", file=sys.stderr)
             return 2
-        previous = report.read_json(paths["lint"]) if keyed else None  # before it's overwritten
-        if target:
-            try:
+        try:
+            if keyed:
+                _save_lint(lint, args.path, prof, cfg, root, paths)
+            elif target:  # --out elsewhere may be a pipe or device
                 target.parent.mkdir(parents=True, exist_ok=True)
-                if keyed:  # the gate and merge read it: never half a file. --out elsewhere may be a pipe or device.
-                    report.write_atomic(target, payload + "\n")
-                else:
-                    target.write_text(payload + "\n", encoding="utf-8")
-            except OSError as e:
-                return _input_error(target, e, "write")
-        if not args.no_record:
-            capture.for_check(lint, args.path, prof, cfg, root, previous=previous,
-                              snapshot=paths["checked"] if keyed else None, reports=paths["checked"].parent)
+                target.write_text(payload + "\n", encoding="utf-8")
+        except OSError as e:
+            return _input_error(target, e, "write")
+        if not keyed and not args.no_record:
+            capture.for_check(lint, args.path, prof, cfg, root, reports=paths["checked"].parent)
         print(payload if args.json else report.summarise(lint))
         return 1 if report.lint_status(lint) == "BLOCK" else 0
     if args.cmd == "profile":
@@ -475,15 +494,24 @@ def _main(argv: list[str] | None) -> int:
         return _draft_status(args, root)
     if args.cmd == "judge-input":
         reports_dir = args.reports or report.reports_dir_default(root)
-        try:
-            items = judges.judge_input(args.path, _profile(args, root), reports_dir, root)
+        try:  # #162: the lint arrives with the judge input, so there's no separate lint call to throw away
+            prof, cfg = _profile(args, root), load_config()
+            paths = report.report_paths(args.path, reports_dir, root)
+            lint = report.read_json(paths["lint"])
+            saved = (lint or {}).get("content_type")
+            ctype = args.content_type or (saved if saved in CONTENT_TYPES else "article")
+            if not _lint_current(lint, args.path, prof, cfg, ctype):
+                lint = report.run_lint(args.path, prof, ctype, cfg)
+                _save_lint(lint, args.path, prof, cfg, root, paths)
+            items = judges.judge_input(args.path, prof, reports_dir, root)
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "prepare judge input for")
+        print(report.summarise(lint), file=sys.stderr)  # stdout stays the four lines: hosts save it as the JSONL
         keep = {k.strip() for arg in args.keep for k in arg.split(",") if k.strip()}
         stray = judges.stray_keeps(args.path, reports_dir, root, keep)
         if stray:  # #162: a keep names a line this pass's lint printed, never one typed before it was read
             print(f"plainspoken: --keep {', '.join(stray)}: the current lint has no open BLOCK or lint-owned WARN for "
-                  "that rule. Read the lint (`check`) and keep only the rules it prints.", file=sys.stderr)
+                  "that rule. Read the lint above and keep only the rules it prints.", file=sys.stderr)
             return 2
         held = judges.open_lint(args.path, reports_dir, root, keep)
         if held:
@@ -491,8 +519,9 @@ def _main(argv: list[str] | None) -> int:
                   "judges say):", file=sys.stderr)
             for f in held:
                 print(f"  {f['severity']:5} r{f['rule']:<4} L{f.get('line', '?')}", file=sys.stderr)
-            print("Fix them and run `check` again, or rerun with --keep <rule> for each one you leave (a WARN you'll "
-                  "justify after merge).", file=sys.stderr)
+            print("Fix them and run judge-input again (at most two lint-only passes before the first judges, "
+                  "counting write step 6's), or rerun with --keep <rule> for each one you leave (a WARN you'll justify "
+                  "after merge).", file=sys.stderr)
             return 1
         hold = [] if args.ignore_claims else claims_tools.judge_hold(
             args.path, root, report.report_paths(args.path, reports_dir, root)["claims-check"],
