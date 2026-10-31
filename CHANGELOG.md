@@ -2,9 +2,17 @@
 
 Every plainspoken release, newest first. Before 1.0, versions follow semantic versioning with a minor release for
 new features and a patch release for fixes. release-please writes each entry from the commit messages; the plain
-"In short" lines were added by hand.
+"In short" lines were added by hand, and so were the corrections where a commit only referred to an issue
+but the entry said it closed it.
 
 ## [0.12.0](https://github.com/littlebearapps/plainspoken/compare/v0.11.0...v0.12.0) (2026-10-30)
+
+In short: the publish gate, write guard and kaizen nudge now run in Codex and Hermes Agent, `doctor` checks an
+install, optional checks read the writing in tool calls and chat replies, and the judges wait for a read lint and a
+current claims status. Write reports copy their figures from the engine and are sent back when they ask the owner about
+lines the engine doesn't list. [#75](https://github.com/littlebearapps/plainspoken/issues/75) and
+[#162](https://github.com/littlebearapps/plainspoken/issues/162) stay open: their fixes shipped, but round 8 showed
+they don't fully hold yet.
 
 
 ### Features
@@ -45,11 +53,11 @@ new features and a patch release for fixes. release-please writes each entry fro
 * **evals:** a spelled count of names the source lists is derived, not new ([#169](https://github.com/littlebearapps/plainspoken/issues/169)) ([7581f00](https://github.com/littlebearapps/plainspoken/commit/7581f000452fb93ac99f2440e8fadb92403468ff)), closes [#158](https://github.com/littlebearapps/plainspoken/issues/158)
 * **gate:** say nothing is gated when warn or block has no [gate] paths ([db79fe3](https://github.com/littlebearapps/plainspoken/commit/db79fe30f72f16eebd2912bc7609088f05af23a3)), closes [#94](https://github.com/littlebearapps/plainspoken/issues/94)
 * **hermes:** pass block-mode integrity findings through and say when a hook couldn't run ([#112](https://github.com/littlebearapps/plainspoken/issues/112)) ([2ffd00a](https://github.com/littlebearapps/plainspoken/commit/2ffd00a26241c2a483b589a10b4e7f42d2d3703a))
-* **hooks:** catch owner decisions and asks beside listed claims in the report guard ([#170](https://github.com/littlebearapps/plainspoken/issues/170)) ([a649081](https://github.com/littlebearapps/plainspoken/commit/a6490811785fb6b78b7ae5b1f0e79d65b7e78255)), closes [#75](https://github.com/littlebearapps/plainspoken/issues/75)
+* **hooks:** catch owner decisions and asks beside listed claims in the report guard ([#170](https://github.com/littlebearapps/plainspoken/issues/170)) ([a649081](https://github.com/littlebearapps/plainspoken/commit/a6490811785fb6b78b7ae5b1f0e79d65b7e78255)), refs [#75](https://github.com/littlebearapps/plainspoken/issues/75)
 * **hooks:** expand literal assignments made earlier in the command in the write guard ([#164](https://github.com/littlebearapps/plainspoken/issues/164)) ([b638992](https://github.com/littlebearapps/plainspoken/commit/b6389924ca9053437b73c8a694b38351fd273bfe)), closes [#161](https://github.com/littlebearapps/plainspoken/issues/161)
 * **hooks:** send back a write report that leaves out the status block ([#172](https://github.com/littlebearapps/plainspoken/issues/172)) ([885cf91](https://github.com/littlebearapps/plainspoken/commit/885cf91600304cc704c11af4360bda7080fd28af)), closes [#171](https://github.com/littlebearapps/plainspoken/issues/171)
 * **hooks:** show the flagged lines in the tool-call check's ask prompt ([#153](https://github.com/littlebearapps/plainspoken/issues/153)) ([2552c1f](https://github.com/littlebearapps/plainspoken/commit/2552c1f589f51a325932c6f302e174fac5df88df)), closes [#152](https://github.com/littlebearapps/plainspoken/issues/152)
-* **hooks:** the writing nudge no longer fires on questions about hooks or on tech tasks that mention emails ([f03492e](https://github.com/littlebearapps/plainspoken/commit/f03492ef0c2349d524e006aa654edda7e2a9f29e)), closes [#125](https://github.com/littlebearapps/plainspoken/issues/125)
+* **hooks:** the writing nudge no longer fires on questions about hooks or on tech tasks that mention emails ([f03492e](https://github.com/littlebearapps/plainspoken/commit/f03492ef0c2349d524e006aa654edda7e2a9f29e)), refs [#125](https://github.com/littlebearapps/plainspoken/issues/125)
 * **humanize:** a request for the text only gets the text only ([#159](https://github.com/littlebearapps/plainspoken/issues/159)) ([faaa186](https://github.com/littlebearapps/plainspoken/commit/faaa186348326efcc1821da1a198006b0d7071b5)), closes [#157](https://github.com/littlebearapps/plainspoken/issues/157)
 * **humanize:** read the voice profile when used on its own ([a6ec638](https://github.com/littlebearapps/plainspoken/commit/a6ec6385e7cbe3c26b5e29b6a4daf2fe3ce3b592)), closes [#98](https://github.com/littlebearapps/plainspoken/issues/98)
 * **lint:** report which fields were read, and document checking a post's other fields ([#115](https://github.com/littlebearapps/plainspoken/issues/115)) ([0940cee](https://github.com/littlebearapps/plainspoken/commit/0940cee6baa93ae151491435c25ac443e613159a))
@@ -58,9 +66,9 @@ new features and a patch release for fixes. release-please writes each entry fro
 * **profile:** the default profile no longer sets a locale, so default-profile reports need one re-check ([791e0bc](https://github.com/littlebearapps/plainspoken/commit/791e0bc2728292bad2926c964f953d019e48b684)), closes [#121](https://github.com/littlebearapps/plainspoken/issues/121)
 * **reader-value:** chain one step's CLI calls with && instead of one Bash call each ([cfc1725](https://github.com/littlebearapps/plainspoken/commit/cfc172590342dd936bfb5da3c3c5c46889720ab8)), closes [#92](https://github.com/littlebearapps/plainspoken/issues/92)
 * **write:** a limit that would change the reader's decision sits beside its claim, not at the close ([641fe6f](https://github.com/littlebearapps/plainspoken/commit/641fe6f38b8f447ae165f3da5a02a195312ddc77))
-* **write:** a report that asks the owner to check a line the engine doesn't list is sent back to cut or hold it ([99799b6](https://github.com/littlebearapps/plainspoken/commit/99799b6230183189b09089b52000b20cb5875637)), closes [#75](https://github.com/littlebearapps/plainspoken/issues/75)
+* **write:** a report that asks the owner to check a line the engine doesn't list is sent back to cut or hold it ([99799b6](https://github.com/littlebearapps/plainspoken/commit/99799b6230183189b09089b52000b20cb5875637)), refs [#75](https://github.com/littlebearapps/plainspoken/issues/75)
 * **write:** copy the report's figures and statuses from the engine lines ([#168](https://github.com/littlebearapps/plainspoken/issues/168)) ([1355edb](https://github.com/littlebearapps/plainspoken/commit/1355edbb3a72c3eba313ec47cf4589347ea35c4f)), closes [#163](https://github.com/littlebearapps/plainspoken/issues/163)
-* **write:** judges wait for a current claims status and a read lint ([#166](https://github.com/littlebearapps/plainspoken/issues/166)) ([ef53ee4](https://github.com/littlebearapps/plainspoken/commit/ef53ee49ec7907a5ec621eb6d20fe6ac6664f2f1)), closes [#160](https://github.com/littlebearapps/plainspoken/issues/160) [#162](https://github.com/littlebearapps/plainspoken/issues/162)
+* **write:** judges wait for a current claims status and a read lint ([#166](https://github.com/littlebearapps/plainspoken/issues/166)) ([ef53ee4](https://github.com/littlebearapps/plainspoken/commit/ef53ee49ec7907a5ec621eb6d20fe6ac6664f2f1)), closes [#160](https://github.com/littlebearapps/plainspoken/issues/160), refs [#162](https://github.com/littlebearapps/plainspoken/issues/162)
 * **write:** label the report's Reader value line as outline-only ([#116](https://github.com/littlebearapps/plainspoken/issues/116)) ([c50208c](https://github.com/littlebearapps/plainspoken/commit/c50208cf653afced3cbd4648252620ab5f1c8c7b))
 
 

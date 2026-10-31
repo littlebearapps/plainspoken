@@ -3,25 +3,23 @@
 This page shows where plainspoken is heading. It's not a commitment: priorities can change as the evals come in,
 and nothing here has a date. For what has already shipped, see [CHANGELOG.md](CHANGELOG.md).
 
-## Now: 0.12.0
+## Now: 0.13.0
 
-0.12.0 brings the remaining hooks to Codex and Hermes Agent and makes reports harder to misread:
+0.12.0 was released on 30 October 2026; [CHANGELOG.md](CHANGELOG.md) lists what it brought. 0.13.0 is being worked
+out from the round-8 evals and from feedback on a Hermes Agent install:
 
-- The publish gate, the write guard and the kaizen nudge now run in Codex and Hermes Agent, not only in Claude Code
-  and Cowork.
-- `/plainspoken:doctor` checks an install and changes nothing, and `/plainspoken:setup` warns about host problems
-  it finds.
-- A lint report says which fields of a post it read, gives its BLOCK and WARN counts, and says "lint only" when the
-  judges haven't run. It never says CLEAN above a WARN.
-- On Hermes Agent, block-mode integrity findings reach the model, and a hook that couldn't run says so instead of
-  looking clean.
-- The claims step treats any result for a client as sensitive, named or not, and humanize reads your voice profile
-  when you use it on its own.
-- The publish gate says nothing is gated when it's set to warn or block but has no paths to gate.
-- The docs gain one voice profile for every kind of writing, a report-only route for checking a draft without
-  changing it, and the Hermes Agent launch flags.
-- For maintainers: a drift check for judge and trigger evals, and a CI job that shows how a change moves the lint's
-  verdicts on a fixed public set of texts.
+- `status` says what made a check stale, and shows whether the draft delivers its reader-value contract
+  ([#151](https://github.com/littlebearapps/plainspoken/issues/151)).
+- One copy-paste block to run the four judges on Hermes Agent
+  ([#150](https://github.com/littlebearapps/plainspoken/issues/150)), and one wording for when a short piece gets
+  the lint only ([#149](https://github.com/littlebearapps/plainspoken/issues/149)).
+- The writing nudge no longer reads a quoted example inside a question as a request
+  ([#146](https://github.com/littlebearapps/plainspoken/issues/146)).
+- Being researched before any code: a check that flags when a fix drops an exclusion or changes a promise
+  ([#147](https://github.com/littlebearapps/plainspoken/issues/147)), a content type for short emails so they don't
+  get article rhythm warnings ([#148](https://github.com/littlebearapps/plainspoken/issues/148)), and closing the
+  last way round reading the lint before the judges run
+  ([#162](https://github.com/littlebearapps/plainspoken/issues/162)).
 
 ## Before v1.0
 
@@ -30,9 +28,10 @@ v1.0 waits on evidence that plainspoken does what it says on real, long pieces. 
 - **A long-form eval round on 0.12.0.** Long pieces drafted with and without the plugin, several runs each, read
   blind by model readers, to confirm the fixes since 0.11.0 hold up outside the unit tests. The same round re-runs
   the per-skill smoke tests and checks the new Codex and Hermes Agent hooks on real installs.
-- **Open issue [#75](https://github.com/littlebearapps/plainspoken/issues/75).** In one long-form run of nine,
-  write's report asked the owner to check lines the engine didn't list as needing them. The round above counts how
-  often it happens; it's fixed when the count is zero or those lines are recorded so the engine lists them.
+- **Open issue [#75](https://github.com/littlebearapps/plainspoken/issues/75).** In round 8, two long-form runs of
+  nine had write's report ask the owner to check lines the engine didn't list as needing them. 0.12.0's report guard
+  catches both of those kinds of ask; the next round counts again. It's fixed when the count is zero or those lines
+  are recorded so the engine lists them.
 - **More evidence on rewrite quality.** A blind reader test that puts plainspoken's drafts beside the author's own
   unassisted writing, read by a model panel, alongside the existing blind reads of rewrites.
 
