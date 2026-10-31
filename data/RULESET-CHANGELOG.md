@@ -2,6 +2,31 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## 4.4.0 (2026-10-31)
+
+- **Rule 7d skips its no-long-sentence test in short pieces (#148):** new threshold `staccato_long_min_words = 150`.
+  A piece under 150 words (counted as 12f counts them, the words in its rhythm sentences) gets only 7d's short-run
+  test, whatever its content type, the way social posts already did. That covers a narrative profile's
+  `long_sentence_headings` sections too. The FAQ test, the narrative run-and-no-long test and rule 7 don't change,
+  and a piece of 150 words or more is checked exactly as before. A profile that sets the key to 0 gets the old
+  behaviour back.
+- **Why:** in a two-paragraph email the only fix the no-long test can ask for is a padded sentence, which is the
+  pressure #73 is about. The issue's 121-word email got 7d for having no sentence over 25 words, and the plain fix
+  was to keep it as it was.
+- **The engine half:** a greeting that opens a piece ("Hi Sam,") and a sign-off that closes it ("Cheers, Alex") no
+  longer count as 7d sentences, so a short email can't reach the five-sentence run on its greeting. That's a
+  separate engine commit, not a ruleset key.
+- **Measured effect (lint only, no model calls):** on the verdict-diff corpus, 149 of 276 texts change, all of them
+  golden cases under 150 words. 7d WARNs go from 155 to 5, and 114 texts move from WARN to CLEAN; no other rule
+  changes. The five 7d WARNs left are the run-form judge-review cases, so no golden case goes stale. On the 718
+  saved campaign pieces (rounds 1 to 8, deduplicated), 7d WARNs go from 618 to 139: emails 50 to 0, text messages
+  38 to 0, long-form pieces 60 to 60. No piece gains a finding, and rule 7 stays at 4.
+- **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.3.0 read as
+  stale and ask for a re-check, which is right, because a 7d WARN someone justified may no longer fire. The file's
+  bytes change, so a pending kaizen proposal rebases.
+- Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
+  merging the pull request.
+
 ## Claims rubric revision (2026-10-30; ruleset version unchanged)
 
 - **A pinned claim is judged on its passage (#77):** a claim whose text and locations say no more than its pinned
