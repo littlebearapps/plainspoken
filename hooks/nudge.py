@@ -41,6 +41,9 @@ _LEAD = re.compile(
     r"|help me|let['’]?s|go ahead and)?"
     r"[\s,]*(?:(?:please|just|quickly|also|now)\s+)*", re.I)
 _BOUNDARY = re.compile(r"[.!?;:,\n()\[\]\"“”]|<[^<>]*>|(?:^|\s)[-*•>]\s")
+# Ignore quoted examples in prose, but preserve quoted requests after genuine clause boundaries.
+_UNQUOTED_BOUNDARY = re.compile(r'[.!?;:,\n()\[\]]|<[^<>]*>|(?:^|\s)[-*•>]\s')
+_QUOTED = re.compile(r'"[^"\n]*"|“[^”\n]*”')
 # The noun has to be the verb's object: "write (me) a short email", not "write tests for the email extraction".
 _DET = (r"(?:(?:me|us|up)\s+)?(?:(?:a few|a couple of|another|some|any|a|an|the|my|our|your|his|her|their|this|"
         r"that|these|those|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+)?")
@@ -96,7 +99,13 @@ _WRAPPER_TAG = re.compile(rf"</?(?:{_WRAPPERS})(?:\s[^<>]*)?>|</?(?:{_WRAPPERS})
 
 def _requests(verb: re.Pattern, text: str) -> Iterator[str]:
     """Each match of `verb` that stands as the request, with the text after it."""
+    quoted_examples = [
+        (q.start(), q.end()) for q in _QUOTED.finditer(text)
+        if not _LEAD.fullmatch(_UNQUOTED_BOUNDARY.split(text[:q.start()])[-1].strip())
+    ]
     for m in verb.finditer(text):
+        if any(start <= m.start() < end for start, end in quoted_examples):
+            continue
         lead = _BOUNDARY.split(text[:m.start()])[-1]
         if _LEAD.fullmatch(lead.strip()):
             yield text[m.end():]
