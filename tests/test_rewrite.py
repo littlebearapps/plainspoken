@@ -193,6 +193,29 @@ class TestGrade(unittest.TestCase):
 
 
 
+class MeaningChanges(unittest.TestCase):  # #147: listed beside the grade, never part of the verdict
+    FIX = Path(__file__).resolve().parent / "fixtures" / "meaning"
+
+    def test_grade_lists_meaning_but_still_passes(self):
+        g = rewrite.grade(self.FIX / "issue-rw.md", self.FIX / "issue-src.md", default_profile(), "article")
+        self.assertEqual(g["verdict"], "PASS")
+        self.assertEqual([c["id"] for c in g["meaning_changes"]], ["M1", "M2", "M3"])
+        text = rewrite.summarise(g)
+        self.assertIn("  meaning: 3 listed", text)
+        self.assertIn('    M3 line 3: dropped "won\'t", "without"', text)
+        self.assertTrue(text.splitlines()[-1].startswith("  words: "))
+
+    def test_grade_without_source_has_no_meaning_key(self):
+        g = rewrite.grade(self.FIX / "issue-rw.md", None, default_profile(), "article")
+        self.assertNotIn("meaning_changes", g)
+        self.assertNotIn("meaning", rewrite.summarise(g))
+
+    def test_nothing_listed(self):
+        g = rewrite.grade(self.FIX / "issue-join.md", self.FIX / "issue-src.md", default_profile(), "article")
+        self.assertEqual(g["meaning_changes"], [])
+        self.assertIn("  meaning: 0 listed", rewrite.summarise(g))
+
+
 class NumbersInWords(unittest.TestCase):
     """Numbers written as words count on both sides of the number check (#33)."""
 

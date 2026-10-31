@@ -28,10 +28,10 @@ in October 2026; the full write-up is `docs/acceptance/p6-evals.md`.
 | Golden set | Is the labelled test data well formed, and is it still held out? | `eval golden validate` | free |
 | Judge validation | Does each judge model find the tells a person would, and leave clean text alone? | `eval judges`, then `eval judges-report` | subscription or paid |
 | Claims-checker validation | Does the claims checker block the claims a person would, and pass the sound ones? | `eval claims` | subscription |
-| Rewrite graders | Does one rewrite keep its facts, drop the banned words and stay under the em-dash cap? | `eval rewrite DRAFT --source FILE` | free |
+| Rewrite graders | Does one rewrite keep its facts, drop the banned words and stay under the em-dash cap? What did it change in the meaning? | `eval rewrite DRAFT --source FILE` | free |
 | Trigger cases | Do the skills start when a request fits, and stay quiet when it doesn't? | `claude plugin eval . --tag trigger` | paid |
 | Rewrite cases | Are rewrites made with the plugin better than rewrites made without it? | `claude plugin eval . --tag rewrite` (a plain request) and `--tag rewrite-slash` (the same texts through `/plainspoken:humanize`) | paid |
-| Rewrite delta | How many lint findings does each arm's rewrite still have? | `eval rewrite-delta RESULT` on a run made with `--keep-temp` | free |
+| Rewrite delta | How many lint findings and meaning changes does each arm's rewrite have? | `eval rewrite-delta RESULT` on a run made with `--keep-temp` | free |
 | Smoke cases | Does every skill do its job end to end on a saved draft? | `claude plugin eval . --tag smoke` | paid |
 | First engine call | Did each smoke run start with its skill's profile call? | `eval first-call RESULT` on a smoke run made with `--keep-temp` | free |
 | Ablations | Does the output style, the session brief or a ban list in the prompt change the drafts? | `scripts/dev/draft_runs.py`, then `scripts/dev/ablation_table.py` | subscription |
@@ -134,7 +134,9 @@ The rewrite cases' regex graders only pass or fail, and a strong model passes mo
 arm. The delta is without minus with: positive favours the plugin. `--keep-temp` is what keeps the traces; without it
 every run is listed as missing. It also counts new numbers, in digits or in words, that the source (the pasted
 passage, or a drafting case's brief) doesn't have. A number worked out from the source's own (150 for 151, a sum, or
-"seven in every ten" for 151 of 212) is listed as derived and not counted; the rules are in `rewrite.py`. The smoke cases run each skill once through its slash command on a draft the case
+"seven in every ten" for 151 of 212) is listed as derived and not counted; the rules are in `rewrite.py`. Both
+commands also list what `meaning-diff` finds (a number, limit or promise the rewrite dropped or added, per arm in the
+delta); those lines never change a verdict. The smoke cases run each skill once through its slash command on a draft the case
 saves first, including the full check with its four judges, so they cost more than the trigger suite (about
 US$5 for all twelve on 2026-10-21). On Claude Code 2.1.306 the eval sandbox couldn't run the skills' old load-time
 commands (see `docs/acceptance/v0.7-drafting-hooks.md`), so the slash and smoke suites ran on 2.1.303 there.

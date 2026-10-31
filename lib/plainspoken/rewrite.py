@@ -39,7 +39,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from itertools import permutations
 from pathlib import Path
 
-from plainspoken import metrics, report
+from plainspoken import meaning, metrics, report
 from plainspoken.checks_lexical import text_units
 from plainspoken.doc import parse
 from plainspoken.profile import Profile
@@ -276,7 +276,8 @@ def grade(draft: Path, source: Path | None, profile: Profile, content_type: str 
     cfg = load_config() if cfg is None else cfg
     cfg.check_profile(profile)
     draft = Path(draft)
-    doc = parse(_read(draft), path=str(draft), profile=profile, content_type=content_type)
+    draft_raw = _read(draft)
+    doc = parse(draft_raw, path=str(draft), profile=profile, content_type=content_type)
     _, findings = report.lint_doc(doc, profile, content_type, cfg)
     blocks = sorted({f["rule"] for f in findings if f["severity"] == "BLOCK"})
     text = _visible(doc)
@@ -284,8 +285,11 @@ def grade(draft: Path, source: Path | None, profile: Profile, content_type: str 
     cap = cfg.thresholds(profile, content_type)["em_dash_max"]
     new: list[str] = []
     derived: list[dict] = []
+    moved: list[dict] | None = None
     if source is not None:
-        src = parse(_read(Path(source)), path=str(source), profile=profile, content_type=content_type)
+        source_raw = _read(Path(source))
+        moved = meaning.diff(source_raw, draft_raw)  # listed for the person, never part of the verdict (#147)
+        src = parse(source_raw, path=str(source), profile=profile, content_type=content_type)
         src_text = _visible(src)
         known = [k for _, k, _ in figures(src_text)]
         seen = set(known)
@@ -306,11 +310,14 @@ def grade(draft: Path, source: Path | None, profile: Profile, content_type: str 
             seen.add(k)
     verdict = "FAIL" if blocks or em_dashes > cap or new else "PASS"
     warns = sum(1 for f in findings if f["severity"] == "WARN")
-    return {"draft": str(draft), "source": None if source is None else str(source), "profile": profile.name,
-            "content_type": content_type, "blocks": blocks, "em_dashes": em_dashes, "em_dash_cap": cap,
-            "new_numbers": new, "derived_numbers": derived, "words": metrics.compute(doc, cfg)["words"],
-            "verdict": verdict,
-            "block_findings": sum(1 for f in findings if f["severity"] == "BLOCK"), "warn_findings": warns}
+    out = {"draft": str(draft), "source": None if source is None else str(source), "profile": profile.name,
+           "content_type": content_type, "blocks": blocks, "em_dashes": em_dashes, "em_dash_cap": cap,
+           "new_numbers": new, "derived_numbers": derived, "words": metrics.compute(doc, cfg)["words"],
+           "verdict": verdict,
+           "block_findings": sum(1 for f in findings if f["severity"] == "BLOCK"), "warn_findings": warns}
+    if moved is not None:
+        out["meaning_changes"] = moved
+    return out
 
 
 def _files(folder: Path, recursive: bool = False) -> list[Path]:
@@ -356,6 +363,10 @@ def summarise(g: dict) -> str:
     ]
     if g.get("derived_numbers"):
         lines.append(f"  derived numbers (from the source's own, not counted as new): {derived_list(g)}")
+    if "meaning_changes" in g:  # what the rewrite changed in the meaning: listed, never counted (#147)
+        lines.append(f"  meaning: {len(g['meaning_changes'])} listed")
+        if g["meaning_changes"]:
+            lines += [f"    {x}" for x in meaning.summarise(g["meaning_changes"], shown=5).splitlines()]
     return "\n".join(lines + [f"  words: {g['words']}"])
 
 
@@ -451,14 +462,14 @@ def delta(result: dict, suite_root: Path, profile: Profile, cfg=None, save: Path
                                  "warns": g["warn_findings"], "em_dashes_over": max(0, g["em_dashes"] - g["em_dash_cap"]),
                                  "new_numbers": len(g["new_numbers"]),
                                  "derived_numbers": len(g["derived_numbers"]), "derived": derived_list(g),
-                                 "verdict": g["verdict"]})
+                                 "meaning": len(g["meaning_changes"]), "verdict": g["verdict"]})
 
     def mean(arm: str, key: str) -> float | None:
         vals = [r[key] for r in rows if r["arm"] == arm]
         return round(sum(vals) / len(vals), 3) if vals else None
 
     summary = {}
-    for key in ("blocks", "warns", "em_dashes_over", "new_numbers", "derived_numbers"):
+    for key in ("blocks", "warns", "em_dashes_over", "new_numbers", "derived_numbers", "meaning"):
         w, wo = mean("with", key), mean("without", key)
         summary[key] = {"with": w, "without": wo, "delta": None if w is None or wo is None else round(wo - w, 3)}
     passes = {arm: sum(1 for r in rows if r["arm"] == arm and r["verdict"] == "PASS") for arm in ("with", "without")}
@@ -478,10 +489,14 @@ def summarise_delta(d: dict) -> str:
     if s and (s["with"] or s["without"]):  # listed, never counted against an arm
         lines.append(f"  derived numbers (worked out from the source's own; not counted as new): with {s['with']},"
                      f" without {s['without']}")
+    s = d["summary"].get("meaning")
+    if s:  # listed for a person to read, never counted against an arm (#147)
+        lines.append(f"  meaning changes listed: with {s['with']}, without {s['without']}")
     for r in d["rows"]:
         derived = f" · derived {r['derived_numbers']} ({r['derived']})" if r.get("derived_numbers") else ""
+        moved = f" · meaning {r['meaning']}" if r.get("meaning") else ""
         lines.append(f"    {r['case']} {r['arm']} #{r['run']}: {r['verdict']} · BLOCK {r['blocks']} · WARN {r['warns']}"
-                     f" · em-dash over {r['em_dashes_over']} · new numbers {r['new_numbers']}{derived}")
+                     f" · em-dash over {r['em_dashes_over']} · new numbers {r['new_numbers']}{derived}{moved}")
     if d["missing"]:
         lines.append(f"  missing traces (run with --keep-temp): {', '.join(d['missing'])}")
     return "\n".join(lines)
