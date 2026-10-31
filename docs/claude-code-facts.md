@@ -321,6 +321,32 @@ feedback.
 - Not observed: whether a value set only in the user's own settings file behaves the same (the docs say it does),
   and whether an unset option exports its manifest default.
 
+**Does an unset option reach a skill as its manifest default? (#133, the locale option)** No. Probed 2026-10-31 on
+Claude Code CLI 2.1.314, Linux, `claude -p --model sonnet` on the subscription, plainspoken 0.12.0 (`dd11930`)
+installed at project scope in a scratch project under `/tmp`, the same flags as above. Prompt: `/plainspoken:check
+Don't check any draft. Run only the profile command from your instructions, exactly as written there, and quote its
+first two output lines verbatim. Then stop.` The skill's line is `run.py profile --plugin-profile
+'${user_config.profile}' --plugin-locale '${user_config.locale}'`, and the manifest default for `locale` is `en-AU`.
+
+- **Unset** (`--setting-sources project,local`, no `pluginConfigs`). The Bash call kept both placeholders as literal
+  text: `--plugin-locale '${user_config.locale}'`. `profile` printed `locale en-AU (default)`, so the run.py fallback
+  answered, not the manifest default.
+- **Set by `--settings`** (`locale: en-US`). The call had `--plugin-locale 'en-US'` and printed
+  `locale en-US (plugin option)`. `${user_config.profile}`, still unset, stayed literal.
+- **Set only in the user's own settings file** (`--setting-sources user,project,local`, where `pluginConfigs` has
+  `locale: en-AU`). It printed `locale en-AU (plugin option)`, so a user-settings value reaches skill substitution
+  too.
+
+So the "4 userConfig options not yet set" note at install time is accurate: an unset option has no value, and its
+manifest default is never substituted. The skills still work because `run.py` treats an unsubstituted placeholder
+as unset, and its own fallback (en-AU, the `default` profile) matches the manifest defaults. Keep those two in step:
+a change to a manifest default needs the same change to the `run.py` fallback.
+
+Retest the same day with `[locale] variant = "en-AU"` in `~/.config/plainspoken/config.toml`: the same Claude Code
+probe (user settings loaded, so the option said `en-AU` too) printed `locale en-AU (user-wide config, …)`, and
+`$plainspoken:doctor` in Codex 0.164.0 printed `locale: en-AU (user-wide config, …)`. So the user-wide file beats the
+plugin option, as documented, and it's how Codex sets the locale.
+
 Consequences: a host can make skills manual-only with the deny rule (README, Host setup), so there's no `[skills]`
 config. Hooks still fall back to the manifest defaults, since a `--plugin-dir` session has no options (section 2),
 and the project config (`[lint_watch] paths`, `[integrity] paths`, `[gate] strictness`) still beats the option.
@@ -445,8 +471,37 @@ tool that records the arguments it receives). Project config only (`[tool_call] 
   tally and rule IDs only, so the model had to guess the words: fixed in #152 (the reason now carries the lines).
 - **A body the model wrote itself** (asked for "warm and a bit enthusiastic", block-once): clean, no hold, one call.
 
-Still open: `ask` interactively and through a bridge such as Untether; the installed copy (the hooks get plugin
-options there, `--plugin-dir` gives them none); Codex 0.164+ and Hermes.
+**Codex 0.164.0, installed copy (2026-10-31).** plainspoken 0.12.0 (`dd11930`) from `codex plugin add
+plainspoken@lba-plugins`, in a scratch git repo under `/tmp` with a bare local remote and a one-tool stdio MCP server
+(`notes.send_note`) passed with `-c mcp_servers.notes.*`. Model GPT-6.1-Sol at low effort. Hooks were trusted the
+normal way, from the TUI's "Hooks need review" screen (8 hooks: 3 PreToolUse, 2 PostToolUse, 1 UserPromptSubmit,
+2 Stop), and that wrote 8 `[hooks.state."plainspoken@lba-plugins:hooks/codex.json:…"]` entries to
+`~/.codex/config.toml`, each with a `trusted_hash` and the same `trusted_content_hash`.
+
+- **Warn** (`codex exec`): the hook fired before the call and its whole finding list reached the model ("Warn mode
+  doesn't hold a call back, so it ran as written …"). Under `exec`'s `never` approval policy Codex then refused the
+  MCP call itself, so the hook runs before Codex's approval step.
+- **Block-once** (TUI): the first call was denied with the findings ("It hasn't run …"); the identical resend
+  passed the hook, reached Codex's own approval prompt and ran unchanged (the server logged the same text).
+- **Publish gate** (TUI): `warn` with `paths` showed `plainspoken gate: content/post.md: no plainspoken report (run
+  $plainspoken:check content/post.md)` and the push went ahead; `block` with no `paths` showed `… no [gate] paths are
+  set …, so nothing is gated` and the push went ahead (#94). Both are `systemMessage`s: the TUI shows them as
+  `↳ Hook · …` lines, `codex exec --json` records neither, and the model didn't see them.
+- **Stop nudge** (TUI): `plainspoken: kaizen calibrate is due (231 events, and it has never run) — $plainspoken:kaizen
+  calibrate` after the first turn, not again in the same session.
+- **Re-trust:** one added byte in `NOTICE.md` (not a hook file) put all 8 hooks back to "new or changed" at the next
+  start; restoring the file made them trusted again. The hooks' own `__pycache__/*.pyc` writes into the plugin
+  folder didn't break trust across a restart.
+- **`$plainspoken:doctor`** (`codex exec`): 10 ok, 0 WARN, 3 not checked (hook trust, sandbox writes, judges). The
+  model ran only `cat` on the skill and `run.py doctor --host codex`.
+- `codex exec --dangerously-bypass-hook-trust` exists, but none of these results used it.
+- **After `codex update` to 0.166.0** (same day): the hooks stayed trusted (no review screen; updating Codex leaves
+  the plugin's files alone), and the gate warning, block-once plus identical resend, Stop nudge and doctor (10 ok,
+  0 WARN, 3 not checked) all came out the same. Asked to report hook messages, the model said none appeared for the
+  push: the gate's `systemMessage` never reaches it.
+
+Still open: `ask` interactively and through a bridge such as Untether; the installed copy on Claude Code (the hooks
+get plugin options there, `--plugin-dir` gives them none); Hermes.
 
 ## 16. What the chat-reply check does live (#125)
 
