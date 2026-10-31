@@ -178,7 +178,8 @@ def add_parser(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> No
     fc.add_argument("--expect", default="profile", metavar="CALL",
                     help="for one trace.jsonl: the run.py call it should start with (default: profile)")
     fc.add_argument("--json", action="store_true", help="print the rows as JSON")
-    rw = es.add_parser("rewrite", help="grade one rewrite: lint BLOCKs, the em-dash cap and new numbers (free)")
+    rw = es.add_parser("rewrite", help="grade one rewrite: lint BLOCKs, the em-dash cap and new numbers, and list "
+                                       "its meaning changes (free)")
     rw.add_argument("draft", type=Path, metavar="DRAFT")
     rw.add_argument("--source", type=Path, help="the text it rewrites: a number not in it fails the draft")
     rw.add_argument("--profile", help="the voice profile (default: the project's, else the plugin default)")

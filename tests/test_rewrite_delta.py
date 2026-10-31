@@ -43,6 +43,23 @@ class Delta(unittest.TestCase):
         self.assertGreater(s["delta"], 0, "positive favours the plugin")
         self.assertEqual(d["passes"], {"with": 1, "without": 0})
 
+    def test_delta_counts_meaning_per_arm(self):  # #147: listed per arm, never part of the verdict
+        prompt = (REPO / "evals/rewrite-slash/rewrite--email--slash/prompt.md").read_text(encoding="utf-8")
+        source = rewrite.passage(prompt.split("\n---\n", 1)[-1])
+        dropped = source.replace(" The cost of $25 can be paid via the school app by 7 March.", "")
+        self.assertNotEqual(dropped, source)
+        result = {"suite": {"root": str(REPO)}, "cases": [{
+            "name": "rewrite--email--slash", "dir": "evals/rewrite-slash/rewrite--email--slash",
+            "arms": {"with": [{"tracePath": trace(self.tmp / "mw", dropped)}],
+                     "without": [{"tracePath": trace(self.tmp / "mo", source)}]}}]}
+        d = rewrite.delta(result, REPO, default_profile())
+        rows = {r["arm"]: r for r in d["rows"]}
+        self.assertGreaterEqual(rows["with"]["meaning"], 1)
+        self.assertEqual(rows["without"]["meaning"], 0)
+        self.assertEqual(d["summary"]["meaning"]["without"], 0.0)
+        self.assertEqual(rows["with"]["verdict"], rows["without"]["verdict"])  # the number drop fails nothing
+        self.assertIn("meaning changes listed: with ", rewrite.summarise_delta(d))
+
     def test_final_reply_is_the_last_result_row(self):
         path = Path(trace(self.tmp / "t", "first"))
         with path.open("a", encoding="utf-8") as f:
