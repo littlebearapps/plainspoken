@@ -1,7 +1,7 @@
 # plainspoken ruleset. Bumped only by `kaizen apply` with a recorded human approval.
 # No human-readable rule reference ships yet: guides/ holds no per-rule text, and Phase 6 added none.
 # Ported from the author's earlier private ruleset (v4).
-version = "4.3.0"
+version = "4.4.0"
 
 [thresholds."default"]
 em_dash_max = 3
@@ -19,6 +19,8 @@ staccato_long_sentence = 25
 staccato_short_run = 5
 staccato_short_len = 12
 staccato_faq_short_run = 7
+# Below this many words, rule 7d's no-long-sentence test is skipped and only its short-run test runs (#148).
+staccato_long_min_words = 150
 paragraph_uniform_run = 4
 paragraph_uniform_faq_run = 4
 bold_bullet_run = 3
