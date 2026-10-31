@@ -110,6 +110,10 @@ class Matcher(unittest.TestCase):
                   "Write the hook that posts replies",
                   "I write emails all day, so how does the hook pick them up?",
                   "When I draft a post, does the nudge fire?",
+                  'Does the hook fire if someone types "write an email"?',
+                  'The test input is "draft a LinkedIn post" and it should nudge.',
+                  'The test input is “draft a LinkedIn post” and it should nudge.',
+                  'Does the hook fire if someone types “write an email”?',
                   "Clean up the hook that tidies replies"):
             with self.subTest(p=p):
                 self.assertIsNone(nudge.intent(p))
@@ -125,6 +129,8 @@ class Matcher(unittest.TestCase):
                   "Write a summary for the board of this quarter's numbers",
                   "- write an email to the volunteers about the roster",
                   'Draft the "About the market" page for our market',  # a quoted name before the noun
+                  '"Write an email to Sam about the invoice."',
+                  'Write an email to Sam: "the invoice is overdue"',
                   "Write something for the parents' newsletter"):  # the piece named by where it goes
             with self.subTest(p=p):
                 self.assertEqual(nudge.intent(p), "draft")
