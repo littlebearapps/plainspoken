@@ -284,6 +284,47 @@ class NoLoadTimeCommands(unittest.TestCase):  # #12: Hermes rates any load-time 
                 assert_first_step(self, text, PROFILE_CALL)
 
 
+class MeaningDiff(unittest.TestCase):  # #147: check and humanize list what an edit changed in the meaning
+    CHECK_DESCRIPTION = ("Checks a draft for AI writing tells with a fixed lint and four isolated judges, then fixes, "
+                         "never adding. Use before an article, page, email, post or script goes out, and whenever "
+                         "asked if any text, even one line, sounds like AI.")
+    HUMANIZE_DESCRIPTION = ("Removes AI writing patterns without adding facts, in the writer's voice. Use when asked to "
+                            "humanise or de-AI text, make it sound like a person wrote it, less like ChatGPT or a bot, "
+                            "or less stiff.")
+
+    @staticmethod
+    def step(text: str, label: str) -> str:
+        """The numbered step whose bold label starts with `label`, found by its content rather than its number."""
+        m = re.search(rf"(?ms)^\d+\. \*\*{re.escape(label)}[^*]*\*\*(.*?)(?=^\d+\. \*\*|^## |\Z)", text)
+        assert m, f"no **{label}** step"
+        return " ".join(m.group(1).split())
+
+    def test_check_starts_and_compares(self):
+        _, text = skill("check")
+        self.assertIn("`RUN meaning-diff FILE --start`", self.step(text, "Lint"))
+        self.assertIn("(not a rerun)", self.step(text, "Lint"))
+        report = self.step(text, "Report")
+        self.assertIn("`RUN meaning-diff FILE`", report)
+        self.assertLess(report.index("meaning-diff FILE"), report.index("RUN status FILE"))
+        self.assertIn("`needs the owner` lines", report)
+        self.assertIn("never call one of them a failure", report)
+        route = re.search(r"(?ms)^## Report only\n(.*?)(?=^## )", text).group(1)
+        self.assertIn("Skip `meaning-diff`: nothing is edited.", " ".join(route.split()))
+        self.assertIn("run.py meaning-diff", text)  # the subcommands-used line
+
+    def test_humanize_file_mode_runs_it(self):
+        _, text = skill("humanize")
+        flat = " ".join(text.split())
+        self.assertIn("lib/run.py meaning-diff <file> --start", flat)
+        self.assertIn("meaning-diff <file>` and put each line it lists in your summary", flat)
+        self.assertIn("Not in text-only or embedded mode", flat)
+        self.assertLess(flat.index("meaning-diff <file> --start"), flat.index("## Why AI text"))  # before rewriting
+
+    def test_descriptions_unchanged(self):  # the always-on budget doesn't move
+        self.assertEqual(skill("check")[0]["description"], self.CHECK_DESCRIPTION)
+        self.assertEqual(skill("humanize")[0]["description"], self.HUMANIZE_DESCRIPTION)
+
+
 class JoinRemedy(unittest.TestCase):  # #73: a 7d join padded a sentence or added a reason ("because …")
     def test_every_fix_step_says_a_join_adds_nothing(self):
         texts = {name: " ".join(skill(name)[1].split()) for name in ("check", "humanize", "write")}
