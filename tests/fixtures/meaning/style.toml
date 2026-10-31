@@ -1,0 +1,123 @@
+# Hand-written before/after pairs from the #147 research (proto/synthetic.py): invented text modelled on the
+# limits and promises in the eval briefs and fixtures. Each pair is a style edit only (a join, split, contraction, reorder or
+# cut puffery): meaning-diff must list nothing.
+
+[[pair]]
+id = "s01"
+kind = "join"
+before = "The call is free. It takes 30 minutes."
+after = "The call is free and takes 30 minutes."
+
+[[pair]]
+id = "s02"
+kind = "join"
+before = "Hosting is a separate bill. It's $15 a month."
+after = "Hosting is a separate bill, and it's $15 a month."
+
+[[pair]]
+id = "s03"
+kind = "split"
+before = "I won't send anything without your OK, and I'll check in every Friday."
+after = "I won't send anything without your OK. I'll check in every Friday."
+
+[[pair]]
+id = "s04"
+kind = "contraction"
+before = "We do not open on Mondays."
+after = "We don't open on Mondays."
+
+[[pair]]
+id = "s05"
+kind = "cut-puffery"
+before = "We're thrilled to share that we're open until 8 pm on Thursdays. It's a game-changer for busy families!"
+after = "We're open until 8 pm on Thursdays."
+
+[[pair]]
+id = "s06"
+kind = "cut-contrast"
+before = "This isn't just a cafe. It's a place for the whole street. We open at 7am."
+after = "We open at 7am."
+
+[[pair]]
+id = "s07"
+kind = "reorder"
+before = "If you cancel at least 7 days before, we'll refund your deposit."
+after = "We'll refund your deposit if you cancel at least 7 days before."
+
+[[pair]]
+id = "s08"
+kind = "plainer-word"
+before = "Bathers who do not hold a season ticket must pay at the gate."
+after = "Bathers without a season ticket must pay at the gate."
+
+[[pair]]
+id = "s09"
+kind = "join"
+before = "Ad spend is separate. It isn't part of my fee."
+after = "Ad spend is separate and isn't part of my fee."
+
+[[pair]]
+id = "s10"
+kind = "semicolon"
+before = "Courts 5 and 6 have lights until 10 pm. The others close at dusk."
+after = "Courts 5 and 6 have lights until 10 pm; the others close at dusk."
+
+[[pair]]
+id = "s11"
+kind = "cut-filler"
+before = "Should you have any questions, please do not hesitate to reach out."
+after = "Any questions, just reply."
+
+[[pair]]
+id = "s12"
+kind = "restate"
+before = "Kids under 12 go free."
+after = "Entry is free for kids under 12."
+
+[[pair]]
+id = "s13"
+kind = "cut-puffery"
+before = "Together, we can build a greener future. Green bins go fortnightly from 1 December."
+after = "Green bins go fortnightly from 1 December."
+
+[[pair]]
+id = "s14"
+kind = "join-but"
+before = "The pool is closed until 14 March. The gym stays open."
+after = "The pool is closed until 14 March, but the gym stays open."
+
+[[pair]]
+id = "s15"
+kind = "number-words"
+before = "We have 12 raised beds."
+after = "We have twelve raised beds."
+
+[[pair]]
+id = "s16"
+kind = "move-sentence"
+before = "Entry is free. There are 40 stalls and a lantern parade."
+after = "There are 40 stalls and a lantern parade, and entry is free."
+
+[[pair]]
+id = "s17"
+kind = "split"
+before = "The quote covers labour and parts, and travel outside Wollongong is extra."
+after = "The quote covers labour and parts. Travel outside Wollongong is extra."
+
+[[pair]]
+id = "s18"
+kind = "cut-hedge-intro"
+before = "I wanted to let you know that I'm running about 15 minutes late."
+after = "I'm running about 15 minutes late."
+
+[[pair]]
+id = "s19"
+kind = "never-moved"
+before = "If you've never held a trowel, that's fine. Everyone is welcome."
+after = "Everyone is welcome, even if you've never held a trowel."
+
+[[pair]]
+id = "s20"
+kind = "cut-stakes"
+before = "It is absolutely crucial that the floor is swept before you leave."
+after = "Please sweep the floor before you leave."

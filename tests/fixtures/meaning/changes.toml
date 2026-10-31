@@ -1,0 +1,220 @@
+# Hand-written before/after pairs from the #147 research (proto/synthetic.py): invented text modelled on the
+# limits and promises in the eval briefs and fixtures. Each pair changes what the text says; `class` is the meaning-diff class that
+# must list it. A regression set (written with the lexicon in view), not a recall estimate.
+
+[[pair]]
+id = "m01"
+kind = "neg-flip"
+class = "negation"
+before = "Hosting is a separate bill on our plans. It isn't included in the build price."
+after = "Hosting is a separate bill on our plans. It's included in the build price."
+
+[[pair]]
+id = "m02"
+kind = "excl-drop"
+class = "exclusion"
+before = "The quote covers labour and parts. Travel outside Wollongong is extra and charged by the hour."
+after = "The quote covers labour and parts."
+
+[[pair]]
+id = "m03"
+kind = "promise-flip"
+class = "negation"
+before = "I won't send anything to your clients without your OK."
+after = "I'll send things to your clients as they're ready."
+
+[[pair]]
+id = "m04"
+kind = "cond-drop"
+class = "condition"
+before = "We can refund your deposit if you cancel at least 7 days before the event."
+after = "We can refund your deposit."
+
+[[pair]]
+id = "m05"
+kind = "cond-drop"
+class = "negation"
+before = "Bathers who don't hold a season ticket must pay at the gate."
+after = "Bathers must pay at the gate."
+
+[[pair]]
+id = "m06"
+kind = "num-drop"
+class = "number"
+before = "The call is free and takes 30 minutes."
+after = "The call is free and quick."
+
+[[pair]]
+id = "m07"
+kind = "num-change"
+class = "number"
+before = "Management is $300 a month, billed on the 1st."
+after = "Management is $350 a month, billed on the 1st."
+
+[[pair]]
+id = "m08"
+kind = "free-drop"
+class = "free"
+before = "Entry is $5 for adults, and kids under 12 go free."
+after = "Entry is $5 for adults and kids."
+
+[[pair]]
+id = "m09"
+kind = "limit-drop"
+class = "number"
+before = "Children under 10 must be within arm's reach of an adult in the water."
+after = "Children must be within arm's reach of an adult in the water."
+
+[[pair]]
+id = "m10"
+kind = "cond-drop"
+class = "condition"
+before = "The library is open until 8 pm on Thursdays only."
+after = "The library is open until 8 pm."
+
+[[pair]]
+id = "m11"
+kind = "incl-add"
+class = "inclusion"
+before = "Your ad spend is paid straight to Google. My fee is $300 a month."
+after = "My fee is $300 a month, and that covers your ad spend."
+
+[[pair]]
+id = "m12"
+kind = "because-add"
+class = "reason"
+before = "You don't need to book. It's first come, first served."
+after = "You don't need to book, because it's first come, first served."
+
+[[pair]]
+id = "m13"
+kind = "neg-drop"
+class = "negation"
+before = "Most people won't notice the difference."
+after = "Most people will notice the difference."
+
+[[pair]]
+id = "m14"
+kind = "cond-drop"
+class = "condition"
+before = "Everything except the walking group needs a booking through the app."
+after = "Everything needs a booking through the app."
+
+[[pair]]
+id = "m15"
+kind = "unless-drop"
+class = "condition"
+before = "Two days is what it sends unless changed."
+after = "Two days is what it sends."
+
+[[pair]]
+id = "m16"
+kind = "promise-add"
+class = "commitment"
+before = "Send me the photos by Friday."
+after = "Send me the photos by Friday and I'll have the page live by Monday."
+
+[[pair]]
+id = "m17"
+kind = "neg-drop"
+class = "negation"
+before = "I'm a baker, not a dietitian, so I can't tell you what suits your kids."
+after = "I'm a baker, so I can tell you what suits your kids."
+
+[[pair]]
+id = "m18"
+kind = "num-drop"
+class = "number"
+before = "Courts 5 and 6 have lights until 10 pm; the others close at dusk."
+after = "Courts 5 and 6 have lights in the evening; the others close at dusk."
+
+[[pair]]
+id = "m19"
+kind = "must-drop"
+class = "obligation"
+before = "Lockers must be cleared before closing."
+after = "Lockers can be cleared before closing."
+
+[[pair]]
+id = "m20"
+kind = "cond-drop"
+class = "condition"
+before = "Shaping the loaves can't start until the dough has doubled."
+after = "Shaping the loaves can start."
+
+[[pair]]
+id = "m21"
+kind = "excl-drop"
+class = "exclusion"
+before = "Weddings and birthday parties go through the events officer and carry a separate bond."
+after = "Weddings and birthday parties go through the events officer."
+
+[[pair]]
+id = "m22"
+kind = "only-drop"
+class = "condition"
+before = "The first review is free. After that, management is $300 a month."
+after = "The review is free, and management is $300 a month."
+
+[[pair]]
+id = "m23"
+kind = "never-drop"
+class = "negation"
+before = "We never share your details with anyone else."
+after = "We share your details with our partners."
+
+[[pair]]
+id = "m24"
+kind = "gst"
+class = "exclusion"
+before = "The price is $1,200 plus GST."
+after = "The price is $1,200."
+
+[[pair]]
+id = "m25"
+kind = "approx-drop"
+class = "qualifier"
+before = "The works will take about 10 working days."
+after = "The works will take 10 working days."
+
+[[pair]]
+id = "m26"
+kind = "upto-drop"
+class = "qualifier"
+before = "Exports are up to 5 times faster."
+after = "Exports are 5 times faster."
+
+[[pair]]
+id = "m27"
+kind = "guarantee-add"
+class = "commitment"
+before = "I'll do my best to have it ready by Friday."
+after = "I guarantee it'll be ready by Friday."
+
+[[pair]]
+id = "m28"
+kind = "scope-narrow"
+class = "negation"
+before = "Anyone who can't make the new time should reply to Maria by Friday."
+after = "Reply to Maria by Friday."
+
+[[pair]]
+id = "m29"
+kind = "neg-add"
+class = "negation"
+before = "You can cancel at any time."
+after = "You can't cancel at any time."
+
+[[pair]]
+id = "m30"
+kind = "neg-add"
+class = "negation"
+before = "Dogs are allowed on the oval."
+after = "Dogs aren't allowed on the oval."
+
+[[pair]]
+id = "m31"
+kind = "neg-add"
+class = "negation"
+before = "Parking is included in the ticket."
+after = "Parking isn't included in the ticket."
