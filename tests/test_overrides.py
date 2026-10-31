@@ -11,7 +11,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plainspoken import capture, kaizen, ledger, overrides, report
+from plainspoken import capture, kaizen, ledger, overrides, report, sentdiff
 from plainspoken.profile import default as default_profile
 from plainspoken.registry import load_config
 from tests.test_anti_ai_report import _judges
@@ -475,9 +475,9 @@ class Diff(Base):
 
     def test_a_sentence_the_splitter_reshaped_covers_the_rest_of_its_paragraph(self):
         text = "Alpha one.\nBeta two.\nGamma three.\n"
-        real = overrides.split_sentences
-        overrides.split_sentences = lambda t: ["Alpha one.", "Gamma."]  # not a substring of the paragraph
-        self.addCleanup(setattr, overrides, "split_sentences", real)
+        real = sentdiff.split_sentences
+        sentdiff.split_sentences = lambda t: ["Alpha one.", "Gamma."]  # not a substring of the paragraph
+        self.addCleanup(setattr, sentdiff, "split_sentences", real)
         units = overrides._units(text)
         self.assertEqual(units[0], ("Alpha one.", 1, 1))
         sentence, first, last = units[1]
