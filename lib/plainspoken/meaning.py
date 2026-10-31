@@ -449,10 +449,20 @@ def saved(path: Path, root: Path, reports_dir: Path) -> tuple[str, list[dict]]:
         current = (rec["after_sha256"] == _sha(Path(path).read_bytes())
                    and rec["lexicon_sha256"] == lexicon_sha256()
                    and (not p["before"].is_file() or rec["before_sha256"] == _sha(p["before"].read_bytes())))
-        changes = rec["changes"] if current and isinstance(rec["changes"], list) else []
-    except (OSError, ValueError, KeyError, TypeError):
+        changes = rec["changes"] if current else []
+        if not isinstance(changes, list) or not all(_well_formed(c) for c in changes):
+            return "stale", []  # a damaged file reads as stale, never as a crash
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return "stale", []
     return ("current" if current else "stale"), changes
+
+
+def _well_formed(change: object) -> bool:
+    return (isinstance(change, dict) and isinstance(change.get("id"), str) and isinstance(change.get("line"), int)
+            and isinstance(change.get("before"), str) and isinstance(change.get("after"), str)
+            and isinstance(change.get("items"), list)
+            and all(isinstance(i, dict) and i.get("change") in ("dropped", "added") and isinstance(i.get("words"), list)
+                    and all(isinstance(w, str) for w in i["words"]) for i in change["items"]))
 
 
 def _clip(text: str, n: int) -> str:
@@ -485,13 +495,16 @@ def summarise(changes: list[dict], shown: int = 10, path: str = "") -> str:
     return "\n".join([*lines, FOOTER])
 
 
-def owner_items(changes: list[dict]) -> list[str]:
-    """`M1: <after sentence, or cut: <before>> (<what changed>; was: <before>)` per change, the shape `status` lists
-    under `needs the owner` and the report guard parses: no parentheses inside either part."""
+def owner_items(changes: list[dict], shown: int = 10, path: str = "") -> list[str]:
+    """`M1: <after sentence, or cut: <before>> (<what changed>; was: <before>)` per change (at most `shown`, then
+    `… N more in <path>`), the shape `status` lists under `needs the owner` and the report guard parses: no
+    parentheses inside either part."""
     def plain(text: str, n: int) -> str:
         return _clip(re.sub(r"[()]", "", text), n)
     out = []
-    for c in changes:
+    for c in changes[:shown]:
         text = plain(c["after"], 120) if c["after"] else "cut: " + plain(c["before"], 115)
         out.append(f"{c['id']}: {text} ({re.sub(r'[()]', '', what_changed(c))}; was: {plain(c['before'], 80)})")
+    if len(changes) > shown:
+        out.append(f"… {len(changes) - shown} more in {path}" if path else f"… {len(changes) - shown} more")
     return out
