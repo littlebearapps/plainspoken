@@ -998,13 +998,21 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
                                          extraction.platform_names(root))
     except _INPUT_ERRORS as e:
         rep = {"status": "INCOMPLETE", "reasons": [f"can't report: {type(e).__name__}: {_first_line(e)}"]}
+    try:  # what an edit changed in the meaning (#147): listed for the owner, never a verdict
+        meaning_state, changes = meaning.saved(args.path, root, reports_dir)
+    except _INPUT_ERRORS:
+        meaning_state, changes = "stale", []
+    moved = meaning.owner_items(changes)
     try:  # read from the ledger, so a report can't say "none" while a claim waits on the owner (#45)
         if ledger is None:
             raise FileNotFoundError("no ledger")
         owner = claims.needs_owner(claims.load_ledger(ledger))
-        owner_lines = [f"{reply.OWNER_MARKER} {len(owner) or 'none'}", *(f"  {o}" for o in owner)]
+        owner_lines = [f"{reply.OWNER_MARKER} {len(owner) + len(moved) or 'none'}", *(f"  {o}" for o in owner)]
     except _INPUT_ERRORS:
         owner_lines = [f"{reply.OWNER_MARKER} unknown (no readable ledger)"]
+    owner_lines += [f"  {m}" for m in moved]
+    if meaning_state == "stale":
+        owner_lines.append("meaning: stale (rerun meaning-diff)")
     contract = reader_value.default_contract(args.path, root)
     shown = claims_tools.display_path(contract, root)
     counted = f"words: {words} (body text; headings, tables, code and numbers not counted)"  # #63: say what it counts

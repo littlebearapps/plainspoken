@@ -146,7 +146,7 @@ def unlisted(message: str) -> list[str]:
     if owner is None:
         return []
     value, listed = owner
-    items = [] if value == "none" or value.startswith("unknown") else [_item(i) for i in listed]
+    items = [] if value == "none" else [_item(i) for i in listed]  # unknown claims can still list M items (#147)
     if (value != "none" and not value.startswith("unknown")) and not items:
         return []  # a count with no items under it: there's nothing to tell an ask about them from another
     found = []
