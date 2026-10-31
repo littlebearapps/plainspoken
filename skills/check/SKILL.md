@@ -62,7 +62,7 @@ edit FILE, and its bytes stay unchanged.
 - Steps 1 and 2: fix nothing, here or when a later step asks you to rerun step 1. The lint cuts long lists short
   ("… N more"), so take the rules from `judge-input`'s exit-1 list, which names every open line, and rerun step 1
   with `--keep <rule>` for each rule it names. Here exit 1 always means keep, and exit 3 always means rerun with
-  `--ignore-claims`. Skip `meaning-diff`: nothing is edited.
+  `--ignore-claims`. Skip `meaning-diff`: nothing is edited, so leave out any `meaning:` line `status` prints.
 - Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
   and go to step 8.
 - If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (`status` doesn't

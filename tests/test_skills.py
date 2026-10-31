@@ -309,7 +309,7 @@ class MeaningDiff(unittest.TestCase):  # #147: check and humanize list what an e
         self.assertIn("`needs the owner` lines", report)
         self.assertIn("never call one of them a failure", report)
         route = re.search(r"(?ms)^## Report only\n(.*?)(?=^## )", text).group(1)
-        self.assertIn("Skip `meaning-diff`: nothing is edited.", " ".join(route.split()))
+        self.assertIn("Skip `meaning-diff`: nothing is edited", " ".join(route.split()))
         self.assertIn("run.py meaning-diff", text)  # the subcommands-used line
 
     def test_humanize_file_mode_runs_it(self):
@@ -318,7 +318,19 @@ class MeaningDiff(unittest.TestCase):  # #147: check and humanize list what an e
         self.assertIn("lib/run.py meaning-diff <file> --start", flat)
         self.assertIn("meaning-diff <file>` and put each line it lists in your summary", flat)
         self.assertIn("Not in text-only or embedded mode", flat)
+        self.assertIn("never as check's fix step", flat)  # check saves and compares itself; a second --start resets it
         self.assertLess(flat.index("meaning-diff <file> --start"), flat.index("## Why AI text"))  # before rewriting
+
+    def test_write_compares_after_a_late_edit(self):
+        flat = " ".join(skill("write")[1].split())
+        report = flat[flat.index("### 8. Report"):]
+        self.assertIn("`RUN meaning-diff '<draft>'`", report)
+        self.assertLess(report.index("meaning-diff"), report.index("RUN status '<draft>'"))
+
+    def test_report_only_leaves_out_a_meaning_line(self):
+        _, text = skill("check")
+        route = " ".join(re.search(r"(?ms)^## Report only\n(.*?)(?=^## )", text).group(1).split())
+        self.assertIn("leave out any `meaning:` line `status` prints", route)
 
     def test_descriptions_unchanged(self):  # the always-on budget doesn't move
         self.assertEqual(skill("check")[0]["description"], self.CHECK_DESCRIPTION)

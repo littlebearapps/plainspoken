@@ -38,7 +38,8 @@ done (it re-lints and re-judges). Used on its own, first run
 notes. If the call fails, carry on without it. After rewriting you may run
 `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py check <file> --plugin-profile '${user_config.profile}'` once, and fix again
 once if a BLOCK remains (two passes at most). Both calls use the file's own profile when the project sets one for it
-(`[engine] profiles`). In file mode, before rewriting the file, run
+(`[engine] profiles`). Used on its own in file mode (never as check's fix step: check saves and compares
+itself), before rewriting the file, run
 `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py meaning-diff <file> --start`; after, run `… meaning-diff <file>` and put
 each line it lists in your summary for the writer to check. Not in text-only or embedded mode.
 

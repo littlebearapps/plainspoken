@@ -141,6 +141,7 @@ spent, or it can't run). If a status still isn't current, say so in the report a
 
 ### 8. Report
 
+If a step edited the draft after the check's report step, first run `RUN meaning-diff '<draft>'` (exit 2: go on).
 Run `RUN status '<draft>' --plugin-profile '${user_config.profile}'` (plus step 2's `--profile`, if any). It reads
 the last saved check and claims results back; it runs and writes nothing. Start the report with this block, with
 no words before it; a report without it is incomplete. Fill it in, with the `status` lines copied exactly as

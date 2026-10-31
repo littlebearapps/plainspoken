@@ -230,6 +230,26 @@ class Status(unittest.TestCase):
         self.assertEqual(cid, "M1")
         self.assertIn("management", words)
 
+    def test_status_caps_its_meaning_items(self):  # the report copies every line: keep it readable
+        before = "\n\n".join(f"Room {n} isn't included in the fee." for n in range(1, 31)) + "\n"
+        self.art.write_text(before.replace("isn't", "is"), encoding="utf-8")
+        self.ledger("verified")
+        meaning.record(self.art, self.cwd, self.reports, before)
+        block = self.owner_block(self.status().stdout)
+        self.assertEqual(block[0], "needs the owner: 30")
+        self.assertEqual(len([x for x in block if x.startswith("  M")]), 10)
+        self.assertTrue(block[-1].startswith("  … 20 more in .plainspoken/reports/"), block[-1])
+
+    def test_a_damaged_result_reads_as_stale(self):
+        meaning.record(self.art, self.cwd, self.reports, self.src)
+        path = report.report_paths(self.art, self.reports, self.cwd)["meaning"]
+        rec = json.loads(path.read_text(encoding="utf-8"))
+        rec["changes"] = [{"id": "M1"}]  # current hashes, a change without its fields
+        path.write_text(json.dumps(rec), encoding="utf-8")
+        r = self.status()
+        self.assertNotIn("Traceback", r.stderr)
+        self.assertIn("meaning: stale (rerun meaning-diff)", r.stdout.splitlines())
+
     def test_exit_code_unchanged_by_meaning(self):
         without = self.status()
         meaning.record(self.art, self.cwd, self.reports, self.src)
