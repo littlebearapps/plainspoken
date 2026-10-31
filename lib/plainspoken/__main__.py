@@ -38,6 +38,7 @@ from pathlib import Path
 from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, doctor, evalcli,
                          extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
                          reader_value, register, reply, report, setup, toolcall, voice)
+from plainspoken import meaning
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
 from plainspoken.registry import load_config
@@ -280,6 +281,13 @@ def _main(argv: list[str] | None) -> int:
     pa = sub.add_parser("paths", help="print every report-file path for an article")
     pa.add_argument("path", type=Path)
     pa.add_argument("--reports", type=Path)
+    md = sub.add_parser("meaning-diff", help="list the numbers, limits and promises an edit changed, for the owner "
+                                             "(word-level, free; never a verdict)")
+    md.add_argument("path", type=Path)
+    md.add_argument("--start", action="store_true", help="save the file as the baseline, before the first edit")
+    md.add_argument("--before", type=Path, help="compare this file with FILE instead (saves nothing)")
+    md.add_argument("--json", action="store_true")
+    md.add_argument("--reports", type=Path)
     m = sub.add_parser("merge", help="combine lint + judge verdicts; prove coverage")
     m.add_argument("path", type=Path)
     m.add_argument("--reports", type=Path)
@@ -492,6 +500,8 @@ def _main(argv: list[str] | None) -> int:
         return 0 if merged["status"] == "PASS" else 1
     if args.cmd == "status":
         return _draft_status(args, root)
+    if args.cmd == "meaning-diff":
+        return _meaning_diff(args, root)
     if args.cmd == "judge-input":
         reports_dir = args.reports or report.reports_dir_default(root)
         try:  # #162: the lint arrives with the judge input, so there's no separate lint call to throw away
@@ -1002,6 +1012,36 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
                      *(f"  {r}" for r in rep["reasons"]), *owner_lines, counted,
                      f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
     return 0 if check_status == rep["status"] == "PASS" else 1
+
+
+def _meaning_diff(args: argparse.Namespace, root: Path) -> int:
+    """`meaning-diff`: `--start` saves the baseline; then FILE against it (or `--before OLD`), listed for the owner.
+    Exit 0 when it ran, whatever it lists; 2 on bad input."""
+    reports_dir = args.reports or report.reports_dir_default(root)
+    try:
+        if not args.path.is_file():
+            raise FileNotFoundError(f"no such file: {args.path}")
+        if args.start:
+            meaning.start(args.path, root, reports_dir)
+            print(f"meaning-diff: baseline saved for {args.path}")
+            return 0
+        if args.before is not None:
+            changes = meaning.diff(args.before.read_text(encoding="utf-8"), args.path.read_text(encoding="utf-8"))
+            print(json.dumps({"changes": changes}, indent=2, ensure_ascii=False) if args.json
+                  else meaning.summarise(changes))
+            return 0
+        before = meaning.baseline(args.path, root, reports_dir)
+        if before is None:
+            print(f"plainspoken: no baseline for {args.path}: run meaning-diff {args.path} --start before the first "
+                  "edit", file=sys.stderr)
+            return 2
+        rec = meaning.record(args.path, root, reports_dir, before)
+    except _INPUT_ERRORS as e:
+        return _input_error(args.path, e, "compare")
+    shown = claims_tools.display_path(report.report_paths(args.path, reports_dir, root)["meaning"], root)
+    print(json.dumps(rec, indent=2, ensure_ascii=False) if args.json
+          else meaning.summarise(rec["changes"], path=shown))
+    return 0
 
 
 def _record(args: argparse.Namespace, root: Path) -> int:

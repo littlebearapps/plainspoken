@@ -45,7 +45,7 @@ class Keys(unittest.TestCase):
     def test_paths_cover_every_file(self):
         p = report.report_paths(self.cwd / "post.md", self.cwd / ".plainspoken" / "reports", self.cwd)
         self.assertEqual(set(p), {"lint", "J1", "J2", "J3", "J4", "JR", "justify", "report", "reply", "claims",
-                                  "claims-check", "delivery", "delivery-reply", "checked"})
+                                  "claims-check", "delivery", "delivery-reply", "checked", "before", "meaning"})
         key = report.report_key(self.cwd / "post.md", self.cwd)
         self.assertEqual(p["claims"].name, f"{key}.claims.json")
         self.assertEqual(p["claims-check"].name, f"{key}.claims-check.json")
@@ -55,6 +55,8 @@ class Keys(unittest.TestCase):
         self.assertEqual(p["report"].name, f"{key}.report.json")
         self.assertEqual(p["reply"].name, f"{key}.reply.json")
         self.assertEqual(p["checked"].name, f"{key}.checked.md")
+        self.assertEqual(p["before"].name, f"{key}.before.md")
+        self.assertEqual(p["meaning"].name, f"{key}.meaning.json")
 
 
 class TwoIndexFiles(unittest.TestCase):
