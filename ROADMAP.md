@@ -15,11 +15,15 @@ out from the round-8 evals and from feedback on a Hermes Agent install:
   the lint only ([#149](https://github.com/littlebearapps/plainspoken/issues/149)).
 - The writing nudge no longer reads a quoted example inside a question as a request
   ([#146](https://github.com/littlebearapps/plainspoken/issues/146)).
-- Being researched before any code: a check that flags when a fix drops an exclusion or changes a promise
-  ([#147](https://github.com/littlebearapps/plainspoken/issues/147)), a content type for short emails so they don't
-  get article rhythm warnings ([#148](https://github.com/littlebearapps/plainspoken/issues/148)), and closing the
-  last way round reading the lint before the judges run
-  ([#162](https://github.com/littlebearapps/plainspoken/issues/162)).
+- `meaning-diff` lists the numbers, limits and promises a fix dropped or changed, for the owner to check
+  ([#147](https://github.com/littlebearapps/plainspoken/issues/147)).
+- Rule 7d no longer asks a piece under 150 words for a long sentence, and doesn't count a greeting or sign-off as a
+  sentence, so short emails and texts stop getting rhythm warnings
+  ([#148](https://github.com/littlebearapps/plainspoken/issues/148); ruleset 4.4.0).
+- `judge-input` lints the draft itself when its saved lint is out of date and prints the lint, so it can't be skipped
+  before the judges run ([#162](https://github.com/littlebearapps/plainspoken/issues/162)).
+
+These three are built and wait for the paid checks in the next eval round.
 
 ## Before v1.0
 
