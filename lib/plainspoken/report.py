@@ -74,6 +74,8 @@ def report_paths(article: Path, reports_dir: Path, cwd: Path) -> dict[str, Path]
              **{g: f"{g}.judge" for g in GROUPS}}
     out = {name: Path(reports_dir) / f"{key}.{suffix}.json" for name, suffix in names.items()}
     out["checked"] = Path(reports_dir) / f"{key}.checked.md"  # the check snapshot: the article's bytes, as checked
+    out["before"] = Path(reports_dir) / f"{key}.before.md"  # meaning-diff's baseline: the bytes before the first edit
+    out["meaning"] = Path(reports_dir) / f"{key}.meaning.json"  # meaning-diff's result, bound to both texts
     return out
 
 

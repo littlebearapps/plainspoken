@@ -14,6 +14,7 @@ It never changes a verdict: `check`, `status`, `eval rewrite` and `rewrite-delta
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import tomllib
 from collections import Counter
@@ -384,3 +385,101 @@ def diff(before: str, after: str, lex: Lexicon | None = None) -> list[dict]:
             out.append({"id": f"M{len(out) + 1}", "line": n[0][1] if n else 0, "before": bt, "after": at,
                         "items": list(items.values())})
     return out
+
+
+# --- the saved baseline and result (`plainspoken meaning-diff`) --------------------------------------------------------
+def _paths(path: Path, root: Path, reports_dir: Path) -> dict:
+    from plainspoken import report
+    return report.report_paths(Path(path), Path(reports_dir), Path(root))
+
+
+def _sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _shown(path: Path, root: Path) -> str:
+    try:
+        return Path(path).resolve().relative_to(Path(root).resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def start(path: Path, root: Path, reports_dir: Path) -> Path:
+    """Save `path`'s bytes as the baseline (`<key>.before.md`) and drop any result from an earlier run. The text must
+    read as UTF-8 (a UnicodeDecodeError otherwise, and nothing is written)."""
+    from plainspoken import report
+    data = Path(path).read_bytes()
+    data.decode("utf-8")
+    p = _paths(path, root, reports_dir)
+    p["before"].parent.mkdir(parents=True, exist_ok=True)
+    report.write_atomic(p["before"], data)
+    p["meaning"].unlink(missing_ok=True)
+    return p["before"]
+
+
+def baseline(path: Path, root: Path, reports_dir: Path) -> str | None:
+    """The saved baseline's text, or None when `start` never ran."""
+    p = _paths(path, root, reports_dir)["before"]
+    return p.read_bytes().decode("utf-8") if p.is_file() else None
+
+
+def record(path: Path, root: Path, reports_dir: Path, before_text: str) -> dict:
+    """Compare `before_text` with `path` now and write `<key>.meaning.json`, bound to both texts' sha256 and the word
+    lists'. Returns what it wrote."""
+    from plainspoken import report
+    data = Path(path).read_bytes()
+    rec = {"article": _shown(path, root), "before_sha256": _sha(before_text.encode("utf-8")),
+           "after_sha256": _sha(data), "lexicon_sha256": lexicon_sha256(),
+           "changes": diff(before_text, data.decode("utf-8"))}
+    p = _paths(path, root, reports_dir)["meaning"]
+    p.parent.mkdir(parents=True, exist_ok=True)
+    report.write_atomic(p, json.dumps(rec, indent=2, ensure_ascii=False) + "\n")
+    return rec
+
+
+def saved(path: Path, root: Path, reports_dir: Path) -> tuple[str, list[dict]]:
+    """(state, changes) of the saved result: `current` (bound to `path` as it is now, the saved baseline and these
+    word lists), `stale` (any of those changed since), `missing` (a baseline but no result) or `no-baseline`. The
+    changes come back only when current."""
+    p = _paths(path, root, reports_dir)
+    if not p["meaning"].is_file():
+        return ("missing" if p["before"].is_file() else "no-baseline"), []
+    try:
+        rec = json.loads(p["meaning"].read_text(encoding="utf-8"))
+        current = (rec["after_sha256"] == _sha(Path(path).read_bytes())
+                   and rec["lexicon_sha256"] == lexicon_sha256()
+                   and (not p["before"].is_file() or rec["before_sha256"] == _sha(p["before"].read_bytes())))
+        changes = rec["changes"] if current and isinstance(rec["changes"], list) else []
+    except (OSError, ValueError, KeyError, TypeError):
+        return "stale", []
+    return ("current" if current else "stale"), changes
+
+
+def _clip(text: str, n: int) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= n else text[:n - 1].rstrip() + "…"
+
+
+def what_changed(change: dict) -> str:
+    """`dropped "isn't", "separate"; added "covers"` for one listed change."""
+    parts = []
+    for kind in ("dropped", "added"):
+        words = [w for i in change["items"] if i["change"] == kind for w in i["words"]]
+        if words:
+            parts.append(f"{kind} " + ", ".join(f'"{w}"' for w in words))
+    return "; ".join(parts)
+
+
+def summarise(changes: list[dict], shown: int = 10, path: str = "") -> str:
+    """One line per listed change (at most `shown`, then how many more and where), or `nothing listed`; always ends
+    with the word-level footer."""
+    if not changes:
+        return f"meaning-diff: nothing listed\n{FOOTER}"
+    lines = []
+    for c in changes[:shown]:
+        where = f"{c['id']} line {c['line']}" if c["line"] else f"{c['id']} cut"
+        now = f'; now: "{_clip(c["after"], 80)}"' if c["after"] else ""
+        lines.append(f'{where}: {what_changed(c)}; was: "{_clip(c["before"], 80)}"{now}')
+    if len(changes) > shown:
+        lines.append(f"… {len(changes) - shown} more in {path}" if path else f"… {len(changes) - shown} more")
+    return "\n".join([*lines, FOOTER])

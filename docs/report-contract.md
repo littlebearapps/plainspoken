@@ -42,6 +42,14 @@ Each file, what writes it, and what it's bound to:
 - `<key>.prev.checked.md` and `<key>.prev.lint.json`: written by `check` when it saves a changed draft over a
   snapshot and lint that belong together (the pair they replace); bound to each other, the check before the current
   one (`kaizen dismiss --from-snapshot` reads it). Removed when check capture is off.
+- `<key>.before.md`: written by `meaning-diff FILE --start` (the check skill runs it before its first lint, humanize
+  before it rewrites a file); the article's exact bytes before the first edit. Bound to nothing: it's the baseline,
+  kept until the next `--start`.
+- `<key>.meaning.json`: written by `meaning-diff FILE` (the baseline against the file now; `--before OLD` writes
+  nothing), deleted by the next `--start`; bound to before_sha256, after_sha256 (bare hex, like the lint's) and
+  lexicon_sha256 (`data/meaning.toml`). `status` lists its changes under `needs the owner` only while all three
+  match the baseline, the file and the word lists on disk now; otherwise it prints `meaning: stale (rerun
+  meaning-diff)`. It never changes a verdict or an exit code.
 
 Hash formats differ by file type. The lint, judge, justify and report files carry `article_sha256` as bare hex
 (`3f2a…`); the claims files (`claims`, `claims-check`, `claims-reply`), the delivery files (`delivery`,
