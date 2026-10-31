@@ -383,9 +383,9 @@ class Versions(Base):
                 rulesedit.bump(version, part)
 
     def test_set_version(self):
-        new = rulesedit.set_version(self.text, "4.4.0")
-        self.assertEqual(_changed_lines(self.text, new), (['version = "4.3.0"'], ['version = "4.4.0"']))
-        self.assertEqual(_load_text(new).version, "4.4.0")
+        new = rulesedit.set_version(self.text, "4.5.0")
+        self.assertEqual(_changed_lines(self.text, new), (['version = "4.4.0"'], ['version = "4.5.0"']))
+        self.assertEqual(_load_text(new).version, "4.5.0")
         with self.assertRaises(EditError):
             rulesedit.set_version(self.text, "four")
         with self.assertRaisesRegex(EditError, "version"):

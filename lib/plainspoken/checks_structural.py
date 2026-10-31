@@ -120,7 +120,9 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
 
     Narrative profiles (decision I5, whole article): WARN only when the run AND the no-long-sentence condition
     both hold, except a section whose heading matches the profile's `long_sentence_headings`, which fails on no
-    long sentence alone.
+    long sentence alone (in a piece of `staccato_long_min_words` or more).
+
+    A piece under `staccato_long_min_words` words (#148), like social, gets the short-run test only.
 
     FAQ sections, and frontmatter FAQ answers (every profile): short answers are the point, so only a run of
     `staccato_faq_short_run` short sentences WARNs.
@@ -129,7 +131,10 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
     long_, short_len, run_len = t["staccato_long_sentence"], t["staccato_short_len"], t["staccato_short_run"]
     faq_run = t["staccato_faq_short_run"]
     narrative = "narrative" in doc.profile.flags
-    run_only = doc.content_type == "social"  # social: only a run of short sentences WARNs (severity table)
+    # Social, and any piece under staccato_long_min_words (#148): only a run of short sentences WARNs, because the
+    # fix the no-long test asks of a short email or text is a padded sentence.
+    short_piece = metrics.compute(doc, cfg)["words"] < t["staccato_long_min_words"]
+    run_only = doc.content_type == "social" or short_piece
     out = []
     units = [(sec.heading, sec.level, sec.line, _prose_sentences(sec.paragraphs)) for sec in doc.sections]
     framed = _letter_frame([u[3] for u in units])  # body units only: frontmatter FAQ answers are never trimmed
@@ -147,7 +152,7 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
             continue
         no_long = max(len(s.words) for s in sents) <= long_
         run_end = _short_run(sents, short_len, run_len)
-        if narrative and any(p.search(heading) for p in doc.profile.long_sentence_headings) and no_long:
+        if narrative and any(p.search(heading) for p in doc.profile.long_sentence_headings) and no_long and not short_piece:
             out.append(Finding("7d", "WARN", at, where,
                                f"No sentence over {long_} words in this section — join two {_JOIN}"))
         elif narrative:

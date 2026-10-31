@@ -13,6 +13,7 @@ from plainspoken.justify import file_sha
 from plainspoken.registry import load_config
 from plainspoken.report import lint_status, merge, report_key, report_paths, run_lint
 from tests._profiles import PRODUCT, NARRATIVE, CONSULTING
+from tests.test_anti_ai_structural import ABOVE_GATE
 
 REPO = Path(__file__).resolve().parents[1]
 FIX = REPO / "tests" / "fixtures" / "profiles"
@@ -596,7 +597,7 @@ class Merge(unittest.TestCase):
 
 
     def test_scare_quoted_ban_word_needs_a_j3_verdict(self):
-        self.art, self.sha = self._prep('A "robust" system. ' + self.BODY)
+        self.art, self.sha = self._prep('A "robust" system. ' + self.BODY + ABOVE_GATE)  # #148: keeps the 7d WARN
         lint = json.loads((self.dir / f"{self.key}.lint.json").read_text())
         j3 = [r.id for r in self.cfg.rules.values() if r.group == "J3"]
         cands = [f for f in lint["findings"] if f["severity"] == "CANDIDATE" and f["rule"] in j3]
