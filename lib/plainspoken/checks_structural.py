@@ -78,6 +78,31 @@ def _short_run(sents: list[Sentence], short_len: int, run_len: int) -> Sentence 
     return None
 
 
+_SALUTATION = re.compile(r"(?:hi|hello|hey|dear|g'day|good (?:morning|afternoon|evening))\b[^.!?]{0,30},", re.I)
+_SIGNOFF = re.compile(r"(?i:cheers|thanks|thank you|many thanks|regards|kind regards|warm regards|best|best wishes"
+                      r"|all the best|sincerely|yours sincerely|yours|love|talk soon|see you),?(?:\s+[A-Z][\w.'-]*){0,3}")
+_FRAME_MAX_WORDS = 4
+
+
+def _frame_line(s: Sentence, pattern: re.Pattern[str]) -> bool:
+    return len(s.words) <= _FRAME_MAX_WORDS and bool(pattern.fullmatch(s.text.strip()))
+
+
+def _letter_frame(units: list[list[Sentence]]) -> list[list[Sentence]]:
+    """#148: a greeting ("Hi Sam,") that opens the piece and a sign-off ("Cheers, Alex") that closes it aren't
+    sentences for 7d. Only the first sentence of the first non-empty unit and the last of the last can go."""
+    filled = [i for i, ss in enumerate(units) if ss]
+    if not filled:
+        return units
+    out = [list(ss) for ss in units]
+    first, last = filled[0], filled[-1]
+    if _frame_line(out[first][0], _SALUTATION):
+        out[first] = out[first][1:]
+    if out[last] and _frame_line(out[last][-1], _SIGNOFF):
+        out[last] = out[last][:-1]
+    return out
+
+
 def _faq_answer_sentences(doc: Doc) -> list[Sentence]:
     """The profile's FAQ frontmatter key renders as the page's FAQ; its answers are checked as one FAQ section."""
     key = doc.profile.faq_frontmatter_key
@@ -107,6 +132,8 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
     run_only = doc.content_type == "social"  # social: only a run of short sentences WARNs (severity table)
     out = []
     units = [(sec.heading, sec.level, sec.line, _prose_sentences(sec.paragraphs)) for sec in doc.sections]
+    framed = _letter_frame([u[3] for u in units])  # body units only: frontmatter FAQ answers are never trimmed
+    units = [(heading, level, line, sents) for (heading, level, line, _), sents in zip(units, framed)]
     units.append(("FAQ (frontmatter faqs)", 2, 0, _faq_answer_sentences(doc)))
     for heading, level, line, sents in units:
         if len(sents) < 3:

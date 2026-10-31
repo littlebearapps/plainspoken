@@ -32,6 +32,7 @@ def with_thresholds(**over):
 LONG = "This sentence goes on for quite a while because it needs more than twenty five words to count as a long flowing sentence in the section."
 
 
+
 class Structural(unittest.TestCase):
     def test_staccato_no_long_sentence_warns(self):
         body = "## A\n\nShort one here. Another short one. And a third."
@@ -156,6 +157,34 @@ class StaccatoFaq(unittest.TestCase):
         fewer = "".join(f"  - question: Question {i}?\n    answer: It is short. {LONG}\n" for i in range(4))
         doc = parse(f"---\nfaqs:\n{fewer}---\n\n{LONG}\n", profile=CONSULTING)
         self.assertEqual(CHECKS["7d"](doc, CFG), [])
+
+
+class StaccatoLetterFrame(unittest.TestCase):
+    """#148: a greeting that opens the piece and a sign-off that closes it aren't sentences for rule 7d."""
+
+    def test_greeting_is_not_a_short_sentence(self):
+        self.assertEqual(run("7d", "Hi Sam,\n\nThanks. Here it is. Short one. Another one.\n\n" + LONG), [])
+
+    def test_signoff_is_not_a_short_sentence(self):
+        self.assertEqual(run("7d", LONG + "\n\nThanks. Here it is. Short one. Another one.\n\nCheers,\nAlex"), [])
+
+    def test_short_answer_with_comma_still_counts(self):  # golden JR-7d-001 lost its 7d to a looser pattern
+        f = run("7d", "Yes, on a lead. Two more. Three here. Four now. Five, done.\n\n" + LONG)
+        self.assertEqual([x.severity for x in f], ["WARN"])
+        self.assertIn("5 consecutive", f[0].message)
+
+    def test_greeting_mid_piece_still_counts(self):
+        f = run("7d", LONG + "\n\nHi Sam,\n\nThanks. Here it is. Short one. Another one.\n\n" + LONG)
+        self.assertEqual([x.severity for x in f], ["WARN"])
+        self.assertIn("5 consecutive", f[0].message)
+
+    def test_frontmatter_faq_answer_never_trimmed(self):
+        answers = "".join(f"  - question: Question {i}?\n    answer: It is short.\n" for i in range(6))
+        answers += "  - question: Who wrote this?\n    answer: Thanks, Alex\n"
+        doc = parse(f"---\nfaqs:\n{answers}---\n\n{LONG}\n", profile=CONSULTING)
+        f = CHECKS["7d"](doc, CFG)
+        self.assertEqual([x.severity for x in f], ["WARN"])
+        self.assertIn("in the FAQ", f[0].message)
 
 
 class BoldBullets(unittest.TestCase):
