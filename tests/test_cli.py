@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.test_anti_ai_structural import ABOVE_GATE
+
 REPO = Path(__file__).resolve().parents[1]
 FIX = REPO / "tests" / "fixtures" / "profiles"
 
@@ -37,8 +39,8 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual([json.loads(x)["group"] for x in r.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
     def test_judge_input_holds_open_lint_lines(self):  # #74: a lint-owned WARN at the judges cost a second round
-        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks.\n",
-                            encoding="utf-8")
+        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks."
+                            + ABOVE_GATE + "\n", encoding="utf-8")  # #148: past the 150-word gate, so 7d's WARN stays
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
         held = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
         self.assertEqual((held.returncode, held.stdout), (1, ""), held.stderr)
@@ -53,8 +55,8 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
     def test_keep_names_only_open_lines(self):  # #162: a keep typed before the lint was read is refused
-        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks.\n",
-                            encoding="utf-8")
+        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks."
+                            + ABOVE_GATE + "\n", encoding="utf-8")  # #148: past the 150-word gate, so 7d's WARN stays
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
         stray = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,7d,HM,r2", cwd=self.cwd)
         self.assertEqual((stray.returncode, stray.stdout), (2, ""), stray.stderr)
@@ -348,7 +350,7 @@ class NoTraceback(unittest.TestCase):
     def test_rules_file_missing_a_key_exits_2_naming_file_and_key(self):
         text = (REPO / "data" / "rules.toml").read_text(encoding="utf-8")
         cases = {
-            "version": text.replace('version = "4.3.0"\n', "", 1),
+            "version": text.replace('version = "4.4.0"\n', "", 1),
             "lists": text.replace("[lists]", "[lists_gone]", 1),
             "rules": text.replace("[[rules]]", "[[rules_gone]]"),
             "name": text.replace('name = "Em dashes"\n', "", 1),

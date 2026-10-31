@@ -43,7 +43,7 @@ class Launcher(unittest.TestCase):
         first = r.stdout.splitlines()[0]
         self.assertTrue(first.startswith("plainspoken profile: default"), first)
         self.assertNotIn("(plugin default)", first)
-        self.assertIn("ruleset 4.3.0", r.stdout)
+        self.assertIn("ruleset 4.4.0", r.stdout)
         self.assertLess(len(r.stdout), 800)
 
     def test_unsubstituted_placeholder_means_plugin_default(self):

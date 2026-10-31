@@ -9,6 +9,7 @@ from plainspoken.doc import parse
 from plainspoken.registry import load_config, spelling_variants
 from plainspoken.report import run_lint
 from tests._profiles import PRODUCT
+from tests.test_anti_ai_structural import ABOVE_GATE
 
 CFG = load_config()
 
@@ -62,7 +63,7 @@ class NotABlogPost(unittest.TestCase):
                          ['4 consecutive sentences under 8 words — join two neighbours with "and" or "but" in their '
                           'own words, or keep it; never pad one'])
         # the same text as an article still gets the no-long-sentence WARN
-        art = STRUCTURAL["7d"](parse(five_short, profile=PRODUCT), CFG)
+        art = STRUCTURAL["7d"](parse(five_short + ABOVE_GATE, profile=PRODUCT), CFG)  # #148: past the 150-word gate
         self.assertTrue([f for f in art if "No sentence over" in f.message], art)
 
     def test_unknown_content_type_fails(self):

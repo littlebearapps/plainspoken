@@ -21,7 +21,7 @@ CASES = {
 
 class ShadowRules(unittest.TestCase):
     def test_registered_as_shadow_with_sources(self):
-        self.assertEqual(CFG.version, "4.3.0")
+        self.assertEqual(CFG.version, "4.4.0")
         for rid in CASES:
             rule = CFG.rules[rid]
             self.assertEqual((rule.status, rule.method), ("shadow", "lint"), rid)
