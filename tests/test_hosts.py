@@ -69,6 +69,24 @@ class HostCli(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout.splitlines()[-1])["group"], "J4")
 
+    def test_judge_input_alone_fills_the_host_jsonl(self):  # #162: Codex and Hermes save stdout as input.jsonl
+        r = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)  # no check first: it lints itself
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("anti-AI lint", r.stderr)
+        self.assertEqual(len([ln for ln in r.stdout.splitlines() if ln.strip()]), 4)
+        for n, group in enumerate(("J1", "J2", "J3", "J4"), 1):
+            prompt = cli("agent-prompt", "tells-judge", "--line", str(n), cwd=self.cwd, input=r.stdout)
+            self.assertEqual(prompt.returncode, 0, prompt.stderr)
+            self.assertEqual(json.loads(prompt.stdout.splitlines()[-1])["group"], group)
+
+    def test_host_notes_say_the_lint_prints_on_stderr(self):
+        for name in ("codex.md", "hermes.md"):
+            text = (REPO / "hosts" / name).read_text(encoding="utf-8")
+            (line,) = [ln for ln in text.splitlines() if "RUN judge-input" in ln and "input.jsonl" in ln]
+            with self.subTest(host=name):
+                self.assertIn("the lint and any hold print on stderr", line)
+                self.assertIn("see check step 1", line)
+
     def test_agent_prompt_empty_input_exits_2(self):
         r = cli("agent-prompt", "tells-judge", cwd=self.cwd, input="")
         self.assertEqual(r.returncode, 2)
