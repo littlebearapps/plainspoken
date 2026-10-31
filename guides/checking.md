@@ -41,9 +41,10 @@ writing. It explains the check step by step, what each result means, and what th
 5. **Up to two fix passes.** A fix pass cuts, joins or splits sentences, or restates plainly what's already there. A
    join uses "and" or "but", or merges two sentences; it never adds a clause, detail or reason. Rhythm fixes (rules
    7 and 7d) join two neighbouring sentences in their own words or split one, and never pad a sentence to reach a
-   length; when that can't clear the warning, the warning is kept and justified. A fix never adds a fact, number,
-   name, quote, example or opinion. After each pass the lint and all four judges run again, because the text
-   changed.
+   length; when that can't clear the warning, the warning is kept and justified. In a piece under 150 words, rule 7d
+   flags only a run of short sentences, never a section that lacks a long one, and a greeting or sign-off line
+   doesn't count as a sentence. A fix never adds a fact, number, name, quote, example or opinion. After each pass
+   the lint and all four judges run again, because the text changed.
 
 The check writes its files to `.plainspoken/reports/` in the project you run it from. Every report file is listed in
 [docs/report-contract.md](../docs/report-contract.md).
@@ -70,7 +71,9 @@ check it again.
   humanize, and the file stays exactly as it is. You get the BLOCK and WARN lines and the result, and it says plainly
   that nothing was fixed.
 - **A quick lint from stdin.** `python3 <plugin>/lib/run.py check -` lints a draft piped in on stdin and saves
-  nothing. A draft under 300 words is checked as social, a longer one as an article.
+  nothing. A draft under 300 words is checked as social, a longer one as an article. Rule 7d already checked those
+  social drafts for a run of short sentences only, and since ruleset 4.4.0 it checks any piece under 150 words that
+  way, whatever its type.
 - **A lint that leaves no trace.** `check --no-record` prints the lint and saves no report (unless `--out` names
   another file), no kaizen event and no snapshot. Use it for a quick look that shouldn't count as kaizen evidence.
 
