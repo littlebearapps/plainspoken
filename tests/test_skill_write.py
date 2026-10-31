@@ -163,6 +163,7 @@ class WriteSkill(SkillBasics, unittest.TestCase):
         self.assertIn("read in full (never sent to `/dev/null`)", claims)
         self.assertIn("Those two are the run's whole lint-only allowance: once they're spent, check step 1 makes no "
                       "more", claims)
+        self.assertIn("and the check's step 1 (judge-input) again", " ".join(self.step(7).split()))
 
     def test_lint_only_passes_before_claims(self):  # #42: a lint fix after claims would stale the ledger
         claims, check = " ".join(self.step(6).split()), " ".join(self.step(7).split())

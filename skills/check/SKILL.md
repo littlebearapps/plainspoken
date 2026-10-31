@@ -39,8 +39,8 @@ That's the active profile the steps below use. If the call fails, carry on witho
 Below, `RUN` means `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py`. These calls take
 `--plugin-profile '${user_config.profile}'` (single quotes, exactly so): check, judge-input, merge, justify, status
 and profile. `paths` and `judge-record` don't take it (argparse rejects it there with exit 2). `FILE` is the first
-argument; quote it in every command (`"drafts/my post.md"`). Pass `--content-type social` to `check` when the user
-asks for it or the file is a social post. When the project gives files their own profile (`[engine] profiles` in
+argument; quote it in every command (`"drafts/my post.md"`). Pass `--content-type social` to `judge-input` when the
+user asks for it or the file is a social post. When the project gives files their own profile (`[engine] profiles` in
 `.plainspoken/config.toml`), every call that takes FILE uses FILE's profile by itself; the first step's summary is
 the project's default (`RUN config profile-for FILE` prints FILE's).
 
@@ -49,7 +49,8 @@ For a post or video with a title, caption and alt text, put each in the frontmat
 the lint heading (`fields_read` in the JSON) shows what the lint read. The plugin checks only the text it's given,
 never a platform's rendered version.
 
-Asked only for a quick lint that shouldn't count as kaizen evidence? Run step 1 with `--no-record` and stop there.
+Asked only for a quick lint that shouldn't count as kaizen evidence? Run
+`RUN check FILE --plugin-profile '${user_config.profile}' --no-record` and stop there.
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
 run.py status.
 
@@ -58,10 +59,10 @@ run.py status.
 When the person asks for findings without edits (the words must stay their own, or only a person may write the
 outgoing text), follow this route. It overrides the fixing in the core rules and in steps 1, 2 and 5: you never
 edit FILE, and its bytes stay unchanged.
-- Step 1: run its `check` call and fix nothing. When a later step asks you to rerun step 1, again fix nothing.
-- Step 2: the lint cuts long lists short ("… N more"), so take the rules from `judge-input`'s exit-1 list, which
-  names every open line, and rerun step 2 with `--keep <rule>` for each rule it names. Here exit 1 always means
-  keep, and exit 3 always means rerun with `--ignore-claims`.
+- Steps 1 and 2: fix nothing, here or when a later step asks you to rerun step 1. The lint cuts long lists short
+  ("… N more"), so take the rules from `judge-input`'s exit-1 list, which names every open line, and rerun step 1
+  with `--keep <rule>` for each rule it names. Here exit 1 always means keep, and exit 3 always means rerun with
+  `--ignore-claims`.
 - Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
   and go to step 8.
 - If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (`status` doesn't
@@ -73,17 +74,19 @@ edit FILE, and its bytes stay unchanged.
 
 ## Steps
 
-1. **Lint.** `RUN check FILE --plugin-profile '${user_config.profile}'` (plus `--content-type social` if needed),
-   on its own: read it before step 2, in full. Never send it to `/dev/null` or cut it with a pipe. Exit 2 → stop
-   with its message. Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again
-   (at most two lint-only passes, counting a caller's, such as write step 6's), so the judges read a lint-clean
-   draft. A line you leave (a WARN you have a real reason to keep, a 7d line the rhythm rule can't clear, one still
-   there after two, or any once the judges have started) goes to step 2 as `--keep <rule>`, only for a rule this
-   pass's lint printed. Justify a kept WARN in step 7 rather than fix it: a fix after the judges means all four again.
-2. **Judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'`. It prints four JSON lines, J1 to J4; read them in full, unfiltered, and never build or edit one. Exit 1 → it names lint lines still open: fix them (step 1) or keep them. Exit 2 → rerun step 1 once (a `--keep` for a rule with no open line lands here too).
-   Exit 3 → FILE has a claim ledger that isn't current, and it prints why. From write, finish the claims step
-   (write steps 6 and 7 say how), then step 1 again. On its own, rerun step 2 with `--ignore-claims` and say so
-   in step 8.
+1. **Lint and judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'` (plus
+   `--content-type social` if needed). It lints FILE and prints the lint first (stderr), then four JSON lines, J1 to
+   J4; read it in full, the lint first, and never send it, or any part of it, to `/dev/null` or cut it with a pipe.
+   Never build or edit a JSON line. Exit 1 → it names lint lines still open. Before the first judges, fix its BLOCK
+   and WARN lines under the fix rule and run step 1 again (at most two lint-only passes, counting a caller's, such
+   as write step 6's), so the judges read a lint-clean draft. A line you leave (a WARN you have a real reason to
+   keep, a 7d line the rhythm rule can't clear, one still there after two, or any once the judges have started) gets
+   `--keep <rule>`, only for a rule the lint above printed: rerun step 1 with it. Justify a kept WARN in step 7
+   rather than fix it: a fix after the judges means all four again. Exit 2 for a `--keep` for a rule with no open
+   line → rerun step 1 once without it; any other exit 2 → stop with its message. Exit 3 → FILE has a claim ledger
+   that isn't current, and it prints why. From write, finish the claims step (write steps 6 and 7 say how), then
+   step 1 again. On its own, rerun step 1 with `--ignore-claims` and say so in step 8.
+2. **Judge input.** Step 1 already printed it; this is the same call. Its four JSON lines go to step 3.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
    this. Your input:" followed by that line verbatim. Nothing else: no file contents, no opinion, no hint about who
    wrote it.

@@ -58,6 +58,9 @@ class CheckSkill(unittest.TestCase):
         self.assertRegex(route, r"(?i)skip step 6 \(fix pass\) and step 7")
         self.assertRegex(route, r"(?i)never call `/plainspoken:humanize`")
         self.assertRegex(route, r"(?i)judge-input`'s exit-1 list")  # the lint's own list is cut short at 15 a severity
+        self.assertNotIn("Step 1: run its `check` call", route)  # #162: step 1 is judge-input, which prints the lint
+        self.assertRegex(route, r"Steps 1 and 2: fix nothing\b")
+        self.assertIn("take the rules from `judge-input`'s exit-1 list", route)
         self.assertRegex(route, r"(?i)never call it a PASS")
 
     def test_no_ban_list_words(self):  # lists live in the checker
@@ -105,31 +108,39 @@ class CheckSkill(unittest.TestCase):
         self.assertIn("they aren't fix passes", head)
         self.assertNotIn("fix lint findings once", head)
         self.assertIn("Once the judges start, every edit to FILE is a fix pass (after justify or JR too)", head)
+        self.assertNotIn("Run step 1 with `--no-record`", head)  # #162: step 1 is judge-input; the quick lint is check
+        self.assertIn("`RUN check FILE --plugin-profile '${user_config.profile}' --no-record`", head)
 
     def test_lint_findings_fixed_before_the_judges(self):  # #42: a lint-only WARN cost a second round of judges
-        step = " ".join(self.text[self.text.index("1. **Lint.**"):self.text.index("2. **Judge input.**")].split())
-        self.assertIn("on its own: read it before step 2", step)
+        step = self.step1()
+        self.assertIn("RUN judge-input FILE --plugin-profile '${user_config.profile}'", step)  # #162: one call
+        self.assertIn("It lints FILE and prints the lint first", step)
         self.assertIn("Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again "
                       "(at most two lint-only passes, counting a caller's, such as write step 6's)", step)  # #162
         self.assertIn("so the judges read a lint-clean draft", step)
-        self.assertIn("one still there after two, or any once the judges have started) goes to step 2 as "
-                      "`--keep <rule>`", step)  # #74: judge-input holds an open lint line back without it
+        self.assertIn("one still there after two, or any once the judges have started) gets `--keep <rule>`",
+                      step)  # #74: judge-input holds an open lint line back without it
         self.assertIn("Justify a kept WARN in step 7 rather than fix it", step)
+        self.assertIn("Exit 1 → it names lint lines still open", step)
         step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
-        self.assertIn("Exit 1 → it names lint lines still open: fix them (step 1) or keep them.", step2)
+        self.assertIn("Step 1 already printed it; this is the same call.", step2)  # the numbers other files cite stay
+
+    def step1(self) -> str:
+        return " ".join(self.text[self.text.index("1. **Lint and judge input.**"):
+                                  self.text.index("2. **Judge input.**")].split())
 
     def test_the_lint_is_read_and_keeps_name_only_what_it_printed(self):  # #162: `check … >/dev/null; … --keep r7d`
-        step = " ".join(self.text[self.text.index("1. **Lint.**"):self.text.index("2. **Judge input.**")].split())
-        self.assertIn("read it before step 2, in full. Never send it to `/dev/null` or cut it with a pipe.", step)
-        self.assertIn("`--keep <rule>`, only for a rule this pass's lint printed", step)
-        step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
-        self.assertIn("a `--keep` for a rule with no open line lands here too", step2)
+        step = self.step1()
+        self.assertIn("read it in full, the lint first", step)
+        self.assertIn("never send it, or any part of it, to `/dev/null`", step)
+        self.assertIn("`--keep <rule>`, only for a rule the lint above printed", step)
+        self.assertIn("a `--keep` for a rule with no open line", step)
 
     def test_judges_wait_for_a_current_claims_status(self):  # #160: judge-input exits 3 on an open claims step
-        step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
-        self.assertIn("Exit 3 → FILE has a claim ledger that isn't current", step2)
-        self.assertIn("From write, finish the claims step", step2)
-        self.assertIn("On its own, rerun step 2 with `--ignore-claims` and say so in step 8", step2)
+        step = self.step1()
+        self.assertIn("Exit 3 → FILE has a claim ledger that isn't current", step)
+        self.assertIn("From write, finish the claims step", step)
+        self.assertIn("On its own, rerun step 1 with `--ignore-claims` and say so in step 8", step)
         self.assertIn("exit 3 always means rerun with `--ignore-claims`", " ".join(self.text.split()))  # report only
         notes = (REPO / "skills" / "claims" / "references" / "claude-code.md").read_text(encoding="utf-8")
         self.assertIn("in the foreground (never `run_in_background`)", " ".join(notes.split()))
