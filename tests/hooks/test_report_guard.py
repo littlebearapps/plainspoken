@@ -9,7 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_owner_asks import ASK, BLOCK, LEDGER_LEAF, LEDGER_LEAF_ASK, REPAIR, REPAIR_ASK, SHORT
+from tests.test_owner_asks import (ASK, BLOCK, LEDGER_LEAF, LEDGER_LEAF_ASK, M_ASK, M_ITEM, M_OTHER, REPAIR, REPAIR_ASK,
+                                   SHORT)
 
 REPO = Path(__file__).resolve().parents[2]
 HOOK = REPO / "hooks" / "report_guard.py"
@@ -55,6 +56,16 @@ class Guard(unittest.TestCase):
                 self.assertEqual(out["decision"], "block")
                 self.assertIn(ask, out["reason"])
                 self.assertNotIn("Please confirm", out["reason"])  # the ask about the listed claim stays
+
+    def test_an_ask_beside_a_meaning_item_is_sent_back(self):  # #147: M items list like claims
+        report = BLOCK.replace("needs the owner: none\n", M_ITEM.join(("needs the owner: 1\n", "")))
+        r = self.stop(report + M_ASK)
+        self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)  # the ask about M1 is the one allowed
+        r = self.stop(report + M_ASK + M_OTHER)
+        out = json.loads(r.stdout)
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("Confirm Jo is happy with the logo.", out["reason"])
+        self.assertNotIn("M1", out["reason"])
 
     def test_it_sends_a_report_back_only_once(self):  # Claude Code sets stop_hook_active on the turn it caused
         self.assertEqual((r := self.stop(BLOCK + ASK, active=True)).stdout, "", r.stderr)

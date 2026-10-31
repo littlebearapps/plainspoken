@@ -483,3 +483,15 @@ def summarise(changes: list[dict], shown: int = 10, path: str = "") -> str:
     if len(changes) > shown:
         lines.append(f"… {len(changes) - shown} more in {path}" if path else f"… {len(changes) - shown} more")
     return "\n".join([*lines, FOOTER])
+
+
+def owner_items(changes: list[dict]) -> list[str]:
+    """`M1: <after sentence, or cut: <before>> (<what changed>; was: <before>)` per change, the shape `status` lists
+    under `needs the owner` and the report guard parses: no parentheses inside either part."""
+    def plain(text: str, n: int) -> str:
+        return _clip(re.sub(r"[()]", "", text), n)
+    out = []
+    for c in changes:
+        text = plain(c["after"], 120) if c["after"] else "cut: " + plain(c["before"], 115)
+        out.append(f"{c['id']}: {text} ({re.sub(r'[()]', '', what_changed(c))}; was: {plain(c['before'], 80)})")
+    return out

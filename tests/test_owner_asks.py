@@ -228,6 +228,37 @@ class Asks(unittest.TestCase):
                 self.assert_clean(s)
 
 
+# A meaning-diff change as `status` lists it (#147), an ask about it, and an ask about something else.
+M_ITEM = ('  M1: After that, management is $300 a month, and that covers your ad spend. (added "covers"; was: '
+          'After that, management is $300 a month.)\n')
+M_ASK = "\nPlease confirm the ad spend line in M1 is right: it now says it's covered.\n"
+M_OTHER = "\nConfirm Jo is happy with the logo.\n"
+
+
+class MeaningItems(unittest.TestCase):  # #147: status lists meaning-diff changes as M items under the marker
+    ITEM, ASK_M1, OTHER = M_ITEM, M_ASK, M_OTHER
+
+    def block(self, value: str = "1") -> str:
+        return BLOCK.replace("needs the owner: none\n", f"needs the owner: {value}\n{self.ITEM}")
+
+    def test_an_ask_about_a_meaning_item_passes(self):
+        self.assertEqual(owner_asks.unlisted(BLOCK + self.ASK_M1), [self.ASK_M1.strip()])  # an ask, unlisted
+        self.assertEqual(owner_asks.unlisted(self.block() + self.ASK_M1), [])
+
+    def test_an_ask_beside_a_meaning_item_is_caught(self):
+        self.assertEqual(owner_asks.unlisted(self.block() + self.ASK_M1 + self.OTHER),
+                         ["Confirm Jo is happy with the logo."])
+
+    def test_meaning_items_under_an_unreadable_ledger_are_read(self):  # a check run with no claims ledger
+        report = self.block("unknown (no readable ledger)")
+        self.assertEqual(owner_asks.unlisted(report + self.ASK_M1), [])
+        self.assertEqual(owner_asks.unlisted(report + self.OTHER), ["Confirm Jo is happy with the logo."])
+
+    def test_the_stale_meaning_line_is_never_an_ask(self):
+        report = BLOCK.replace("needs the owner: none\n", "needs the owner: none\nmeaning: stale (rerun meaning-diff)\n")
+        self.assertEqual(owner_asks.unlisted(report + SHORT), [])
+
+
 class Message(unittest.TestCase):
     def test_the_message_quotes_each_ask_and_says_cut_or_hold(self):
         msg = owner_asks.message(["so check Jo is happy with them."])
