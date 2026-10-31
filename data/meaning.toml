@@ -1,0 +1,111 @@
+# Word lists for meaning-diff (#147): the marker words whose count, sentence by sentence, says a fix or rewrite
+# changed what the text promises, limits or costs. `lib/plainspoken/meaning.py` reads this file; nothing in
+# `data/rules.toml` depends on it, so a change here never changes a check verdict.
+#
+# Tuned on 475 real before/after pairs (eval rewrites, fix runs, reference rewrites), 3,768 synthetic joins and splits
+# and the round-6/8 7d fixes. Every word is matched in lower case after contractions are split ("won't" is
+# "will" + "not", "we'll" is "we" + "will"); curly apostrophes count as straight ones; a hyphenated word (must-see) is
+# one token and never a marker.
+version = 1
+
+# Negation: one count for the whole class, so "do not hold" -> "without" isn't a change.
+negations = ["not", "no", "never", "none", "nothing", "nobody", "neither", "nor", "without", "cannot"]
+
+# A dropped negation is listed only when one of these words, or "I" or "we", is within five words of it (the thing
+# it limits); an added one only when the sentence kept that word ("can" -> "can't").
+negation_context = [
+  "will", "would", "can", "could", "must", "should", "may", "might", "shall", "need", "need to", "have to",
+  "include", "included", "includes", "cover", "covers", "covered", "charge", "charged", "cost", "costs",
+  "fee", "fees", "price", "refund", "refunds", "free", "extra", "separate", "separately", "ok", "okay",
+  "approval", "permission", "consent", "agree", "ask", "asked", "change", "changes", "guarantee",
+  "promise", "exception", "exceptions", "allowed", "allow", "able", "available", "required", "open",
+]
+
+# A commitment is a first-person subject, then (optionally one adverb, then) one of these. Future "will" with any
+# other subject is a plan, not a promise.
+commitment_modals = ["will", "shall", "must", "promise", "guarantee", "always"]
+commitment_subjects = ["i", "we"]
+adverbs = ["also", "still", "just", "never", "always", "really", "only", "then", "usually", "probably", "definitely"]
+
+obligations = ["must", "need to", "have to", "required", "mandatory", "compulsory"]
+
+# "before" and "after" count only when the next word isn't a number, a duration or the end of the clause.
+conditions = ["if", "unless", "until", "only", "provided", "as long as", "except", "before", "after"]
+time_after = [
+  "a", "an", "one", "two", "three", "four", "five", "six", "several", "many",
+  "month", "months", "week", "weeks", "year", "years", "day", "days", "hour", "hours", "minute", "minutes",
+  "decade", "decades",
+]
+
+# "extra" counts only in a sentence that names a price or fee (price_context_pattern).
+exclusions = ["separate", "separately", "excluded", "exclude", "excludes", "excluding", "extra", "on top"]
+free = ["free", "complimentary", "no charge", "no cost"]
+# Counted only in a sentence that names a price or fee.
+inclusions = ["include", "included", "includes", "covers", "covered", "comes with"]
+reasons = ["because"]
+
+# Multi-word markers, matched before single words: what each phrase is counted as.
+[phrases]
+"need to" = "need to"
+"needs to" = "need to"
+"have to" = "have to"
+"has to" = "have to"
+"as long as" = "as long as"
+"on top" = "on top"
+"no charge" = "no charge"
+"no cost" = "no cost"
+"comes with" = "comes with"
+"come with" = "comes with"
+
+# A qualifier in front of a number, and the group it belongs to: "over 22 years" -> "22 years" drops `over 22`.
+# "from" counts only before a price ("from $50"); "from 9am" is a range.
+[qualifiers]
+"about" = "about"
+"approximately" = "about"
+"approx" = "about"
+"approx." = "about"
+"around" = "about"
+"roughly" = "about"
+"up to" = "up to"
+"at most" = "up to"
+"no more than" = "up to"
+"over" = "over"
+"more than" = "over"
+"above" = "over"
+"under" = "under"
+"less than" = "under"
+"fewer than" = "under"
+"below" = "under"
+"nearly" = "nearly"
+"almost" = "nearly"
+"at least" = "at least"
+"from" = "from"
+
+[patterns]
+# A tax, fee or cost on top of a price: counted as the exclusion "plus GST/fees".
+tax = '(?:\bplus|\+|\bex|\bexcl\.?|\bexcluding|\bnot including)\s+(?:gst|vat|tax|fees?|postage|shipping|delivery|travel|materials|parts)\b|\b(?:gst|postage|shipping|delivery|travel|materials) (?:is |are )?extra\b'
+# A sentence that names a price or fee (for "extra" and the inclusions).
+price_context = '[$£€]\s?\d|\b(?:fee|fees|price|prices|cost|costs|charge|charged|spend|rate|invoice|bill|pay|paid|per (?:month|year|hour)|a (?:month|year|week))\b'
+# Idioms and the "not just X" contrast humanize removes: taken out before counting, on both sides, so cutting one is
+# never a change.
+frames = [
+  '''\b(?:is|are|was|were|it['’]s|isn['’]t|aren['’]t|wasn['’]t)\s+not\s+(?:just|only|merely|simply|about)\b''',
+  '''\b(?:isn['’]t|aren['’]t|wasn['’]t|not)\s+(?:just|only|merely|simply|about)\b''',
+  '''\bmore than just\b''',
+  '''\bdon['’]t miss(?: out)?\b''',
+  '''\bdo not hesitate\b''',
+  '''\bdon['’]t hesitate\b''',
+  '''\bnot to be missed\b''',
+  '''\bno matter\b''',
+  '''\bwithout a doubt\b''',
+  '''\bno doubt\b''',
+  '''\bcan['’]t wait\b''',
+  '''\bcannot wait\b''',
+  '''\bcan not wait\b''',
+  '''\bcannot stress[^.?!]{0,20}?enough\b''',
+  '''\bcan['’]t stress[^.?!]{0,20}?enough\b''',
+  '''\b(?:has|have) to offer\b''',
+  '''\bthan (?:before|ever)\b''',
+  '''\bever before\b''',
+  '''\b(?:only|just) the (?:beginning|start)\b''',
+]
