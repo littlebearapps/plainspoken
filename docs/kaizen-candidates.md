@@ -82,6 +82,11 @@ rule change.
   justification (format, JR-accepted) was in a body section, not an opening. The ledger has no reader-floor facet,
   so low-floor evidence can only come through the profile name. Needs 7d dismissals or justifications on openings
   (2 more documents for the kept trigger) and any 7b fire at all.
+- **Evidence 2026-10-31:** ruleset 4.4.0 (#148) removed 7d's no-long-sentence test from pieces under 150 words
+  (`staccato_long_min_words`), so short emails, texts and similar pieces no longer get it, and a greeting or
+  sign-off line no longer counts as a 7d sentence. Long-form pressure (#73) is unchanged: round 8's pads were in
+  pieces 203–306 words long. Calibrate can still turn the existing `form = "no-long"` knob on
+  `staccato_long_sentence` for those.
 
 ## K5: a weekday check the drafting skills can run
 
