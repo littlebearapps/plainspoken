@@ -22,7 +22,6 @@ old text) only when excerpts are on; judge evidence is never stored.
 """
 from __future__ import annotations
 
-import difflib
 import hashlib
 import os
 import re
@@ -30,17 +29,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from plainspoken import capture, config, justify, ledger, report
-from plainspoken.doc import Doc, parse, split_sentences
+from plainspoken.doc import Doc, parse
 from plainspoken.registry import load_config
+from plainspoken.sentdiff import hunks as _hunks, units as _units  # noqa: F401 (_units: tests reach it here)
 
 OVERRIDE_KINDS = ("false_positive", "voice", "unfixable", "quote", "format", "other")
 OUTCOMES = ("dismissed", "upheld")
 JUDGED = ("judge", "lint+judge")
 PATTERN = re.compile(r"[a-z0-9-]{1,40}")
 PATTERN_RULE = "?"  # the rule of a `missed` event named by pattern (the schema needs a rule on `diff` events)
-_BLOCK_LINE = re.compile(r"^\s*(#|```|~~~|\|)")  # a line that is a unit of its own (heading, fence, table row)
-_FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")  # a code fence; the lines between two are code
-_ITEM_LINE = re.compile(r"^\s*([-*+]\s|\d+[.)]\s|>)")  # a line that starts a new paragraph (list item, quote)
 
 
 class UsageError(ValueError):
@@ -280,80 +277,6 @@ def _settings_or_none(root: Path) -> dict | None:
         return config.kaizen_settings(Path(root), os.environ)
     except Exception:  # deliberate: this only picks a refusal message
         return None
-
-
-def _units(text: str) -> list[tuple[str, int, int]]:
-    """(sentence, first line, last line) for each sentence of `text`. A paragraph's lines are joined before it's
-    split, so a sentence wrapped over two lines is one unit. Frontmatter lines, headings, table rows and every line
-    of a fenced code block (fences included) are units of their own; a list item or quote line starts a new
-    paragraph. A sentence the splitter returns reshaped (not found in its paragraph) spans the rest of the
-    paragraph, so its lines are never placed short of where it sits."""
-    lines = text.splitlines()
-    fm_end = capture.frontmatter_end(lines)
-    units: list[tuple[str, int, int]] = []
-    para: list[tuple[int, str]] = []
-
-    def flush() -> None:
-        if not para:
-            return
-        joined, starts = "", []
-        for ln, t in para:
-            if joined:
-                joined += " "
-            starts.append((len(joined), ln))
-            joined += t.strip()
-
-        def line_at(offset: int) -> int:
-            return [ln for start, ln in starts if start <= offset][-1]
-        pos = 0
-        for s in split_sentences(joined):
-            i = joined.find(s, pos)
-            if i < 0:  # the splitter reshaped it: cover the rest of the paragraph rather than guess a line
-                units.append((s, line_at(pos), para[-1][0]))
-                continue
-            end = i + len(s)
-            units.append((s, line_at(i), line_at(max(i, end - 1))))
-            pos = end
-        para.clear()
-
-    fence: str | None = None  # the opening fence (``` or ~~~) while inside a fenced code block
-    for n, raw in enumerate(lines, start=1):
-        m = _FENCE.match(raw)
-        if fence is not None or m:
-            flush()  # a fenced line is code, never prose to join and split: each is a unit of its own
-            if raw.strip():
-                units.append((raw.strip(), n, n))
-            if m and (fence is None or m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence)):
-                fence = m.group(1) if fence is None else None
-        elif n <= fm_end or _BLOCK_LINE.match(raw):
-            flush()
-            if raw.strip():
-                units.append((raw.strip(), n, n))
-        elif not raw.strip():
-            flush()
-        else:
-            if _ITEM_LINE.match(raw):
-                flush()
-            para.append((n, raw))
-    flush()
-    return units
-
-
-def _hunks(old_text: str, new_text: str) -> list[dict]:
-    old, new = _units(old_text), _units(new_text)
-    sm = difflib.SequenceMatcher(None, [u[0] for u in old], [u[0] for u in new], autojunk=False)
-    out = []
-    for tag, i1, i2, j1, j2 in sm.get_opcodes():
-        if tag == "equal":
-            continue
-        if i2 > i1:
-            span = [old[i1][1], old[i2 - 1][2]]
-        else:  # an insertion: the line of the old sentence it goes before (the last line at the end)
-            at = old[i1][1] if i1 < len(old) else (old[-1][2] if old else 0)
-            span = [at, at]
-        out.append({"n": len(out) + 1, "old": " ".join(u[0] for u in old[i1:i2]),
-                    "new": " ".join(u[0] for u in new[j1:j2]), "old_lines": span})
-    return out
 
 
 def hunks(article: Path, root: Path, *, reports_dir: Path | None = None) -> list[dict]:
