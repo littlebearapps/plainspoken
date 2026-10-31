@@ -47,6 +47,11 @@ writing. It explains the check step by step, what each result means, and what th
    flags only a run of short sentences, never a section that lacks a long one, and a greeting or sign-off line
    doesn't count as a sentence. A fix never adds a fact, number, name, quote, example or opinion. After each pass
    the lint and all four judges run again, because the text changed.
+6. **What the fixes changed.** Before its first lint the check saves the draft as it was (`meaning-diff --start`),
+   and when it has edited the draft it compares the two (`meaning-diff`). Any number, price, qualifier ("over 22
+   years"), negation, condition, exclusion, promise or added "because" that a fix dropped or added is listed under
+   `needs the owner` as an `M` line, for you to check. These lines never change the result. The comparison is
+   word-level and free: a change made without one of those words isn't seen.
 
 The check writes its files to `.plainspoken/reports/` in the project you run it from. Every report file is listed in
 [docs/report-contract.md](../docs/report-contract.md).
@@ -99,8 +104,9 @@ the text it's given, never a platform's rendered version.
 Humanize rewrites a draft to remove AI writing patterns, without a full check. It works from 26 patterns, strongest
 first, and keeps the writer's voice from the profile or a sample you give it. Its first rule is the same as the
 check's: remove, never add. When a sentence needs a detail it doesn't have, it flags that for you instead of
-inventing one. Used on its own, it may lint the result once and fix again once if a BLOCK remains. The check calls it
-for its fix passes.
+inventing one. Used on its own, it may lint the result once and fix again once if a BLOCK remains. On a file, it
+saves the text before rewriting and lists in its summary any number, limit or promise the rewrite changed
+(`meaning-diff`), so you can check them; it doesn't for pasted text. The check calls it for its fix passes.
 
 ## Write
 

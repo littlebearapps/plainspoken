@@ -52,7 +52,7 @@ never a platform's rendered version.
 Asked only for a quick lint that shouldn't count as kaizen evidence? Run
 `RUN check FILE --plugin-profile '${user_config.profile}' --no-record` and stop there.
 Subcommands used: run.py check, run.py judge-input, run.py judge-record, run.py merge, run.py justify, run.py paths,
-run.py status.
+run.py status, run.py meaning-diff.
 
 ## Report only
 
@@ -62,7 +62,7 @@ edit FILE, and its bytes stay unchanged.
 - Steps 1 and 2: fix nothing, here or when a later step asks you to rerun step 1. The lint cuts long lists short
   ("… N more"), so take the rules from `judge-input`'s exit-1 list, which names every open line, and rerun step 1
   with `--keep <rule>` for each rule it names. Here exit 1 always means keep, and exit 3 always means rerun with
-  `--ignore-claims`.
+  `--ignore-claims`. Skip `meaning-diff`: nothing is edited.
 - Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
   and go to step 8.
 - If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (`status` doesn't
@@ -74,7 +74,8 @@ edit FILE, and its bytes stay unchanged.
 
 ## Steps
 
-1. **Lint and judge input.** `RUN judge-input FILE --plugin-profile '${user_config.profile}'` (plus
+1. **Lint and judge input.** On the first step 1 of a run (not a rerun), first run
+   `RUN meaning-diff FILE --start`. Then `RUN judge-input FILE --plugin-profile '${user_config.profile}'` (plus
    `--content-type social` if needed). It lints FILE and prints the lint first (stderr), then four JSON lines, J1 to
    J4; read it in full, the lint first, and never send it, or any part of it, to `/dev/null` or cut it with a pipe.
    Never build or edit a JSON line. Exit 1 → it names lint lines still open. Before the first judges, fix its BLOCK
@@ -111,9 +112,12 @@ edit FILE, and its bytes stay unchanged.
 7. **Justify what you kept** (after the last fix pass you'll make). When no BLOCK remains but a WARN still fails and you have a real reason to keep it,
    follow `references/fix-or-justify.md` (template → fill → review input → one JR judge → record → merge). A JR
    reject leaves the rule UNRESOLVED: fix it, or rewrite the reason once.
-8. **Report.** Run `RUN status FILE --plugin-profile '${user_config.profile}'` and give its `check:` lines exactly
-   as printed (its claims lines and exit code aren't this skill's). `INCOMPLETE (stale …)` means FILE changed after
-   the last merge: that edit was a fix pass, so run steps 1 to 5 again without editing, then report. Then say how
+8. **Report.** If FILE was edited in this run, first run `RUN meaning-diff FILE` (exit 2, no baseline: go on).
+   Then run `RUN status FILE --plugin-profile '${user_config.profile}'` and give its `check:` lines exactly as
+   printed (its claims lines and exit code aren't this skill's), and its `needs the owner` lines too when they list
+   an `M` item: those are meaning changes for the person to check, so never call one of them a failure.
+   `INCOMPLETE (stale …)` means FILE changed after the last merge: that edit was a fix pass, so run steps 1 to 5
+   again without editing, then report. Then say how
    many fix passes ran, BLOCKs, justified WARNs (accepted / rejected), anything unresolved, and the report file's path. A WARN kept without an accepted justification is
    UNRESOLVED, never passed. If the run stopped early, say which step and quote the engine's message.
    Merge has already captured the verdicts in the kaizen ledger, so don't record them again.
