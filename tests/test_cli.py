@@ -11,7 +11,8 @@ from tests.test_anti_ai_structural import ABOVE_GATE
 
 REPO = Path(__file__).resolve().parents[1]
 FIX = REPO / "tests" / "fixtures" / "profiles"
-ALSO = "Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks.\n"
+# #148: ABOVE_GATE takes the draft past 7d's 150-word gate, so its no-long WARN stays open for the keep tests.
+ALSO = "Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks." + ABOVE_GATE + "\n"
 
 
 def cli(*args, cwd: Path, env: dict | None = None, input: str | None = None):
@@ -82,8 +83,7 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual([json.loads(x)["group"] for x in r.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
     def test_judge_input_holds_open_lint_lines(self):  # #74: a lint-owned WARN at the judges cost a second round
-        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks."
-                            + ABOVE_GATE + "\n", encoding="utf-8")  # #148: past the 150-word gate, so 7d's WARN stays
+        self.art.write_text(ALSO, encoding="utf-8")
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
         held = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd)
         self.assertEqual((held.returncode, held.stdout), (1, ""), held.stderr)
@@ -101,8 +101,7 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual([json.loads(x)["group"] for x in kept.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
     def test_keep_names_only_open_lines(self):  # #162: a keep typed before the lint was read is refused
-        self.art.write_text("Also the vans run late. Also the gate is shut. Also the tea is cold. Also the dog barks."
-                            + ABOVE_GATE + "\n", encoding="utf-8")  # #148: past the 150-word gate, so 7d's WARN stays
+        self.art.write_text(ALSO, encoding="utf-8")
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)
         stray = cli("judge-input", "post.md", "--profile", "default", "--keep", "4b,7d,HM,r2", cwd=self.cwd)
         self.assertEqual((stray.returncode, stray.stdout), (2, ""), stray.stderr)
