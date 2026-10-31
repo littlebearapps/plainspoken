@@ -5,6 +5,41 @@ new features and a patch release for fixes. release-please writes each entry fro
 "In short" lines were added by hand, and so were the corrections where a commit only referred to an issue
 but the entry said it closed it.
 
+## [0.13.0](https://github.com/littlebearapps/plainspoken/compare/v0.12.0...v0.13.0) (2026-10-31)
+
+
+### Features
+
+* **engine:** meaning-diff command with a saved baseline and result ([#147](https://github.com/littlebearapps/plainspoken/issues/147)) ([2de3756](https://github.com/littlebearapps/plainspoken/commit/2de37564ecb499acaaecd45c384644992a246a92))
+* **engine:** meaning-diff lists dropped limits and flipped promises ([#147](https://github.com/littlebearapps/plainspoken/issues/147)) ([cb94930](https://github.com/littlebearapps/plainspoken/commit/cb949302f272b9c47af378e4ccb58f218f6e44c8))
+* **engine:** meaning-diff word lists and marker counting ([#147](https://github.com/littlebearapps/plainspoken/issues/147)) ([141138c](https://github.com/littlebearapps/plainspoken/commit/141138ca3941fc425eab876be817a0cf938b62fa))
+* **engine:** status lists meaning changes for the owner ([#147](https://github.com/littlebearapps/plainspoken/issues/147)) ([2eea947](https://github.com/littlebearapps/plainspoken/commit/2eea94739d98d01766d25cef49b5ee6497dcfa23))
+* **evals:** eval rewrite and rewrite-delta list meaning changes ([#147](https://github.com/littlebearapps/plainspoken/issues/147)) ([f68f464](https://github.com/littlebearapps/plainspoken/commit/f68f464731b68809bccf892e77ceecdf498f8d05))
+* **skills:** check and humanize list meaning changes for the owner ([#147](https://github.com/littlebearapps/plainspoken/issues/147)) ([c8720a0](https://github.com/littlebearapps/plainspoken/commit/c8720a0f4b32e599ad6b1f246cebe6b6b83d94e5))
+
+
+### Bug Fixes
+
+* **check:** judge-input lints a stale draft itself and prints the lint on stderr ([#162](https://github.com/littlebearapps/plainspoken/issues/162)) ([69185fe](https://github.com/littlebearapps/plainspoken/commit/69185fe1352d51799434a32e03a0ce0aa882204a))
+* **check:** one call lints and prints the judge input, so the lint is never thrown away ([#162](https://github.com/littlebearapps/plainspoken/issues/162)) ([76ae278](https://github.com/littlebearapps/plainspoken/commit/76ae2781519e3cd5522d41e9ba8c1b2069edcca7))
+* **check:** rule 7d doesn't count a greeting or sign-off as a sentence ([#148](https://github.com/littlebearapps/plainspoken/issues/148)) ([97e0267](https://github.com/littlebearapps/plainspoken/commit/97e026767252b49e41a12305c8d122df38db719f))
+* **check:** short pieces get only 7d's short-run test ([#148](https://github.com/littlebearapps/plainspoken/issues/148)) ([8dedcb9](https://github.com/littlebearapps/plainspoken/commit/8dedcb96acad4946094731bfe747ff8e6f5f8fb4))
+* **meaning:** cap status's M lines, read a damaged result as stale, scope the skill calls ([#147](https://github.com/littlebearapps/plainspoken/issues/147)) ([75a73a8](https://github.com/littlebearapps/plainspoken/commit/75a73a8c479bf575bdd6741ec9d648409525d44c))
+
+
+### Ruleset
+
+* skip rule 7d's no-long-sentence test under 150 words ([#148](https://github.com/littlebearapps/plainspoken/issues/148)) ([8a09286](https://github.com/littlebearapps/plainspoken/commit/8a09286d038d12288bd56bed2929779091d1da5d))
+
+
+### Documentation
+
+* a plain summary and corrected issue links for 0.12.0, and a roadmap for 0.13.0 ([753ade7](https://github.com/littlebearapps/plainspoken/commit/753ade7a3f1d3d53ac4b0d97da09ab7286b9b4e4))
+* **facts:** record the locale option probe and the Codex live checks ([5107b14](https://github.com/littlebearapps/plainspoken/commit/5107b149713d3313bf2cd455a4c713918f2a0866))
+* **hosts:** judge-input prints the lint on stderr; eval: no lint to /dev/null ([#162](https://github.com/littlebearapps/plainspoken/issues/162)) ([69e31ac](https://github.com/littlebearapps/plainspoken/commit/69e31ac55f075d73679f7cc7ee71051b022ad348))
+* **roadmap:** [#147](https://github.com/littlebearapps/plainspoken/issues/147), [#148](https://github.com/littlebearapps/plainspoken/issues/148) and [#162](https://github.com/littlebearapps/plainspoken/issues/162) are built for 0.13.0 ([02311d6](https://github.com/littlebearapps/plainspoken/commit/02311d6492579f299a73d1c36d58a5b7ac0b60bc))
+* say 7d skips the long-sentence test in short pieces ([#148](https://github.com/littlebearapps/plainspoken/issues/148)) ([9dd7d4c](https://github.com/littlebearapps/plainspoken/commit/9dd7d4c679c643e437a87cd4ab158ef692c8007b))
+
 ## [0.12.0](https://github.com/littlebearapps/plainspoken/compare/v0.11.0...v0.12.0) (2026-10-30)
 
 In short: the publish gate, write guard and kaizen nudge now run in Codex and Hermes Agent, `doctor` checks an
