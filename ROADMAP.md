@@ -20,6 +20,9 @@ out from the round-8 evals and from feedback on a Hermes Agent install:
 - Rule 7d no longer asks a piece under 150 words for a long sentence, and doesn't count a greeting or sign-off as a
   sentence, so short emails and texts stop getting rhythm warnings
   ([#148](https://github.com/littlebearapps/plainspoken/issues/148); ruleset 4.4.0).
+- Rule 7d doesn't count a line that's only a link or button label as a sentence, so a call to action of two short
+  sentences and a button stops getting a rhythm warning
+  ([#186](https://github.com/littlebearapps/plainspoken/issues/186); ruleset 4.4.0).
 - `judge-input` lints the draft itself when its saved lint is out of date and prints the lint, so it can't be skipped
   before the judges run ([#162](https://github.com/littlebearapps/plainspoken/issues/162)).
 
