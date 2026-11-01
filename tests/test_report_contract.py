@@ -45,7 +45,8 @@ class Keys(unittest.TestCase):
     def test_paths_cover_every_file(self):
         p = report.report_paths(self.cwd / "post.md", self.cwd / ".plainspoken" / "reports", self.cwd)
         self.assertEqual(set(p), {"lint", "J1", "J2", "J3", "J4", "JR", "justify", "report", "reply", "claims",
-                                  "claims-check", "delivery", "delivery-reply", "checked", "before", "meaning"})
+                                  "claims-check", "delivery", "delivery-reply", "checked", "before", "first-draft",
+                                  "meaning"})
         key = report.report_key(self.cwd / "post.md", self.cwd)
         self.assertEqual(p["claims"].name, f"{key}.claims.json")
         self.assertEqual(p["claims-check"].name, f"{key}.claims-check.json")

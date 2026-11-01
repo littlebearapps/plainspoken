@@ -8,6 +8,9 @@ added detail, "support" -> "raising money") isn't seen, and every listing says s
 - `markers(sentence, lex)`: the marker counts of one sentence, keyed `(class, lemma)`.
 - `diff(before, after)`: the changed sentences, each with the marker changes inside it.
 - `record`, `saved`, `summarise`: the CLI's saved result and its lines (`plainspoken meaning-diff`).
+- `first_draft`, `start`: the saved baselines. On the write route the first draft (saved before any edit) shows what
+  later edits added, such as a reason joined in a lint-only pass. What they dropped is read only from check's own
+  baseline, since a writer cutting its own first draft isn't a change to anything the owner gave it (#189).
 
 It never changes a verdict: `check`, `status`, `eval rewrite` and `rewrite-delta` exit as they would without it.
 """
@@ -16,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 import tomllib
 from collections import Counter
 from dataclasses import dataclass
@@ -24,6 +28,7 @@ from pathlib import Path
 
 DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "meaning.toml"
 FOOTER = "meaning-diff: word-level; a change made without these words isn't seen."
+FIRST_DRAFT_HOURS = 6  # a first draft no check has claimed in this long was left by a run that stopped
 
 # class -> the label used in output, and which way a change is listed
 CLASSES = {"num": "number", "qual": "qualifier", "neg": "negation", "commit": "commitment", "oblig": "obligation",
@@ -404,41 +409,93 @@ def _shown(path: Path, root: Path) -> str:
         return str(path)
 
 
-def start(path: Path, root: Path, reports_dir: Path) -> Path:
-    """Save `path`'s bytes as the baseline (`<key>.before.md`) and drop any result from an earlier run. The text must
-    read as UTF-8 (a UnicodeDecodeError otherwise, and nothing is written)."""
+def first_draft(path: Path, root: Path, reports_dir: Path) -> None:
+    """Save `path`'s bytes as a write run's first draft (`<key>.first-draft.md`). It's a new run, so any baseline and
+    result from an earlier one go. The text must read as UTF-8 (a UnicodeDecodeError otherwise, and nothing is
+    written)."""
     from plainspoken import report
     data = Path(path).read_bytes()
     data.decode("utf-8")
     p = _paths(path, root, reports_dir)
+    p["first-draft"].parent.mkdir(parents=True, exist_ok=True)
+    report.write_atomic(p["first-draft"], data)
+    p["before"].unlink(missing_ok=True)
+    p["meaning"].unlink(missing_ok=True)
+
+
+def start(path: Path, root: Path, reports_dir: Path) -> int | None:
+    """Save `path`'s bytes as the baseline (`<key>.before.md`) and drop any result from an earlier run. The text must
+    read as UTF-8 (a UnicodeDecodeError otherwise, and nothing is written). The first `start` after `first_draft`
+    claims that first draft, and its age in minutes comes back; once one has claimed it, or after FIRST_DRAFT_HOURS,
+    the first draft belongs to an earlier run, so it's deleted and this returns None."""
+    from plainspoken import report
+    data = Path(path).read_bytes()
+    data.decode("utf-8")
+    p = _paths(path, root, reports_dir)
+    claimed = None
+    if p["first-draft"].is_file():
+        age = time.time() - p["first-draft"].stat().st_mtime
+        if p["before"].is_file() or age >= FIRST_DRAFT_HOURS * 3600:
+            p["first-draft"].unlink()
+        else:
+            claimed = int(max(age, 0) // 60)
     p["before"].parent.mkdir(parents=True, exist_ok=True)
     report.write_atomic(p["before"], data)
     p["meaning"].unlink(missing_ok=True)
-    return p["before"]
+    return claimed
 
 
 def baseline(path: Path, root: Path, reports_dir: Path) -> str | None:
-    """The saved baseline's text, or None when `start` never ran."""
-    p = _paths(path, root, reports_dir)["before"]
-    return p.read_bytes().decode("utf-8") if p.is_file() else None
+    """The saved baseline's text (a write run's first draft until its check takes one), or None when neither ran."""
+    p = _paths(path, root, reports_dir)
+    for name in ("before", "first-draft"):
+        if p[name].is_file():
+            return p[name].read_bytes().decode("utf-8")
+    return None
+
+
+def _one_way(changes: list[dict], kind: str) -> list[dict]:
+    """`changes` with only their `kind` ("added" or "dropped") items; a change left with none goes."""
+    kept = ({**c, "items": [i for i in c["items"] if i["change"] == kind]} for c in changes)
+    return [c for c in kept if c["items"]]
+
+
+def _since_first_draft(first: str, before: str | None, after: str) -> list[dict]:
+    """What edits added since the first draft, and what they dropped since check's baseline (None: check hasn't
+    started), in text order with a cut sentence last, numbered afresh."""
+    changes = _one_way(diff(first, after), "added") + (_one_way(diff(before, after), "dropped") if before is not None
+                                                       else [])
+    changes.sort(key=lambda c: c["line"] or float("inf"))
+    return [{**c, "id": f"M{n}"} for n, c in enumerate(changes, start=1)]
+
+
+def _file_sha(path: Path) -> str | None:
+    return _sha(path.read_bytes()) if path.is_file() else None
 
 
 def record(path: Path, root: Path, reports_dir: Path, before_text: str) -> dict:
-    """Compare `before_text` with `path` now and write `<key>.meaning.json`, bound to both texts' sha256 and the word
-    lists'. Returns what it wrote."""
+    """Compare `before_text` with `path` now and write `<key>.meaning.json`, bound to both texts' sha256, the first
+    draft's (None off the write route) and the word lists'. Returns what it wrote."""
     from plainspoken import report
     data = Path(path).read_bytes()
+    after = data.decode("utf-8")
+    paths = _paths(path, root, reports_dir)
+    if paths["first-draft"].is_file():
+        changes = _since_first_draft(paths["first-draft"].read_bytes().decode("utf-8"),
+                                     before_text if paths["before"].is_file() else None, after)
+    else:
+        changes = diff(before_text, after)
     rec = {"article": _shown(path, root), "before_sha256": _sha(before_text.encode("utf-8")),
-           "after_sha256": _sha(data), "lexicon_sha256": lexicon_sha256(),
-           "changes": diff(before_text, data.decode("utf-8"))}
-    p = _paths(path, root, reports_dir)["meaning"]
+           "first_draft_sha256": _file_sha(paths["first-draft"]),
+           "after_sha256": _sha(data), "lexicon_sha256": lexicon_sha256(), "changes": changes}
+    p = paths["meaning"]
     p.parent.mkdir(parents=True, exist_ok=True)
     report.write_atomic(p, json.dumps(rec, indent=2, ensure_ascii=False) + "\n")
     return rec
 
 
 def saved(path: Path, root: Path, reports_dir: Path) -> tuple[str, list[dict]]:
-    """(state, changes) of the saved result: `current` (bound to `path` as it is now, the saved baseline and these
+    """(state, changes) of the saved result: `current` (bound to `path` as it is now, the saved baselines and these
     word lists), `stale` (any of those changed since), `missing` (a baseline but no result) or `no-baseline`. The
     changes come back only when current."""
     p = _paths(path, root, reports_dir)
@@ -448,6 +505,7 @@ def saved(path: Path, root: Path, reports_dir: Path) -> tuple[str, list[dict]]:
         rec = json.loads(p["meaning"].read_text(encoding="utf-8"))
         current = (rec["after_sha256"] == _sha(Path(path).read_bytes())
                    and rec["lexicon_sha256"] == lexicon_sha256()
+                   and rec.get("first_draft_sha256") == _file_sha(p["first-draft"])
                    and (not p["before"].is_file() or rec["before_sha256"] == _sha(p["before"].read_bytes())))
         changes = rec["changes"] if current else []
         if not isinstance(changes, list) or not all(_well_formed(c) for c in changes):
@@ -470,6 +528,14 @@ def _clip(text: str, n: int) -> str:
     return text if len(text) <= n else text[:n - 1].rstrip() + "…"
 
 
+def _in_view(change: dict, n: int) -> str:
+    """The after text, starting later (with "…") when the first added word would sit past `n` characters."""
+    text = " ".join(change["after"].split())
+    added = next((w for i in change["items"] if i["change"] == "added" for w in i["words"]), "")
+    at = text.lower().find(added.lower()) if added else -1
+    return "…" + text[text.find(" ", max(at - n // 2, 0)) + 1:] if at + len(added) >= n - 1 else text
+
+
 def what_changed(change: dict) -> str:
     """`dropped "isn't", "separate"; added "covers"` for one listed change."""
     parts = []
@@ -488,7 +554,7 @@ def summarise(changes: list[dict], shown: int = 10, path: str = "") -> str:
     lines = []
     for c in changes[:shown]:
         where = f"{c['id']} line {c['line']}" if c["line"] else f"{c['id']} cut"
-        now = f'; now: "{_clip(c["after"], 80)}"' if c["after"] else ""
+        now = f'; now: "{_clip(_in_view(c, 80), 80)}"' if c["after"] else ""
         lines.append(f'{where}: {what_changed(c)}; was: "{_clip(c["before"], 80)}"{now}')
     if len(changes) > shown:
         lines.append(f"… {len(changes) - shown} more in {path}" if path else f"… {len(changes) - shown} more")
@@ -503,7 +569,7 @@ def owner_items(changes: list[dict], shown: int = 10, path: str = "") -> list[st
         return _clip(re.sub(r"[()]", "", text), n)
     out = []
     for c in changes[:shown]:
-        text = plain(c["after"], 120) if c["after"] else "cut: " + plain(c["before"], 115)
+        text = plain(_in_view(c, 120), 120) if c["after"] else "cut: " + plain(c["before"], 115)
         out.append(f"{c['id']}: {text} ({re.sub(r'[()]', '', what_changed(c))}; was: {plain(c['before'], 80)})")
     if len(changes) > shown:
         out.append(f"… {len(changes) - shown} more in {path}" if path else f"… {len(changes) - shown} more")

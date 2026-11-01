@@ -284,7 +284,11 @@ def _main(argv: list[str] | None) -> int:
     md = sub.add_parser("meaning-diff", help="list the numbers, limits and promises an edit changed, for the owner "
                                              "(word-level, free; never a verdict)")
     md.add_argument("path", type=Path)
-    md.add_argument("--start", action="store_true", help="save the file as the baseline, before the first edit")
+    md_base = md.add_mutually_exclusive_group()
+    md_base.add_argument("--start", action="store_true", help="save the file as the baseline, before the first edit")
+    md_base.add_argument("--first-draft", action="store_true",
+                         help="save a write run's whole first draft, before any edit: later compares list what "
+                              "was added since it")
     md.add_argument("--before", type=Path, help="compare this file with FILE instead (saves nothing)")
     md.add_argument("--json", action="store_true")
     md.add_argument("--reports", type=Path)
@@ -1024,15 +1028,21 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
 
 
 def _meaning_diff(args: argparse.Namespace, root: Path) -> int:
-    """`meaning-diff`: `--start` saves the baseline; then FILE against it (or `--before OLD`), listed for the owner.
+    """`meaning-diff`: `--start` or `--first-draft` saves a baseline; then FILE against it (or `--before OLD`), listed
+    for the owner.
     Exit 0 when it ran, whatever it lists; 2 on bad input."""
     reports_dir = args.reports or report.reports_dir_default(root)
     try:
         if not args.path.is_file():
             raise FileNotFoundError(f"no such file: {args.path}")
+        if args.first_draft:
+            meaning.first_draft(args.path, root, reports_dir)
+            print(f"meaning-diff: first draft saved for {args.path}")
+            return 0
         if args.start:
-            meaning.start(args.path, root, reports_dir)
-            print(f"meaning-diff: baseline saved for {args.path}")
+            age = meaning.start(args.path, root, reports_dir)
+            print(f"meaning-diff: baseline saved for {args.path}" + (
+                "" if age is None else f"; also listing what was added since the first draft saved {age} min ago"))
             return 0
         if args.before is not None:
             changes = meaning.diff(args.before.read_text(encoding="utf-8"), args.path.read_text(encoding="utf-8"))

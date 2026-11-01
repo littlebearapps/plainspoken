@@ -44,12 +44,17 @@ Each file, what writes it, and what it's bound to:
   one (`kaizen dismiss --from-snapshot` reads it). Removed when check capture is off.
 - `<key>.before.md`: written by `meaning-diff FILE --start` (the check skill runs it before its first lint, humanize
   before it rewrites a file); the article's exact bytes before the first edit. Bound to nothing: it's the baseline,
-  kept until the next `--start`.
+  kept until the next `--start`, or deleted by `--first-draft`.
+- `<key>.first-draft.md`: written by `meaning-diff FILE --first-draft` (the write skill runs it once the whole first
+  draft is saved, before any edit). The next `--start` claims it and says so, if that's within 6 hours; a later
+  `--start`, or one after that time, deletes it. While it's there, a compare lists what was added since it and what
+  was dropped since `<key>.before.md`: cutting its own first draft isn't a change to anything the owner gave the
+  writer.
 - `<key>.meaning.json`: written by `meaning-diff FILE` (the baseline against the file now; `--before OLD` writes
-  nothing), deleted by the next `--start`; bound to before_sha256, after_sha256 (bare hex, like the lint's) and
-  lexicon_sha256 (`data/meaning.toml`). `status` lists its changes under `needs the owner` only while all three
-  match the baseline, the file and the word lists on disk now; otherwise it prints `meaning: stale (rerun
-  meaning-diff)`. It never changes a verdict or an exit code.
+  nothing), deleted by the next `--start` or `--first-draft`; bound to before_sha256, first_draft_sha256 (null off
+  the write route), after_sha256 (bare hex, like the lint's) and lexicon_sha256 (`data/meaning.toml`). `status` lists
+  its changes under `needs the owner` only while all four match the baselines, the file and the word lists on disk
+  now; otherwise it prints `meaning: stale (rerun meaning-diff)`. It never changes a verdict or an exit code.
 
 Hash formats differ by file type. The lint, judge, justify and report files carry `article_sha256` as bare hex
 (`3f2a…`); the claims files (`claims`, `claims-check`, `claims-reply`), the delivery files (`delivery`,

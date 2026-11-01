@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -111,6 +112,159 @@ class Command(unittest.TestCase):
         self.assertTrue(self.paths["meaning"].exists())
         cli("meaning-diff", "email.md", "--start", cwd=self.cwd)
         self.assertFalse(self.paths["meaning"].exists())
+
+
+class FirstDraft(unittest.TestCase):
+    """#189: on the write route, what any edit added since the first draft, and what check's fixes dropped."""
+    FIRST = ("You don't need to book. It's first come, first served.\n\n"
+             "That was fine until something changed late.\n\n"
+             "The first visit is free, and we won't charge you without asking.\n")
+    JOINED = FIRST.replace("book. It's", "book, because it's")  # a lint-only join: adds a reason
+
+    def setUp(self):
+        self.cwd = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.cwd, ignore_errors=True)
+        self.art = self.cwd / "draft.md"
+        self.art.write_text(self.FIRST, encoding="utf-8")
+        self.paths = report.report_paths(self.art, self.cwd / ".plainspoken" / "reports", self.cwd)
+
+    def run_cli(self, *flags: str) -> subprocess.CompletedProcess:
+        r = cli("meaning-diff", "draft.md", *flags, cwd=self.cwd)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r
+
+    def edit(self, text: str) -> None:
+        self.art.write_text(text, encoding="utf-8")
+
+    @staticmethod
+    def listed(r: subprocess.CompletedProcess) -> list[str]:
+        return [x for x in r.stdout.splitlines() if x.startswith("M")]
+
+    def test_a_reason_joined_before_check_starts_is_listed(self):
+        self.run_cli("--first-draft")
+        self.edit(self.JOINED)
+        self.run_cli("--start")  # check step 1
+        lines = self.listed(self.run_cli())
+        self.assertEqual(len(lines), 1)
+        self.assertIn('M1 line 1: added "because"', lines[0])
+
+    def test_its_own_cut_before_check_starts_is_not_listed(self):
+        self.run_cli("--first-draft")
+        self.edit(self.FIRST.replace("That was fine until something changed late.\n\n", ""))
+        self.run_cli("--start")
+        self.assertEqual(self.listed(self.run_cli()), [])
+
+    def test_a_limit_a_fix_drops_after_check_starts_is_still_listed(self):
+        self.run_cli("--first-draft")
+        self.run_cli("--start")
+        self.edit(self.FIRST.replace(", and we won't charge you without asking", ""))
+        lines = self.listed(self.run_cli())
+        self.assertEqual(len(lines), 1)
+        self.assertIn("dropped", lines[0])
+        self.assertNotIn("added", lines[0])
+
+    def test_both_kinds_are_numbered_in_text_order(self):
+        self.run_cli("--first-draft")
+        self.run_cli("--start")
+        self.edit(self.JOINED.replace(", and we won't charge you without asking", ""))
+        rec = self.run_cli("--json")
+        changes = json.loads(rec.stdout)["changes"]
+        self.assertEqual([(c["id"], c["items"][0]["change"]) for c in changes], [("M1", "added"), ("M2", "dropped")])
+
+    def test_a_reason_added_after_check_starts_is_listed_once(self):
+        self.run_cli("--first-draft")
+        self.run_cli("--start")
+        self.edit(self.JOINED)
+        self.assertEqual(len(self.listed(self.run_cli())), 1)
+
+    def test_check_start_says_it_kept_the_first_draft(self):
+        self.run_cli("--first-draft")
+        out = self.run_cli("--start").stdout
+        self.assertIn("baseline saved for draft.md", out)
+        self.assertIn("first draft saved 0 min ago", out)
+        self.assertEqual(self.paths["first-draft"].read_text(encoding="utf-8"), self.FIRST)
+        self.assertEqual(self.paths["before"].read_text(encoding="utf-8"), self.FIRST)
+
+    def test_a_compare_with_no_check_start_lists_only_what_was_added(self):
+        self.run_cli("--first-draft")
+        self.edit(self.JOINED.replace("That was fine until something changed late.\n\n", ""))
+        lines = self.listed(self.run_cli())
+        self.assertEqual(len(lines), 1)
+        self.assertIn('added "because"', lines[0])
+
+    def test_a_later_standalone_check_takes_its_own_baseline(self):
+        self.run_cli("--first-draft")
+        self.run_cli("--start")  # the write run's check
+        self.edit(self.JOINED)  # the piece goes on; a person's edit weeks later
+        out = self.run_cli("--start").stdout  # a new check, on its own
+        self.assertEqual(out.strip(), "meaning-diff: baseline saved for draft.md")
+        self.assertFalse(self.paths["first-draft"].exists())
+        self.assertEqual(self.listed(self.run_cli()), [])
+
+    def test_a_first_draft_left_by_a_dead_run_expires(self):
+        self.run_cli("--first-draft")  # the run stops here: no check ever claims it
+        old = time.time() - (meaning.FIRST_DRAFT_HOURS * 3600 + 60)
+        os.utime(self.paths["first-draft"], (old, old))
+        self.edit(self.JOINED)
+        out = self.run_cli("--start").stdout
+        self.assertEqual(out.strip(), "meaning-diff: baseline saved for draft.md")
+        self.assertFalse(self.paths["first-draft"].exists())
+        self.assertEqual(self.listed(self.run_cli()), [])
+
+    def test_a_new_write_run_clears_the_old_baselines(self):
+        self.run_cli("--first-draft")
+        self.run_cli("--start")
+        self.edit(self.JOINED)
+        self.run_cli()
+        self.run_cli("--first-draft")
+        self.assertEqual(self.paths["first-draft"].read_text(encoding="utf-8"), self.JOINED)
+        self.assertFalse(self.paths["before"].exists())
+        self.assertFalse(self.paths["meaning"].exists())
+
+    def test_start_and_first_draft_together_is_exit_2(self):
+        r = cli("meaning-diff", "draft.md", "--start", "--first-draft", cwd=self.cwd)
+        self.assertEqual(r.returncode, 2)
+        self.assertFalse(self.paths["first-draft"].exists())
+
+    def test_first_draft_not_utf8_is_exit_2(self):
+        self.art.write_bytes(b"caf\xe9 is free\n")
+        r = cli("meaning-diff", "draft.md", "--first-draft", cwd=self.cwd)
+        self.assertEqual(r.returncode, 2)
+        self.assertFalse(self.paths["first-draft"].exists())
+
+    def test_the_result_is_bound_to_the_first_draft(self):
+        self.run_cli("--first-draft")
+        self.edit(self.JOINED)
+        self.run_cli("--start")
+        self.run_cli()
+        reports = self.cwd / ".plainspoken" / "reports"
+        self.assertEqual(meaning.saved(self.art, self.cwd, reports)[0], "current")
+        self.paths["first-draft"].write_text("Another first draft.\n", encoding="utf-8")
+        self.assertEqual(meaning.saved(self.art, self.cwd, reports), ("stale", []))
+
+    def test_a_long_sentence_keeps_the_added_word_in_view(self):  # round 9: the join sat past the clip
+        start = "The library started a monthly repair cafe in July, and it runs in the community room from 10am to 1pm"
+        first = f"{start}; you don't need to book. It's first come, first served.\n"
+        self.edit(first)
+        self.run_cli("--first-draft")
+        self.edit(first.replace("book. It's", "book, because it's"))
+        self.assertIn("because it's first come", self.listed(self.run_cli())[0])
+        status = cli("status", "draft.md", "--profile", "default", cwd=self.cwd).stdout
+        item = next(x.strip() for x in status.splitlines() if x.strip().startswith("M1:"))
+        self.assertIn("…", item.split(" (added")[0])
+        self.assertIn("because it's first come", item.split(" (added")[0])
+
+    def test_status_lists_it_under_the_owner_and_keeps_its_exit_code(self):
+        self.run_cli("--first-draft")
+        self.edit(self.JOINED)
+        self.run_cli("--start")
+        before = cli("status", "draft.md", "--profile", "default", cwd=self.cwd)
+        self.run_cli()
+        after = cli("status", "draft.md", "--profile", "default", cwd=self.cwd)
+        self.assertEqual(after.returncode, before.returncode)
+        item = next(x.strip() for x in after.stdout.splitlines() if x.strip().startswith("M1:"))
+        self.assertIn('added "because"', item)
+        self.assertEqual(owner_asks._item(item)[0], "M1")
 
 
 class Saved(unittest.TestCase):
