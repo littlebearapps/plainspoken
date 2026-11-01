@@ -16,11 +16,19 @@ Ruleset versions are separate from the plugin version. Every report records the 
 - **The engine half:** a greeting that opens a piece ("Hi Sam,") and a sign-off that closes it ("Cheers, Alex") no
   longer count as 7d sentences, so a short email can't reach the five-sentence run on its greeting. That's a
   separate engine commit, not a ruleset key.
-- **Measured effect (lint only, no model calls):** on the verdict-diff corpus, 149 of 276 texts change, all of them
-  golden cases under 150 words. 7d WARNs go from 155 to 5, and 114 texts move from WARN to CLEAN; no other rule
-  changes. The five 7d WARNs left are the run-form judge-review cases, so no golden case goes stale. On the 718
-  saved campaign pieces (rounds 1 to 8, deduplicated), 7d WARNs go from 618 to 139: emails 50 to 0, text messages
-  38 to 0, long-form pieces 60 to 60. No piece gains a finding, and rule 7 stays at 4.
+- **A link or button line isn't a 7d sentence (#186):** a source line holding only one link or one button label
+  (`[Book a call]`, `**[Book a call](url)**`, `<a href="url">Book</a>`) no longer counts as a sentence for 7d, or for
+  NR-2, which reads 7d. So a call to action of two short sentences and a button has too few sentences to check. A
+  label of `staccato_short_len` words or more stays a sentence, and so does a sentence that only contains a link or
+  a link closed by a full stop. Rule 7, the other rules and the word count still see the line. This is an engine
+  commit too, not a ruleset key. In round 9 all three bookkeeping pages ended on this 7d WARN, and one check ended
+  UNRESOLVED after three rejected reasons.
+- **Measured effect (lint only, no model calls, against 4.3.0):** on the verdict-diff corpus, 149 of 277 texts
+  change, all of them golden cases under 150 words. 7d WARNs go from 155 to 5, and 114 texts move from WARN to CLEAN;
+  no other rule changes. The five 7d WARNs left are the run-form judge-review cases, so no golden case goes stale.
+  #186 changes nothing in this corpus. On the 797 saved campaign pieces (rounds 1 to 9, deduplicated), 7d WARNs go
+  from 678 to 145: emails 61 to 1, text messages 40 to 0, long-form pieces 65 to 62. The long-form drop is #186, the
+  three bookkeeping pages, and it's the only change #186 makes there. No piece gains a finding, and rule 7 stays at 4.
 - **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.3.0 read as
   stale and ask for a re-check, which is right, because a 7d WARN someone justified may no longer fire. The file's
   bytes change, so a pending kaizen proposal rebases.
