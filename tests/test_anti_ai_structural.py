@@ -2,7 +2,7 @@
 import dataclasses
 import unittest
 
-from plainspoken import report
+from plainspoken import metrics, report
 from plainspoken.checks_lexical import CHECKS as LEXICAL
 from plainspoken.checks_structural import CHECKS
 from plainspoken.doc import parse
@@ -205,6 +205,86 @@ class StaccatoLetterFrame(unittest.TestCase):
         f = CHECKS["7d"](doc, CFG)
         self.assertEqual([x.severity for x in f], ["WARN"])
         self.assertIn("in the FAQ", f[0].message)
+
+
+CTA = "The first step is a free call. If it's a clean-up, I'll quote it afterwards."
+BUTTONS = (
+    "[Book your free 30-minute call]",
+    "**[Book your free call]**",
+    "[Book your free call](https://example.com/book)",
+    "**[Book your free call](https://example.com/book)**",
+    "__[Book your free call]__",
+    "*[Book your free call]*",
+    "[Book your free call][cta]",
+    '<a class="button" href="https://example.com/book">Book your free call</a>',
+)
+
+
+class StaccatoButtonLine(unittest.TestCase):
+    """#186: a line that's only a link or a button label isn't a sentence for rule 7d. The bookkeeping finals of round 9
+    got a no-long WARN on a two-sentence call to action because the button was the section's third sentence."""
+
+    def test_two_sentences_and_a_button_stay_quiet(self):
+        for button in BUTTONS:
+            self.assertEqual(run("7d", f"## Book a call\n\n{CTA}\n\n{button}" + ABOVE_GATE), [], button)
+
+    def test_button_on_the_next_line_of_the_paragraph(self):
+        self.assertEqual(run("7d", f"## Book a call\n\n{CTA}\n[Book your free call](https://example.com/book)"
+                                   + ABOVE_GATE), [])
+
+    def test_three_real_short_sentences_still_warn(self):
+        found = run("7d", f"## Book a call\n\n{CTA} It takes half an hour." + ABOVE_GATE)
+        self.assertEqual([(f.severity, f.excerpt) for f in found], [("WARN", "Book a call")])
+
+    def test_three_real_short_sentences_and_a_button_still_warn(self):
+        found = run("7d", f"## Book a call\n\n{CTA} It takes half an hour.\n\n[Book your free call]" + ABOVE_GATE)
+        self.assertEqual([(f.severity, f.excerpt) for f in found], [("WARN", "Book a call")])
+
+    def test_sentence_containing_a_link_still_counts(self):
+        for line in ("Read [the guide](https://example.com/guide) first.",
+                     "[The guide](https://example.com/guide) comes first.",
+                     "**Read [the guide](https://example.com/guide) first.**"):
+            found = run("7d", f"## Book a call\n\n{CTA}\n\n{line}" + ABOVE_GATE)
+            self.assertEqual([f.excerpt for f in found], ["Book a call"], line)
+
+    def test_link_closed_by_a_full_stop_still_counts(self):  # written as a sentence, so it's read as one
+        found = run("7d", f"## Book a call\n\n{CTA}\n\n[The guide](https://example.com/guide)." + ABOVE_GATE)
+        self.assertEqual([f.excerpt for f in found], ["Book a call"])
+
+    def test_long_sentence_written_as_one_link_still_counts(self):
+        self.assertEqual(run("7d", f"## Book a call\n\n{CTA}\n\n[{LONG}](https://example.com/book)" + ABOVE_GATE), [])
+
+    def test_two_sentences_inside_one_label_still_count(self):
+        found = run("7d", f"## Book a call\n\n{CTA}\n\n[Book now. It's free.](https://example.com/book)" + ABOVE_GATE)
+        self.assertEqual([f.excerpt for f in found], ["Book a call"])
+
+    def test_buttons_alone_stay_quiet(self):
+        self.assertEqual(run("7d", "## Next\n\n[Book a call]\n\n[Send an email]\n\n[Read the guide](https://example.com)"
+                                   + ABOVE_GATE), [])
+
+    def test_button_does_not_reach_a_short_run(self):
+        self.assertEqual(run("7d", f"{LONG} Short one here. Two more here. Three more here. Four more here.\n\n"
+                                   "[Book your free call]"), [])
+        found = run("7d", f"{LONG} Short one here. Two more here. Three more here. Four more here. Five more here.\n\n"
+                          "[Book your free call]")
+        self.assertIn("5 consecutive", found[0].message)
+
+    def test_signoff_before_a_closing_button_still_goes(self):
+        self.assertEqual(run("7d", LONG + "\n\nThanks. Here it is. Short one. Another one.\n\nCheers,\nAlex\n\n"
+                                          "[Book your free call]"), [])
+
+    def test_narrative_profile_gets_the_same_reading(self):
+        real = "One here. Two here. Three here. Four here. Five here. Six here."
+        self.assertEqual(run("NR-2", f"## Book a call\n\n{real}\n\n[Book your free call]", NARRATIVE), [])
+        self.assertEqual(len(run("NR-2", f"## Book a call\n\n{real} Seven here.\n\n[Book your free call]", NARRATIVE)), 1)
+
+    def test_other_rules_and_word_counts_still_see_the_button(self):
+        body = "## Book a call\n\nOne more short thing. Two more short things. [Book your free call]"
+        doc = parse(f"---\n---\n\n{body}\n", profile=PRODUCT)
+        self.assertIn("[Book your free call]", [s.text for s in doc.all_sentences()])
+        self.assertEqual(metrics.compute(doc, CFG)["words"], 12)
+        self.assertEqual([f.rule for f in run("7", "One more short thing. Two more short things. Three more short things. "
+                                                   "Four more short things.\n\n[Book your free call]")], ["7"])
 
 
 ISSUE_EMAIL_BODY = """Thanks for asking about cost. Here's how I'd set it up.
