@@ -326,6 +326,19 @@ class MeaningDiff(unittest.TestCase):  # #147: check and humanize list what an e
         report = flat[flat.index("### 8. Report"):]
         self.assertIn("`RUN meaning-diff '<draft>'`", report)
         self.assertLess(report.index("meaning-diff"), report.index("RUN status '<draft>'"))
+        self.assertTrue(report[len("### 8. Report "):].startswith("First run"))  # #189: lint and claims edits count too
+
+    def test_write_saves_the_first_draft_before_any_edit(self):  # #189: the reason joins came in the lint-only passes
+        flat = " ".join(skill("write")[1].split())
+        draft = flat[flat.index("### 5. Draft"):flat.index("### 6. Claims")]
+        self.assertIn("`RUN meaning-diff '<draft>' --first-draft`", draft)
+        self.assertIn("before you change a word", draft)
+
+    def test_humanize_compares_last(self):  # #189: the compare ran before the last edit in 2 of 5 fix runs
+        flat = " ".join(skill("humanize")[1].split())
+        self.assertIn("after your last edit to the file", flat)
+        self.assertIn("Edit again and you run it again", flat)
+        self.assertLess(flat.index("lib/run.py check <file>"), flat.index("after your last edit to the file"))
 
     def test_report_only_leaves_out_a_meaning_line(self):
         _, text = skill("check")

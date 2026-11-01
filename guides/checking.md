@@ -51,7 +51,9 @@ writing. It explains the check step by step, what each result means, and what th
    and when it has edited the draft it compares the two (`meaning-diff`). Any number, price, qualifier ("over 22
    years"), negation, condition, exclusion, promise or added "because" that a fix dropped or added is listed under
    `needs the owner` as an `M` line, for you to check. These lines never change the result. The comparison is
-   word-level and free: a change made without one of those words isn't seen.
+   word-level and free: a change made without one of those words isn't seen. When `write` drafted the piece, it also
+   saves the first draft, so a reason or promise added by any edit since is listed. Limits it cut from its own first
+   draft aren't; only what the check's own fixes dropped is.
 
 The check writes its files to `.plainspoken/reports/` in the project you run it from. Every report file is listed in
 [docs/report-contract.md](../docs/report-contract.md).

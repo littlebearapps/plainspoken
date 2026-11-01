@@ -40,8 +40,9 @@ notes. If the call fails, carry on without it. After rewriting you may run
 once if a BLOCK remains (two passes at most). Both calls use the file's own profile when the project sets one for it
 (`[engine] profiles`). Used on its own in file mode (never as check's fix step: check saves and compares
 itself), before rewriting the file, run
-`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py meaning-diff <file> --start`; after, run `… meaning-diff <file>` and put
-each line it lists in your summary for the writer to check. Not in text-only or embedded mode.
+`python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py meaning-diff <file> --start`; after your last edit to the file, run
+`… meaning-diff <file>` and put each line it lists in your summary for the writer to check. Edit again and you run it
+again: it's the last thing you do to the file. Not in text-only or embedded mode.
 
 ## Why AI text sounds the way it does
 

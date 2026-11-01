@@ -100,6 +100,9 @@ Rewrite the lines that drift before you start the next section. Every fact comes
 When the piece recommends or reports findings, say how strong each one's evidence is:
 `references/confidence-labels.md`.
 
+Once the whole first draft is saved, before you change a word of it (a lint nudge can arrive with the save), run
+`RUN meaning-diff '<draft>' --first-draft`, so step 8 can list a reason or promise an edit added.
+
 ### 6. Claims
 
 First make the check's lint-only passes here, so a lint fix lands before the ledger is built: the lint on the
@@ -141,7 +144,7 @@ spent, or it can't run). If a status still isn't current, say so in the report a
 
 ### 8. Report
 
-If a step edited the draft after the check's report step, first run `RUN meaning-diff '<draft>'` (exit 2: go on).
+First run `RUN meaning-diff '<draft>'` (exit 2: go on).
 Run `RUN status '<draft>' --plugin-profile '${user_config.profile}'` (plus step 2's `--profile`, if any). It reads
 the last saved check and claims results back; it runs and writes nothing. Start the report with this block, with
 no words before it; a report without it is incomplete. Fill it in, with the `status` lines copied exactly as
