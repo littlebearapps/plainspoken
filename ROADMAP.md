@@ -3,42 +3,41 @@
 This page shows where plainspoken is heading. It's not a commitment: priorities can change as the evals come in,
 and nothing here has a date. For what has already shipped, see [CHANGELOG.md](CHANGELOG.md).
 
-## Now: 0.13.0
+## Now: 0.14.0
 
-0.12.0 was released on 30 October 2026; [CHANGELOG.md](CHANGELOG.md) lists what it brought. 0.13.0 is being worked
-out from the round-8 evals and from feedback on a Hermes Agent install:
+0.13.0 was released in November 2026; [CHANGELOG.md](CHANGELOG.md) lists what it brought. 0.14.0 picks up what it left
+open:
 
-- `status` says what made a check stale, and shows whether the draft delivers its reader-value contract
+- Rerun the blind readers, which fell in round 8 and haven't been checked since
+  ([#195](https://github.com/littlebearapps/plainspoken/issues/195)).
+- Fixes for rule 7d that still add a reason or lengthen a sentence
+  ([#73](https://github.com/littlebearapps/plainspoken/issues/73)), and a claim kind that pins a promise or exclusion
+  to the brief ([#178](https://github.com/littlebearapps/plainspoken/issues/178)).
+- Write reports: asks the engine doesn't list ([#75](https://github.com/littlebearapps/plainspoken/issues/75)), and
+  engine lines restated in the report's own words
+  ([#163](https://github.com/littlebearapps/plainspoken/issues/163)).
+- The check's cost and order: the lint step ([#162](https://github.com/littlebearapps/plainspoken/issues/162)), the
+  rubric's 7d clause ([#187](https://github.com/littlebearapps/plainspoken/issues/187)) and the four-judge round a
+  kept WARN can cost ([#188](https://github.com/littlebearapps/plainspoken/issues/188)).
+- `status` says what made a check stale, and shows the delivery result
   ([#151](https://github.com/littlebearapps/plainspoken/issues/151)).
 - One copy-paste block to run the four judges on Hermes Agent
   ([#150](https://github.com/littlebearapps/plainspoken/issues/150)), and one wording for when a short piece gets
   the lint only ([#149](https://github.com/littlebearapps/plainspoken/issues/149)).
-- The writing nudge no longer reads a quoted example inside a question as a request
-  ([#146](https://github.com/littlebearapps/plainspoken/issues/146)).
-- `meaning-diff` lists the numbers, limits and promises a fix dropped or changed, for the owner to check
-  ([#147](https://github.com/littlebearapps/plainspoken/issues/147)).
-- Rule 7d no longer asks a piece under 150 words for a long sentence, and doesn't count a greeting or sign-off as a
-  sentence, so short emails and texts stop getting rhythm warnings
-  ([#148](https://github.com/littlebearapps/plainspoken/issues/148); ruleset 4.4.0).
-- Rule 7d doesn't count a line that's only a link or button label as a sentence, so a call to action of two short
-  sentences and a button stops getting a rhythm warning
-  ([#186](https://github.com/littlebearapps/plainspoken/issues/186); ruleset 4.4.0).
-- `judge-input` lints the draft itself when its saved lint is out of date and prints the lint, so it can't be skipped
-  before the judges run ([#162](https://github.com/littlebearapps/plainspoken/issues/162)).
-
-These three are built and wait for the paid checks in the next eval round.
+- Short emails linted as social posts by the hook route
+  ([#190](https://github.com/littlebearapps/plainspoken/issues/190)), small eval fixes
+  ([#191](https://github.com/littlebearapps/plainspoken/issues/191)), and install steps still to confirm on live hosts
+  ([#123](https://github.com/littlebearapps/plainspoken/issues/123)).
 
 ## Before v1.0
 
 v1.0 waits on evidence that plainspoken does what it says on real, long pieces. What's left:
 
-- **A long-form eval round on 0.12.0.** Long pieces drafted with and without the plugin, several runs each, read
-  blind by model readers, to confirm the fixes since 0.11.0 hold up outside the unit tests. The same round re-runs
-  the per-skill smoke tests and checks the new Codex and Hermes Agent hooks on real installs.
-- **Open issue [#75](https://github.com/littlebearapps/plainspoken/issues/75).** In round 8, two long-form runs of
-  nine had write's report ask the owner to check lines the engine didn't list as needing them. 0.12.0's report guard
-  catches both of those kinds of ask; the next round counts again. It's fixed when the count is zero or those lines
-  are recorded so the engine lists them.
+- **A current blind reader number.** Rounds 9 and 10 checked the fixes in long-form runs but didn't run the readers,
+  so the last reading is round 8's ([#195](https://github.com/littlebearapps/plainspoken/issues/195)).
+- **Open issue [#75](https://github.com/littlebearapps/plainspoken/issues/75).** In round 10, all three long-form
+  reports opened with words before the status block, which the report guard doesn't catch. It's fixed when the count
+  is zero.
 - **More evidence on rewrite quality.** A blind reader test that puts plainspoken's drafts beside the author's own
   unassisted writing, read by a model panel, alongside the existing blind reads of rewrites.
 
