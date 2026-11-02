@@ -7,6 +7,13 @@ but the entry said it closed it.
 
 ## [0.13.0](https://github.com/littlebearapps/plainspoken/compare/v0.12.0...v0.13.0) (2026-11-01)
 
+In short: `meaning-diff` lists the numbers, limits and promises a fix dropped or changed, so the owner can check them.
+Rule 7d stops flagging greetings, sign-offs and button lines, and skips its long-sentence test under 150 words.
+`judge-input` lints a stale draft itself, and the writing nudge ignores quoted examples.
+[#73](https://github.com/littlebearapps/plainspoken/issues/73), [#75](https://github.com/littlebearapps/plainspoken/issues/75)
+and [#162](https://github.com/littlebearapps/plainspoken/issues/162) stay open, and the blind readers weren't rerun
+([#195](https://github.com/littlebearapps/plainspoken/issues/195)).
+
 
 ### Features
 
