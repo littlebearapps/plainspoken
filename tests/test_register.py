@@ -53,6 +53,22 @@ class Items(unittest.TestCase):
         r11 = next(i for i in register.checklist("email", P.default()) if i["id"] == "R11")
         self.assertEqual(r11["ask"], "Is it consistently en-AU?")
 
+    def test_article_is_a_kind_with_the_page_items(self):  # #207
+        ids = lambda kind: [i["id"] for i in register.checklist(kind, P.default())]  # noqa: E731
+        self.assertEqual(ids("article"), ids("page"))
+        for rid in ("R6", "R7", "R8", "R9"):
+            self.assertNotIn(rid, ids("article"))
+
+    def test_r10_reads_well_with_any_reader_line(self):  # #207: a reader line can carry a rule of its own
+        import dataclasses
+        line = "a charity director, who has to understand the lead paragraph on first read"
+        prof = dataclasses.replace(P.default(), reader_persona=line)
+        r10 = next(i for i in register.checklist("email", prof) if i["id"] == "R10")
+        self.assertEqual(r10["ask"], f"Would the reader ({line}) use every word here?")
+        bare = dataclasses.replace(P.default(), reader_persona="")
+        r10 = next(i for i in register.checklist("email", bare) if i["id"] == "R10")
+        self.assertEqual(r10["ask"], "Would the reader use every word here?")
+
     def test_unknown_register(self):
         with self.assertRaises(ValueError) as cm:
             register.checklist("email", P.load(FULL), "linkedin")
