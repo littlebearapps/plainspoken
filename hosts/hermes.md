@@ -10,7 +10,8 @@ wins in Hermes; the skill still decides *what* to do.
   is also two folders above the `[Skill directory: …]` a loaded skill shows. Hermes doesn't fill it in, so write the
   absolute path into every command. `RUN` in the skills is `python3 <root>/lib/run.py`, run with `terminal`.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
-  literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
+  literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own. With no
+  project config, each command prints one line on stderr saying the default was used; that's expected here.
   `--plugin-locale '${user_config.locale}'` works the same way: the literal counts as unset. To write in British or
   American English, set `[locale] variant` in a config file (`RUN setup --host hermes --locale <variant>` with
   `--scope user`).
