@@ -148,7 +148,8 @@ First run `RUN meaning-diff '<draft>'` (exit 2: go on).
 Run `RUN status '<draft>' --plugin-profile '${user_config.profile}'` (plus step 2's `--profile`, if any). It reads
 the last saved check and claims results back; it runs and writes nothing. Start the report with this block, with
 no words before it; a report without it is incomplete. Fill it in, with the `status` lines copied exactly as
-printed, never from memory or in other words:
+printed, never from memory or in other words. Each line starts at the left margin, with no indent and no code fence
+around it (the indent below is only how this file shows it, and a reader would see a code block):
 
     Draft: <draft path>
     <every line `status` printed: check, claims and its reasons, needs the owner, words, the reader-value contract, delivery>
@@ -159,8 +160,9 @@ printed, never from memory or in other words:
 Then give any length shortfall (step 1) and whatever else the user needs, in plain words. Any length you give is
 the `words:` line's, never an estimate, and you say it counts body text only. Every figure and status the prose
 gives is copied from the block's lines as printed, never rounded or summarised: `words: 272` is 272 words, not
-"about 270", and `claims: BLOCKED` stays BLOCKED, even when the checker's own result was PASS. Say no fixes were
-made only when no step edited the draft (lint-only passes and claims fixes are edits too). Ask the owner to check
+"about 270", and `claims: BLOCKED` stays BLOCKED, even when the checker's own result was PASS. An UNRESOLVED or
+WARN line is never played down ("nothing serious", "safe to ignore"): say what's open, as the line gives it.
+Say no fixes were made only when no step edited the draft (lint-only passes and claims fixes are edits too). Ask the owner to check
 nothing that the `needs the owner` lines don't list: for a line you'd want them to check, go back to step 6, cut
 it or hold it `blocking`, and carry on from there. A check or claims result that isn't PASS is never described as
 passed. The person records a `For kaizen` item with `/plainspoken:kaizen dismiss` if they agree.

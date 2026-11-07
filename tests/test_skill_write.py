@@ -98,6 +98,9 @@ class WriteSkill(SkillBasics, unittest.TestCase):
                       "you run /plainspoken:reader-value deliver <draft>", block)  # the block is for a drafted piece
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)
+        flat = " ".join(step.split())  # #163: 2 of 9 round-11 reports copied the indent, so a reader saw a code block
+        self.assertIn("Each line starts at the left margin, with no indent and no code fence", flat)
+        self.assertIn('An UNRESOLVED or WARN line is never played down', flat)  # round 11: "nothing serious"
         flat = " ".join(step.split())
         self.assertIn("copied exactly as printed, never from memory or in other words", flat)
         self.assertIn("A check or claims result that isn't PASS is never described as passed", flat)
