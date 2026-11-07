@@ -36,6 +36,8 @@ ASKS = tuple(re.compile(p, re.IGNORECASE) for p in (
     r"\b(?:ask|get)\s+[^.?!\n]{1,30}?\bto\s+(?:" + _CHECK + r"|approve|sign\s+off|look\s+over|read\s+over|okay|ok)\b",
     r"\b(?:should|must|needs?\s+to|wants?\s+to|may\s+want\s+to|might\s+want\s+to)\s+(?:" + _CHECK
     + r"|approve|sign\s+off|look\s+over|read\s+over)\b",
+    # a suggestion that hands the draft back, whatever the verb: "You may want to split it back." (round 11)
+    r"\byou\s+(?:may|might)\s+(?:want|wish|like|prefer)\s+to\s+(?!send|give|share|supply|provide)\w",
     r"\b(?!(?:it|that|there|here|what|who|he|she|let)['’]s\b)[\w'’]+(?:'s|’s)\s+"  # "needs Jo's OK", not "it's ok"
     r"(?:ok|okay|approval|sign-off|sign\s+off|blessing|go-ahead)\b",
 ))
@@ -77,6 +79,21 @@ def _owner_line(lines: list[str]) -> tuple[str, list[str]] | None:
                 items.append(below.strip())
             return s.split(":", 1)[1].strip(), items
     return None
+
+
+def owner_block(text: str) -> str:
+    """`text`'s `needs the owner:` line and the items under it, or "" when it has none. The Stop hook reads these from
+    the `status` a turn ran, so a report that left the block out can still be held to it."""
+    lines = text.splitlines()
+    for k, line in enumerate(lines):
+        if line.strip().startswith(OWNER_MARKER):
+            indent, block = len(line) - len(line.lstrip()), [line]
+            for below in lines[k + 1:]:
+                if not below.strip() or len(below) - len(below.lstrip()) <= indent:
+                    break
+                block.append(below)
+            return "\n".join(block)
+    return ""
 
 
 def _words(text: str) -> set[str]:
@@ -169,4 +186,5 @@ def message(asks: list[str]) -> str:
             "Write's step 8 allows no such ask. For each line you'd have them check, go back to step 6: cut it from "
             "the draft (a fix never adds a fact), or hold it in the claims ledger as `blocking` with a `resolution` "
             "naming what the owner must confirm, never only ask in the report. Then rerun the claims steps the "
-            "change touched and `status`, and give the report again with the status lines as printed.")
+            "change touched and `status`, and give the report again. Start it with the status block, with no words "
+            "before it and nothing about this message: the owner reads the report, not this check.")

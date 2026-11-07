@@ -9,6 +9,7 @@ prints a block decision whose reason quotes each ask and says to cut the line or
 carries on and reports again. A write turn whose last message leaves the block out (#171: 2 of 3 round-8
 verification reports opened with prose) is sent back too, to start with it: the hook reads the turn in the
 transcript (`transcript_path`) and acts only when that turn started the write skill and `status` printed the block.
+That report's asks are read against the lines `status` printed, because the resend won't be read.
 It never sends a report back twice in a row (`stop_hook_active`), keeps no state, writes no file and fails open: any
 problem is exit 0 with nothing printed.
 """
@@ -65,10 +66,11 @@ def _skill_body(content) -> str | None:
     return None
 
 
-def _write_turn_printed_block(path, marker: str) -> bool:
-    """True when this turn started the write skill (its Skill call, or `/plainspoken:write` typed) and a tool result
-    in it holds the `status` block's owner line, so the report was meant to carry the block."""
-    started = printed = False
+def _write_turn_block(path, marker: str) -> str:
+    """The owner lines `status` last printed, when this turn started the write skill (its Skill call, or
+    `/plainspoken:write` typed), so the report was meant to carry the block; "" otherwise."""
+    from plainspoken import owner_asks
+    started, printed = False, ""
     for r in _turn(path):
         content = (r.get("message") or {}).get("content")
         body = _skill_body(content) if r.get("type") == "user" else None
@@ -88,8 +90,10 @@ def _write_turn_printed_block(path, marker: str) -> bool:
             elif b.get("type") == "tool_result":
                 body = b.get("content")
                 body = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)
-                printed = printed or any(line.lstrip().startswith(marker) for line in body.replace("\\n", "\n").splitlines())
-    return started and printed
+                body = body.replace("\\n", "\n")
+                if marker in body:
+                    printed = owner_asks.owner_block(body) or printed
+    return printed if started else ""
 
 
 def main() -> int:
@@ -100,11 +104,14 @@ def main() -> int:
     text = event.get("last_assistant_message")
     if not isinstance(text, str):
         return 0
-    if OWNER_MARKER not in text:
-        if _write_turn_printed_block(event.get("transcript_path"), OWNER_MARKER):
-            print(json.dumps({"decision": "block", "reason": MISSING_BLOCK}, ensure_ascii=False))
-        return 0  # otherwise not a write report
     from plainspoken import owner_asks
+    if OWNER_MARKER not in text:
+        block = _write_turn_block(event.get("transcript_path"), OWNER_MARKER)
+        if block:
+            asks = owner_asks.unlisted(f"{block}\n\n{text}")  # #75: the resend goes unread, so read this one
+            reason = f"{MISSING_BLOCK}\n\n{owner_asks.message(asks)}" if asks else MISSING_BLOCK
+            print(json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False))
+        return 0  # otherwise not a write report
     asks = owner_asks.unlisted(text)
     if asks:
         print(json.dumps({"decision": "block", "reason": owner_asks.message(asks)}, ensure_ascii=False))

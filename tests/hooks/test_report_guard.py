@@ -144,6 +144,20 @@ class MissingBlock(unittest.TestCase):
                 self.assertEqual(out["decision"], "block")
                 self.assertIn("leaves out the status block", out["reason"])
 
+    def test_an_ask_in_a_report_without_the_block_goes_back_with_it(self):  # #75 N6: the resend is never read
+        write = [_user("Write the post."), _skill("plainspoken:write"), _loaded("write"), _status()]
+        r = self.stop(write, self.PROSE + " Cut either if you'd rather keep strictly to the notes.")
+        reason = json.loads(r.stdout)["reason"]
+        self.assertIn("leaves out the status block", reason)
+        self.assertIn("Cut either if you'd rather keep strictly to the notes.", reason)
+        self.assertIn("`blocking`", reason)
+
+    def test_a_report_without_the_block_and_without_an_ask_gets_the_block_line_only(self):
+        write = [_user("Write the post."), _skill("plainspoken:write"), _loaded("write"), _status()]
+        reason = json.loads(self.stop(write).stdout)["reason"]
+        self.assertIn("leaves out the status block", reason)
+        self.assertNotIn("`blocking`", reason)
+
     def test_left_alone(self):
         write = [_user("Write the post."), _skill("plainspoken:write"), _loaded("write"), _status()]
         cases = {
