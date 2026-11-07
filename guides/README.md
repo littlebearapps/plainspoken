@@ -49,8 +49,7 @@ up from where you are, that holds a plainspoken config or a git repository.
 | What | Where |
 |---|---|
 | Project settings | `.plainspoken/config.toml` |
-| User-wide settings (nudge, rule, lint after edits, locale, tool-call and chat-reply checks only) |
-`~/.config/plainspoken/config.toml` |
+| User-wide settings (nudge, rule, lint after edits, locale, tool-call and chat-reply checks only) | `~/.config/plainspoken/config.toml` |
 | Your voice profiles | `.plainspoken/profiles/<name>.toml` |
 | Check reports | `.plainspoken/reports/` |
 | Kaizen ledger | `.plainspoken/ledger/` |

@@ -1,7 +1,6 @@
 ---
 name: setup
-description: Turns plainspoken's optional pieces on or off for this app (the writing nudge, the drafting rule, lint
-after edits, the tool-call and chat-reply checks), or prints the text to paste into claude.ai or ChatGPT. Manual only.
+description: Turns plainspoken's optional pieces on or off for this app (the writing nudge, the drafting rule, lint after edits, the tool-call and chat-reply checks), or prints the text to paste into claude.ai or ChatGPT. Manual only.
 argument-hint: "[claude-code | codex | hermes | claude-ai | chatgpt] [--scope project|user] [status | remove]"
 disable-model-invocation: true
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py setup *)

@@ -47,8 +47,7 @@ Claude Code asks for these when you install or enable the plugin (`userConfig` i
 | `rule` | On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read | off | `[rule] enabled` |
 | `tool_call` | The tool-call check's mode: `off`, `warn`, `block-once` or `ask` ([The tool-call check](#the-tool-call-check)) | `off` | `[tool_call] mode` |
 | `chat_reply` | On: the chat-reply check tells you what the lint found in a draft written into the reply ([The chat-reply check](#the-chat-reply-check)) | off | `[chat_reply] mode` |
-| `strictness` | What the publish gate does on `git push`: `watch` does nothing, `warn` warns, `block` refuses a push
-unless every gated file has a current PASS | `watch` | `[gate] strictness` |
+| `strictness` | What the publish gate does on `git push`: `watch` does nothing, `warn` warns, `block` refuses a push unless every gated file has a current PASS | `watch` | `[gate] strictness` |
 | `ledger_excerpts` | Whether the kaizen ledger stores excerpts of your text. Off keeps raw text out of it (hashes only) | off | `[kaizen] excerpts` |
 | `kaizen_adapter` | Where kaizen proposals go: `file` (Markdown in `.plainspoken/`), `github` (issues) or `trello` (cards). The project config supplies the IDs | `file` | `[kaizen] adapter` |
 
