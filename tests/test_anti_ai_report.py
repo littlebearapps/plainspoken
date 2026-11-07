@@ -731,7 +731,8 @@ class DraftStatus(unittest.TestCase):
         lines = r.stdout.splitlines()
         self.assertEqual(lines[0], "check: " + merged.stdout.splitlines()[0])
         self.assertIn("claims: INCOMPLETE", lines)  # no ledger: the claims step never ran, and it shows
-        self.assertTrue(lines[-1].startswith("reader-value contract: ") and lines[-1].endswith("(missing)"))
+        self.assertTrue(lines[-2].startswith("reader-value contract: ") and lines[-2].endswith("(missing)"))
+        self.assertEqual(lines[-1], "delivery: not checked")
         self.assertFalse((self.dir / f"{self.key}.claims.json").exists())  # it writes nothing
 
     def test_a_passing_check_still_exits_1_without_claims(self):
@@ -749,14 +750,60 @@ class DraftStatus(unittest.TestCase):
         with self.art.open("a", encoding="utf-8") as f:
             f.write("One more line.\n")
         r = self._cli("status", str(self.art), *PRODUCT_ARGS)
-        self.assertTrue(r.stdout.startswith("check: INCOMPLETE (stale"), r.stdout)
+        self.assertTrue(r.stdout.startswith("check: INCOMPLETE (stale: draft changed since"), r.stdout)
+
+    def test_a_stale_check_names_what_moved(self):  # #151
+        self._checked()
+        saved = self.dir / f"{self.key}.report.json"
+        body = json.loads(saved.read_text(encoding="utf-8"))
+        for field, value, want in (("profile_sha256", "sha256:other", "stale: profile changed since"),
+                                   ("ruleset_version", "0.0.1", f"stale: ruleset 0.0.1 → {self.cfg.version} changed")):
+            saved.write_text(json.dumps({**body, field: value}), encoding="utf-8")
+            r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn(want, r.stdout.splitlines()[0])
+        saved.write_text(json.dumps({**body, "profile_sha256": "x", "article_sha256": "y"}), encoding="utf-8")
+        line = self._cli("status", str(self.art), *PRODUCT_ARGS).stdout.splitlines()[0]
+        self.assertIn("stale: draft, profile changed since", line)
+
+    def _delivery(self, **over) -> None:
+        """A contract, and a delivery record bound to the files as they are now."""
+        from plainspoken import claims, reader_value
+        contract = self.tmp / ".plainspoken" / "reader-value" / f"{self.art.stem}.reader-value.toml"
+        contract.parent.mkdir(parents=True, exist_ok=True)
+        contract.write_text((REPO / "tests" / "fixtures" / "reader_value" / "contract.toml").read_text(encoding="utf-8"), encoding="utf-8")
+        body = {"result": "PASS", "reviewer": "delivery-checker", "article_sha256": claims.article_hash(self.art),
+                "contract_sha256": claims.article_hash(contract), "rubric_sha256": reader_value.delivery_rubric_hash()}
+        self.dir.mkdir(parents=True, exist_ok=True)
+        (self.dir / f"{self.key}.delivery.json").write_text(json.dumps({**body, **over}), encoding="utf-8")
+
+    def test_delivery_line_reads_the_saved_record(self):  # #151
+        def last():
+            r = self._cli("status", str(self.art), *PRODUCT_ARGS)
+            self.assertEqual(r.returncode, 1)  # no claims here, and delivery never moves the exit code
+            return r.stdout.splitlines()[-1]
+        self._delivery()
+        self.assertEqual(last(), "delivery: PASS")
+        self._delivery(result="FAIL")
+        self.assertEqual(last(), "delivery: FAIL")
+        self._delivery(reviewer="self-check", result="INCOMPLETE")
+        self.assertTrue(last().startswith("delivery: INCOMPLETE (reviewer is 'self-check'"), last())
+        self._delivery()
+        with self.art.open("a", encoding="utf-8") as f:
+            f.write("One more line.\n")
+        self.assertTrue(last().startswith("delivery: STALE (delivery record stale (draft changed"), last())
+
+    def test_delivery_never_turns_a_pass_into_a_fail(self):  # #151: a piece with no contract isn't pushed into failing
+        self.assertEqual(self._checked().returncode, 0)
+        self.assertEqual(self._cli("status", str(self.art), *PRODUCT_ARGS).stdout.splitlines()[-1],
+                         "delivery: not checked")
 
     def test_names_an_existing_contract_and_refuses_a_missing_draft(self):
         contract = self.tmp / ".plainspoken" / "reader-value" / f"{self.art.stem}.reader-value.toml"
         contract.parent.mkdir(parents=True)
         contract.write_text("", encoding="utf-8")
         r = self._cli("status", str(self.art), *PRODUCT_ARGS)
-        self.assertEqual(r.stdout.splitlines()[-1],
+        self.assertEqual(r.stdout.splitlines()[-2],
                          f"reader-value contract: .plainspoken/reader-value/{self.art.stem}.reader-value.toml")
         gone = self._cli("status", str(self.tmp / "nope.md"), *PRODUCT_ARGS)
         self.assertEqual((gone.returncode, gone.stdout), (2, ""))
@@ -780,7 +827,7 @@ class DraftStatus(unittest.TestCase):
         at = lines.index("needs the owner: 1")
         self.assertEqual(lines[at + 1], "  A-C1: before I went out on my own (blocking)")
         self.assertIn("claims: BLOCKED", lines)
-        self.assertTrue(lines[-1].startswith("reader-value contract: "))
+        self.assertTrue(lines[-2].startswith("reader-value contract: "))
 
     def test_gives_the_drafts_word_count_as_the_check_counts_it(self):
         """A report states the piece's real length from the engine, not an estimate (issue #32)."""

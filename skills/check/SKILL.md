@@ -65,8 +65,8 @@ edit FILE, and its bytes stay unchanged.
   `--ignore-claims`. Skip `meaning-diff`: nothing is edited, so leave out any `meaning:` line `status` prints.
 - Steps 3 to 5 as written. Then skip step 6 (fix pass) and step 7 (justify), never call `/plainspoken:humanize`,
   and go to step 8.
-- If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (`status` doesn't
-  say which): report INCOMPLETE with that line, and stop. Don't rerun steps 1 to 5.
+- If `status` says `INCOMPLETE (stale …)`, FILE, its profile or the ruleset changed since merge (the line says
+  which): report INCOMPLETE with that line, and stop. Don't rerun steps 1 to 5.
 - The report gives step 8's `check:` lines and lists each BLOCK and WARN with its line. Merge's status line names
   the rules; the lines are in the `report` file from `RUN paths FILE` (each rule's `findings` from the lint,
   `evidence` from a judge). Say plainly that nothing was fixed. Merge's FAIL or UNRESOLVED is the result: never

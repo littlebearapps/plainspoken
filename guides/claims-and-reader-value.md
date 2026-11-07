@@ -49,9 +49,11 @@ The skills call these subcommands (`python3 lib/run.py <subcommand>`; each print
   article's `<!-- module:NAME -->` blocks, print a starter contract, print the delivery reviewer's input, record its
   reply, and read the delivery record back against the current files.
 - `status <draft>`: the last saved check and claims status lines, the ledger's claims that need the owner, the
-  draft's word count (as the check counts it) and the reader-value contract path. It reads them back without running
-  or writing anything, so `write`'s report can quote them. A check or claims step that never ran, or ran on an older
-  version of the draft, shows as INCOMPLETE. It exits 0 only when both say PASS.
+  draft's word count (as the check counts it), the reader-value contract path and the delivery result. It reads
+  them back without running or writing anything, so `write`'s report can quote them. A check or claims step that
+  never ran, or ran on an older version of the draft, shows as INCOMPLETE, and a stale check says what changed. Delivery
+  shows `not checked` with no record, and a stale one says what moved. It exits 0 only when check and claims say PASS;
+  delivery never changes the exit code.
 
 ## The integrity hook
 

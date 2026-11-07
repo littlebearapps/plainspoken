@@ -151,8 +151,8 @@ no words before it; a report without it is incomplete. Fill it in, with the `sta
 printed, never from memory or in other words:
 
     Draft: <draft path>
-    <every line `status` printed: check, claims and its reasons, needs the owner, words, the reader-value contract>
-    Reader value (outline): READY (<contract path>); delivery not checked: you run /plainspoken:reader-value deliver <draft>
+    <every line `status` printed: check, claims and its reasons, needs the owner, words, the reader-value contract, delivery>
+    Reader value (outline): READY (<contract path>); before it ships, you run /plainspoken:reader-value deliver <draft>
     Anchors: <ids used>; no anchors: <tags, or none>; <every (skipped anchor …) line>
     For kaizen: <each finding you think is wrong, with its rule and line, or none>
 

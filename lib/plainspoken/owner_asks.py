@@ -19,7 +19,7 @@ import re
 
 from plainspoken.reply import OWNER_MARKER
 
-STATUS_PREFIXES = ("Draft:", "check:", "claims:", OWNER_MARKER, "words:", "reader-value contract:",
+STATUS_PREFIXES = ("Draft:", "check:", "claims:", OWNER_MARKER, "words:", "reader-value contract:", "delivery:",
                    "Reader value (outline):", "Anchors:", "For kaizen:")
 _NOT_AN_ASK = r"(?!\s*:)(?!\s+(?:passed|ran|found|said|came|returned|gave|failed|is|was)\b)"
 _CHECK = r"(?:double-check|check|confirm|verify)"

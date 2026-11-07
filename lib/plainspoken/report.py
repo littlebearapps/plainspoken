@@ -346,11 +346,14 @@ def saved_check(article: Path, reports_dir: Path, profile: Profile, cwd: Path) -
     merged = read_json(report_paths(article, reports_dir, cwd)["report"])
     if merged is None:
         return "INCOMPLETE", ["INCOMPLETE (not run: no merged report for this draft)"]
-    current = (merged.get("article_sha256") == sha256(article) and merged.get("profile_sha256") == profile.sha256
-               and merged.get("ruleset_version") == load_config().version)
-    if not current:
-        return "INCOMPLETE", ["INCOMPLETE (stale: the last merge checked another version of the draft, or ran "
-                              "under another profile or ruleset; run the check again)"]
+    ruleset = load_config().version
+    moved = [what for what, same in (
+        ("draft", merged.get("article_sha256") == sha256(article)),
+        ("profile", merged.get("profile_sha256") == profile.sha256),
+        (f"ruleset {merged.get('ruleset_version')} → {ruleset}", merged.get("ruleset_version") == ruleset)) if not same]
+    if moved:
+        return "INCOMPLETE", [f"INCOMPLETE (stale: {', '.join(moved)} changed since the last merge; run the check "
+                              "again)"]
     try:
         if merged["status"] in ("PASS", "FAIL", "UNRESOLVED", "INCOMPLETE"):
             return merged["status"], merge_lines(merged)
