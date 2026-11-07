@@ -1,7 +1,7 @@
 # plainspoken ruleset. Bumped only by `kaizen apply` with a recorded human approval.
 # No human-readable rule reference ships yet: guides/ holds no per-rule text, and Phase 6 added none.
 # Ported from the author's earlier private ruleset (v4).
-version = "4.4.0"
+version = "4.5.0"
 
 [thresholds."default"]
 em_dash_max = 3
@@ -572,6 +572,8 @@ ban_literal = [
   "interplay",
   "garner",
   "focal point",
+  "set the stage for",
+  "sets the stage for",
   "setting the stage for",
   "indelible mark",
   "deeply rooted",
@@ -580,7 +582,13 @@ ban_literal = [
   "plethora",
   "ideate",
   "circle back",
+  "circles back",
+  "circled back",
+  "circling back",
   "move the needle",
+  "moves the needle",
+  "moved the needle",
+  "moving the needle",
 ]
 ban_exempt_terms = [
   "Dynamic Search Ads",

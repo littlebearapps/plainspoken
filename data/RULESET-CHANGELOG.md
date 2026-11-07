@@ -35,6 +35,17 @@ Ruleset versions are separate from the plugin version. Every report records the 
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
   merging the pull request.
 
+## 4.5.0 (2026-11-07)
+
+- **Inflected forms of three multi-word bans (#199):** `move the needle`, `circle back` and `setting the stage for`
+  matched only as written, because inflection reaches single words alone. A live article carried "what actually moves
+  the needle" through its original publish. `ban_literal` now lists each form: `moves`, `moved` and `moving the needle`;
+  `circles`, `circled` and `circling back`; `set` and `sets the stage for`. The other multi-word bans have no verb head.
+- **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.4.0 read as stale
+  and ask for a re-check. The file's bytes change, so a pending kaizen proposal rebases.
+- Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
+  merging the pull request.
+
 ## Judges rubric revision (2026-11-07; ruleset version unchanged)
 
 - **JR's 7d clause now agrees with the keep-the-WARN rule (#187):** the check skill keeps a 7d when no join or split

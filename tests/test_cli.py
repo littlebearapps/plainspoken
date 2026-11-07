@@ -398,7 +398,7 @@ class NoTraceback(unittest.TestCase):
     def test_rules_file_missing_a_key_exits_2_naming_file_and_key(self):
         text = (REPO / "data" / "rules.toml").read_text(encoding="utf-8")
         cases = {
-            "version": text.replace('version = "4.4.0"\n', "", 1),
+            "version": text.replace('version = "4.5.0"\n', "", 1),
             "lists": text.replace("[lists]", "[lists_gone]", 1),
             "rules": text.replace("[[rules]]", "[[rules_gone]]"),
             "name": text.replace('name = "Em dashes"\n', "", 1),
