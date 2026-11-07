@@ -370,6 +370,9 @@ class StaccatoFloor(unittest.TestCase):
                    "use at home. Paid ones carry a label beside them.\n\n### Free tools\n\nA tool for this thing.")
         self.assertEqual(len(self.no_long(section)), 1)
 
+    def test_an_intro_before_the_first_heading_is_no_lead_in(self):  # #201: it has no heading of its own
+        self.assertEqual(len(self.no_long("Everything above is here. All of it is free. Paid ones are labelled.")), 1)
+
     def test_the_same_short_section_with_no_subsections_still_warns(self):  # #201: lead-ins only
         self.assertEqual(len(self.no_long("## Tools\n\nEverything above is here. All of it is free. Paid ones are labelled.")), 1)
 
