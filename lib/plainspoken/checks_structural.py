@@ -58,14 +58,24 @@ def in_faq(doc: Doc, line: int) -> bool:
 
 
 def uniform_sentences(doc: Doc, cfg: Config) -> list[Finding]:
+    """A short email reaches the lint as `social` on the stdin and hook routes (under 300 words), so a piece framed as a
+    letter keeps the `article` limit: the same email gets the same rule 7 limit on every route (#190)."""
     t = cfg.thresholds_for(doc)
+    letter = doc.content_type == "social" and _is_letter(doc)
+    run = cfg.thresholds(doc.profile, "article")["uniform_sentence_run"] if letter else t["uniform_sentence_run"]
     out = []
     for sec in doc.sections:
         sents = _prose_sentences(sec.paragraphs)
-        for i in _runs([len(s.words) for s in sents], t["uniform_tolerance"], t["uniform_sentence_run"]):
+        for i in _runs([len(s.words) for s in sents], t["uniform_tolerance"], run):
             out.append(Finding("7", "WARN", sents[i].line, sents[i].text[:160],
-                               f"{t['uniform_sentence_run']}+ consecutive sentences of near-identical length — {_SPLIT}"))
+                               f"{run}+ consecutive sentences of near-identical length — {_SPLIT}"))
     return out
+
+
+def _is_letter(doc: Doc) -> bool:
+    """Whether the piece opens with a greeting or closes with a sign-off."""
+    sents = [s for sec in doc.sections for s in _prose_sentences(sec.paragraphs)]
+    return bool(sents) and (_frame_line(sents[0], _SALUTATION) or _frame_line(sents[-1], _SIGNOFF))
 
 
 def _short_run(sents: list[Sentence], short_len: int, run_len: int) -> Sentence | None:
