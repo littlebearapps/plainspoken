@@ -335,7 +335,7 @@ def diff(before: str, after: str, lex: Lexicon | None = None) -> list[dict]:
     """The sentences `after` changed from `before` with a marker change inside, in after-text order:
     `{"id": "M1", "line" (after's line, 0 when cut), "before", "after", "items": [{"class", "change", "words"}]}`.
     A change is listed only when the whole text has fewer (dropped) or more (added) of that marker."""
-    from plainspoken.rewrite import counted_names, derivation, figures
+    from plainspoken.rewrite import SMALL_COUNTS, counted_names, derivation, figures
     lex = lex or load_lexicon()
     old, new = _prose(before), _prose(after)
     src_text, new_text = " ".join(s for s, _ in old), " ".join(s for s, _ in new)
@@ -373,8 +373,8 @@ def diff(before: str, after: str, lex: Lexicon | None = None) -> list[dict]:
             if key in src_keys or key in seen:
                 continue
             seen.add(key)
-            if written.lower() in ("two", "three", "four", "five", "a dozen"):
-                continue  # a spelled small count usually counts what the text lists (#158)
+            if written.lower() in SMALL_COUNTS:
+                continue
             if derivation(key, src_keys, base) or (base is None and counted_names(written, new_text, src_text)):
                 continue  # worked out from the source's own numbers: eval rewrite lists these
             found.append(("num", "added", [_number_written(written, at)]))

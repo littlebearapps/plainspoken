@@ -116,7 +116,7 @@ one invocation can spend about US$5 plus the runs already in flight (up to 4 wit
 suite, two invocations, about twice that:
 
 ```bash
-claude plugin eval . --tag trigger --ablation none --allow-tools "Bash(python3 *)" --runs 1 -j 4 \
+claude plugin eval . --tag trigger --ablation none --keep-temp --allow-tools "Bash(python3 *)" --runs 1 -j 4 \
   --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin
 claude plugin eval . --tag rewrite --runs 2 -j 3 --keep-temp \
   --no-publish --max-cost-usd 5 --threshold 0.8 --trust-plugin --json rewrite.json
@@ -149,8 +149,8 @@ Each smoke case except `doctor` and `setup`, which have no profile step, also ha
 runner says only "pattern not found in trace", so run the suite with `--keep-temp` and `--json`, then `eval first-call`
 on that file: it prints the first engine call of each run.
 
-The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm. The
-rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The
+The trigger suite uses `--ablation none` because a `tool_used: Skill` grader isn't scored against a no-plugin arm, and
+`--keep-temp` so the traces can be audited. The rewrite suite keeps the default with-without ablation, which adds the no-plugin arm and reports the difference. The
 same two suites run from GitHub through the manual `evals` workflow (`.github/workflows/evals.yml`), which skips with
 a notice when the repository has no `ANTHROPIC_API_KEY` secret. This repository doesn't set one, so here the workflow
 skips; run the suites locally, or from a fork that adds its own key. Pull requests never need it.

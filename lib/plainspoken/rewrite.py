@@ -235,6 +235,7 @@ def derivation(n: str, sources: list[str], base: str | None = None) -> str | Non
 
 
 COUNT_WORDS = {"two": 2, "three": 3, "four": 4, "five": 5}
+SMALL_COUNTS = (*COUNT_WORDS, "a dozen")  # a spelled small count usually counts what the text lists (#158)
 _NAME = r"[A-Z][\w'’-]*(?: [A-Z][\w'’-]*)*"
 _NAME_LIST = re.compile(rf"\b({_NAME})((?:, {_NAME})*),? and ({_NAME})")
 
@@ -301,6 +302,8 @@ def grade(draft: Path, source: Path | None, profile: Profile, content_type: str 
             how = f"base of the rate {rate_of} in {n}" if rate_of else derivation(k, known, base)
             if how is None and base is None:
                 how = counted_names(n, text, src_text)
+            if how is None and n.lower() in SMALL_COUNTS:  # the rule meaning.diff keeps too (#191)
+                how = "a spelled small count"
             if how is not None and base not in (None, "100") and how != derivation(k, known):
                 rate = n  # derived as a rate, so its base comes with it
             if how is None:

@@ -310,6 +310,18 @@ class DerivedNumbers(unittest.TestCase):
         self.assertEqual(g["new_numbers"], [])
         self.assertEqual(g["derived_numbers"], [{"number": "Two", "from": "counts 2 names in the source (Ana and Ruth Silva)"}])
 
+    def test_grade_and_meaning_diff_agree_on_a_spelled_small_count(self):  # #191: "how the two connect", round 9
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: [f.unlink() for f in d.iterdir()] and d.rmdir())
+        (d / "s.md").write_text("I fix bikes. I also teach repair classes.\n", encoding="utf-8")
+        for piece, new in (("I fix bikes and teach repair classes, and how the two connect is my whole job.\n", []),
+                           ("I fix bikes and teach six repair classes.\n", ["six"])):  # past the small counts: still new
+            (d / "d.md").write_text(piece, encoding="utf-8")
+            g = rewrite.grade(d / "d.md", d / "s.md", default_profile(), "article")
+            self.assertEqual(g["new_numbers"], new, piece)
+            self.assertEqual([c for c in g["meaning_changes"] if "added" in str(c.get("items"))] != [], bool(new), piece)
+        self.assertIn("two", rewrite.SMALL_COUNTS)
+
     def test_grade_lists_derived_apart_from_new(self):
         d = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: [f.unlink() for f in d.iterdir()] and d.rmdir())
