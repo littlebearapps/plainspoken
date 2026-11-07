@@ -106,9 +106,13 @@ def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
     """The profile for this command: a command with an article path resolves that file's `[engine] profiles`
     entry."""
     target = getattr(args, "path", None)
-    return config.resolve_profile_ex(getattr(args, "profile", None), root, os.environ,
-                                     getattr(args, "plugin_profile", None),
-                                     target if isinstance(target, Path) else None)
+    option = getattr(args, "plugin_profile", None)
+    prof, fallback = config.resolve_profile_ex(getattr(args, "profile", None), root, os.environ, option,
+                                               target if isinstance(target, Path) else None)
+    if fallback and config.is_placeholder(option):  # #206: a real choice may be behind it, so never silent
+        print(f"plainspoken: {option} wasn't expanded, so this run uses the {prof.name} profile. "
+              "To use another, pass --profile <name>.", file=sys.stderr)
+    return prof, fallback
 
 
 def _setup(args: argparse.Namespace, root: Path) -> int:

@@ -10,7 +10,8 @@ Codex; the skill still decides *what* to do.
   list gives its path). It holds `lib/run.py`. Codex doesn't fill it in, so write the absolute path into every
   command. `RUN` in the skills is `python3 <root>/lib/run.py`.
 - Keep `--plugin-profile '${user_config.profile}'` exactly as written, single quotes and all. The engine reads that
-  literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own.
+  literal as the shipped default profile, and a project's `.plainspoken/config.toml` still picks its own. With no
+  project config, each command prints one line on stderr saying the default was used; that's expected here.
   `--plugin-locale '${user_config.locale}'` works the same way: the literal counts as unset. To write in British or
   American English, set `[locale] variant` in a config file (`RUN setup --host codex --locale <variant>`).
 - `allowed-tools`, `argument-hint` and `disable-model-invocation` in the frontmatter are Claude Code settings. Codex

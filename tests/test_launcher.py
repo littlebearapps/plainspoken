@@ -52,6 +52,23 @@ class Launcher(unittest.TestCase):
         self.assertTrue(r.stdout.splitlines()[0].startswith("plainspoken profile: default (plugin default) ("),
                         r.stdout)
 
+    def test_unsubstituted_placeholder_says_so_on_stderr(self):  # #206
+        r = run("profile", "--plugin-profile", "${user_config.profile}", cwd=self.cwd)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stderr.count("wasn't expanded"), 1, r.stderr)
+        self.assertIn("${user_config.profile}", r.stderr)
+        self.assertIn("default profile", r.stderr)
+        self.assertNotIn("wasn't expanded", r.stdout)
+
+    def test_no_placeholder_warning_when_nothing_was_lost(self):  # #206
+        for value in ("default", ""):
+            self.assertNotIn("wasn't expanded", run("profile", "--plugin-profile", value, cwd=self.cwd).stderr, value)
+        (self.cwd / ".plainspoken" / "profiles").mkdir(parents=True)
+        (self.cwd / ".plainspoken" / "profiles" / "mine.toml").write_text('[profile]\nname = "mine"\n', encoding="utf-8")
+        (self.cwd / ".plainspoken" / "config.toml").write_text('[engine]\nprofile = "mine"\n', encoding="utf-8")
+        r = run("profile", "--plugin-profile", "${user_config.profile}", cwd=self.cwd)
+        self.assertNotIn("wasn't expanded", r.stderr)
+
     def test_placeholder_with_project_config_uses_project_config(self):
         (self.cwd / ".plainspoken" / "profiles").mkdir(parents=True)
         (self.cwd / ".plainspoken" / "profiles" / "mine.toml").write_text('[profile]\nname = "mine"\n', encoding="utf-8")

@@ -8,6 +8,8 @@ default.
 `--plugin-profile` carries the Claude Code userConfig value when the environment doesn't (skills pass
 `${user_config.profile}`). An installed-from-directory plugin can leave that string unsubstituted, or substitute it
 empty; either way it means the manifest's default profile, `default`. Only `--plugin-profile` gets that treatment.
+The CLI says so on stderr when the string came through unsubstituted (#206): hosts that never substitute it depend on
+this fallback, so it stays a warning, not an error.
 
 The spelling locale (resolve_locale) has its own order: project `[locale] variant` → the voice profile's own
 `[profile] locale` → user-wide `[locale] variant` → the plugin option (CLAUDE_PLUGIN_OPTION_LOCALE, else
