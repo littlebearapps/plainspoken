@@ -24,7 +24,7 @@ import _common  # noqa: E402
 
 MISSING_BLOCK = ("plainspoken: this write report leaves out the status block. Start the report with it, with no "
                  "words before it: `Draft: <draft path>`, then every line `status` printed (check, claims and its "
-                 "reasons, needs the owner, words, the reader-value contract), copied exactly. Then the rest of "
+                 "reasons, needs the owner, words, the reader-value contract, delivery), copied exactly. Then the rest of "
                  "the report, with figures and statuses as those lines give them (write step 8).")
 SKILL_BASE = "Base directory for this skill:"
 MAX_TRANSCRIPT = 50_000_000  # bytes: past this the turn isn't read (fail open)

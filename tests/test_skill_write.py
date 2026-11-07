@@ -94,7 +94,7 @@ class WriteSkill(SkillBasics, unittest.TestCase):
                          ["Draft", "<every line `status` printed", "Reader value (outline)", "Anchors", "For kaizen"])
         self.assertIn("needs the owner", block[1])  # #45: the engine's list from the ledger, not the model's
         # #108: READY is the outline contract, not a delivery pass, and only a READY line gets the deliver tail
-        self.assertIn("Reader value (outline): READY (<contract path>); delivery not checked: "
+        self.assertIn("Reader value (outline): READY (<contract path>); before it ships, "
                       "you run /plainspoken:reader-value deliver <draft>", block)  # the block is for a drafted piece
         self.assertNotIn("Claims:", step)
         self.assertNotIn("Reader brief", step)

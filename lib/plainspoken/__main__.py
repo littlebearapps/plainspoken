@@ -298,8 +298,8 @@ def _main(argv: list[str] | None) -> int:
     m.add_argument("--profile")
     m.add_argument("--plugin-profile")
     st = sub.add_parser("status", help="the last saved check and claims status lines for a draft, the claims "
-                                       "that need the owner, its word count and its reader-value contract path, for a report to quote (runs and "
-                                       "writes nothing)")
+                                       "that need the owner, its word count, its reader-value contract path and its "
+                                       "delivery result, for a report to quote (runs and writes nothing)")
     st.add_argument("path", type=Path)
     st.add_argument("--reports", type=Path)
     st.add_argument("--ledger", type=Path)
@@ -1023,8 +1023,22 @@ def _draft_status(args: argparse.Namespace, root: Path) -> int:
     counted = f"words: {words} (body text; headings, tables, code and numbers not counted)"  # #63: say what it counts
     print("\n".join([f"check: {check_lines[0]}", *check_lines[1:], f"claims: {rep['status']}",
                      *(f"  {r}" for r in rep["reasons"]), *owner_lines, counted,
-                     f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)")]))
+                     f"reader-value contract: {shown}" + ("" if contract.is_file() else " (missing)"),
+                     _delivery_line(args.path, contract, reports_dir, root)]))
     return 0 if check_status == rep["status"] == "PASS" else 1
+
+
+def _delivery_line(article: Path, contract: Path, reports_dir: Path, root: Path) -> str:
+    """`status`'s delivery line (#151), read from the saved record. It never sets the exit code: a short piece with no
+    contract isn't pushed into failing."""
+    record = report.report_paths(article, reports_dir, root)["delivery"]
+    if not contract.is_file() or not record.exists():
+        return "delivery: not checked"
+    try:
+        got = reader_value.delivery_status(article, contract, record, root)
+    except _INPUT_ERRORS as e:
+        return f"delivery: INCOMPLETE ({_first_line(e)})"
+    return f"delivery: {got['status']}" + (f" ({'; '.join(got['reasons'])})" if got["reasons"] else "")
 
 
 def _meaning_diff(args: argparse.Namespace, root: Path) -> int:

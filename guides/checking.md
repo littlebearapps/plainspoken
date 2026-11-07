@@ -131,8 +131,8 @@ this order:
    ledger isn't current, unless the only open lines are ones held for you.
 
 Its report starts with the lines `python3 <plugin>/lib/run.py status <draft>` prints, copied exactly: the check and
-claims results, the claims that need you, the word count and the reader-value contract path. Those come from the
-engine, never from the model's memory, and the prose after them repeats their figures and statuses as printed (272
+claims results, the claims that need you, the word count, the reader-value contract path and the delivery result.
+Those come from the engine, never from the model's memory, and the prose after them repeats their figures and statuses as printed (272
 words, not "about 270"; BLOCKED, not "passed"). Before a drafted piece ships, run `/plainspoken:reader-value deliver <draft>`
 to check it keeps the promise it made.
 
