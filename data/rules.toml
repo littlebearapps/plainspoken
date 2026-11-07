@@ -1,4 +1,5 @@
-# plainspoken ruleset. Bumped only by `kaizen apply` with a recorded human approval.
+# plainspoken ruleset. Bumped by `kaizen apply` with a recorded human approval, or by hand in a pull request the
+# owner merges.
 # No human-readable rule reference ships yet: guides/ holds no per-rule text, and Phase 6 added none.
 # Ported from the author's earlier private ruleset (v4).
 version = "4.4.0"
