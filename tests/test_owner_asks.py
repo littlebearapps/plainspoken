@@ -183,6 +183,9 @@ class Asks(unittest.TestCase):
                   "Ask Jo to confirm the canteen start date.",
                   "Get the owner to sign off on the thanks.",
                   "Jo may want to check the thank-you line.",
+                  "You may want to split it back.",  # round 11: k0Cr1y
+                  "You might want to soften the closing line.",
+                  "You might like to reword the thanks.",
                   "You'll want to confirm the canteen roster starts next season.",
                   "Please confirm the canteen roster starts next season.",
                   "Double-check the thanks before it goes up.",
@@ -201,6 +204,17 @@ class Asks(unittest.TestCase):
                   "If you don't run a waitlist, change the second paragraph."):
             with self.subTest(s=s):
                 self.assert_caught(s)
+
+    def test_a_request_for_material_is_not_a_may_want_to_ask(self):  # the same exemption as _CONDITION
+        for s in ("You may want to send me the roster date.", "You might want to share the photo with me.",
+                  "You may want to add a line."):  # round 9: a note on what was left out, and adding isn't an edit
+            with self.subTest(s=s):
+                self.assert_clean(s)
+
+    def test_owner_block_is_the_line_and_its_items(self):  # #75: what the hook reads from `status`
+        printed = "check: PASS\nneeds the owner: 1\n  C1: The hall opens at 9 (blocking)\nwords: 236 (body text)\n"
+        self.assertEqual(owner_asks.owner_block(printed), "needs the owner: 1\n  C1: The hall opens at 9 (blocking)")
+        self.assertEqual(owner_asks.owner_block("check: PASS\n"), "")
 
     def test_report_prose_that_asks_nothing_is_left_alone(self):
         for s in ("The check passed first time, and I'm happy with how the close reads.",
@@ -260,6 +274,11 @@ class MeaningItems(unittest.TestCase):  # #147: status lists meaning-diff change
 
 
 class Message(unittest.TestCase):
+    def test_the_message_says_to_start_with_the_block(self):  # round 11 N2: both resends opened with hook talk
+        flat = " ".join(owner_asks.message(["Check it."]).split())
+        self.assertIn("Start it with the status block, with no words before it", flat)
+        self.assertIn("nothing about this message", flat)
+
     def test_the_message_quotes_each_ask_and_says_cut_or_hold(self):
         msg = owner_asks.message(["so check Jo is happy with them."])
         self.assertIn('"so check Jo is happy with them."', msg)
