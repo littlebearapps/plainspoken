@@ -17,7 +17,7 @@ isn't the format.
 
 ## What's in it
 
-257 cases (as of 30 October 2026): 233 for the judges, 24 for the claims checker.
+259 cases (as of 7 November 2026): 235 for the judges, 24 for the claims checker.
 
 | Group | Cases | Labels | Confirmed | Endorsed | Provisional |
 |---|---|---|---|---|---|
@@ -25,8 +25,8 @@ isn't the format.
 | J2 | 50 | fail 27 · pass 23 | 5 | 9 | 36 |
 | J3 | 60 | fail 30 · pass 30 | 11 | 0 | 49 |
 | J4 | 40 | fail 20 · pass 20 | 4 | 0 | 36 |
-| JR | 43 | accept 18 · reject 25 | 5 | 0 | 38 |
-| **Judges** | **233** | fail 97 · pass 93 · accept 18 · reject 25 | **33** | **9** | **191** |
+| JR | 45 | accept 19 · reject 26 | 5 | 0 | 40 |
+| **Judges** | **235** | fail 97 · pass 93 · accept 19 · reject 26 | **33** | **9** | **193** |
 | CL | 24 | fail 17 · pass 7 (claims: fail 17 · pass 36) | 0 | 0 | 24 |
 
 42 cases carry a human label. 17 came from the owner's recorded decisions, anonymised. On 18 October 2026 the

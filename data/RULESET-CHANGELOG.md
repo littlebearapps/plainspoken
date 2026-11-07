@@ -35,6 +35,17 @@ Ruleset versions are separate from the plugin version. Every report records the 
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
   merging the pull request.
 
+## Judges rubric revision (2026-11-07; ruleset version unchanged)
+
+- **JR's 7d clause now agrees with the keep-the-WARN rule (#187):** the check skill keeps a 7d when no join or split
+  clears the line, while the rubric rejected a reason saying a fix would pad. In round 9 the same argument was
+  accepted in one run and rejected in two. A 7d reason now shows its working, JR checks it, and JR accepts when no
+  join in the sentences' own words clears the line. A reason with no working is still rejected, and JR's own reason
+  never suggests a fix that adds a word, name, detail or reason. The join test is for a 7d `metric` reason only.
+- New golden cases `JR-7d-004` and `JR-7d-005` (provisional). Measured with `eval judges --group JR` on Claude Opus,
+  3 runs on the subscription: both new cases right 3 of 3, and the bar met each time. One case moved against the old
+  rubric: `JR-7c-002` was accepted 3 of 3 and is now accepted 2 of 3. The owner approves by merging the pull request.
+
 ## Claims rubric revision (2026-10-30; ruleset version unchanged)
 
 - **A pinned claim is judged on its passage (#77):** a claim whose text and locations say no more than its pinned

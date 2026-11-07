@@ -309,8 +309,12 @@ this article (it says what the text is doing, not that it "reads fine"); and the
   itself.
 - `metric`: an article-level or section-level metric (12f vocabulary variety, opener share or paragraph spread; 7;
   7d; 12d) where the reason says why a fix pass (cut, join, split or restate) can't move it honestly. For 7d the
-  reason names what joining or splitting those sentences in their own words would lose or add; a reason that only
-  says the sentences are short, or that a fix would pad them, is rejected.
+  reason shows its working: the neighbouring sentences and the word count their join gives, or what joining or
+  splitting them in their own words would lose. Check that working. When no join or split in their own words clears
+  the line, accept, because the WARN is then meant to stay: an unresolved 7d is better than a padded sentence. When
+  one does clear it, reject. A reason with no working (the sentences are short, a fix would pad them) is rejected.
+  This join test is for a 7d `metric` reason only: never try joins on another rule or kind. Your own reason never
+  suggests a fix that adds a word, name, detail or reason ("because", "so").
 
 **Reject when** the reason is generic ("reads naturally", "stylistic choice"), covers only some of the evidence,
 contradicts the rule's entry, or excuses exactly what the rule exists to catch (e.g. `voice` for a
