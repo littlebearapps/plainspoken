@@ -83,13 +83,17 @@ def summary_lines(p: Profile) -> list[str]:
     """The two voice lines `profile` adds to its summary."""
     tags = Counter(t for a in p.anchors for t in a.tags)
     tag_text = ", ".join(f"{t} {n}" for t, n in sorted(tags.items()))
+    total = sum(tags.values())  # an anchor can carry several tags, so these parts don't sum to the anchors (#209)
+    anchors = f"{len(p.anchors)} anchor{'' if len(p.anchors) == 1 else 's'}"
+    if tag_text:
+        anchors += f", {total} tag{'' if total == 1 else 's'} ({tag_text})"
     reader = p.reader_persona or "not set"
     blends = ", ".join(f"{k}={v}" for k, v in sorted(p.voice.get("blends", {}).items())) or "none"
     writer = p.voice.get("identity", {}).get("writer") or "not set"
     return [
         f"writer: {writer} (pronoun {p.pronoun}) · reader: {reader} (Year {p.comprehension_floor} floor)",
         f"registers: {', '.join(r.name for r in p.registers) or 'none'} · blends: {blends} · "
-        f"anchors: {len(p.anchors)}{f' ({tag_text})' if tag_text else ''}",
+        anchors,
     ]
 
 
@@ -161,5 +165,5 @@ def stats_toml(st: dict[str, float | int]) -> str:
         f"burstiness = {st['burstiness']}",
         f"long_share = {st['long_share']}  # sentences of {LONG}+ words",
         f"short_share = {st['short_share']}  # sentences of {SHORT} words or fewer",
-        f"# measured from {st['files']} file(s), {st['words']} words",
+        f"# measured from {st['files']} file(s), {st['words']} words across their sentences",
     ]) + "\n"

@@ -642,7 +642,8 @@ def _main(argv: list[str] | None) -> int:
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "measure")
         text = raw.rstrip("\n")
-        print(f"chars {_util.graphemes(text)} · words {len(text.split())} · lines {len(text.splitlines())}")
+        print(f"chars {_util.graphemes(text)} · words {len(text.split())} · lines {len(text.splitlines())} "
+              "(whole file, frontmatter and code included)")
         return 0
     if args.cmd == "voice-stats":
         try:

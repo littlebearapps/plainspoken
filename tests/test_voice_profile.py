@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import os
 import shutil
@@ -302,8 +303,15 @@ class Summary(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("writer: A solo bike mechanic who writes about fixing things properly. (pronoun I) · "
                       "reader: a commuter who rides every day", r.stdout)
-        self.assertIn("anchors: 2 (body 1, explainer 1, opening 1)", r.stdout)
+        self.assertIn("2 anchors, 3 tags (body 1, explainer 1, opening 1)", r.stdout)
         self.assertIn("registers: email", r.stdout)
+
+    def test_the_anchor_count_reads_right_with_one_and_with_none(self):  # #209
+        full = P.load(FULL)
+        lines = voice.summary_lines(dataclasses.replace(full, anchors=full.anchors[:1]))
+        self.assertIn("· 1 anchor, ", lines[1])
+        lines = voice.summary_lines(dataclasses.replace(full, anchors=()))
+        self.assertTrue(lines[1].endswith("· 0 anchors"), lines[1])
 
     def test_profile_voice_prints_what_the_skills_need(self):
         r = cli("profile", "--voice", "--type", "email", "--profile", str(FULL))

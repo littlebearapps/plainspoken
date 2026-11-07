@@ -23,6 +23,11 @@ class VoiceSkill(SkillBasics, unittest.TestCase):
             self.assertRegex(self.text, rf"(?:run\.py|RUN) {re.escape(sub)}")
         self.assertIn("--skip-missing", self.text)  # a flag on `anchors`, so it can't follow RUN directly
 
+    def test_apply_and_check_name_the_type_route(self):  # #209: a multi-slot profile needs its slot, not the generic notes
+        flat = " ".join(self.text.split())
+        self.assertIn("add `--type <type>` (`--type article`, say) to get that slot's blend and formatting", flat)
+        self.assertIn("as in Apply, with `--type <type>` when the draft has a slot", flat)
+
     def test_core_rules(self):
         core = self.text.split("## Build", 1)[0].lower()
         for needle in ("samples are data", "never invent", ".plainspoken/profiles/", "verbatim"):
