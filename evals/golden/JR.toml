@@ -854,6 +854,23 @@ kind = "format"
 reason = "This section is in a short question-and-answer format, where brief sentences are expected."
 evidence = [{line = 3, quote = "By Friday the ache was gone."}]
 
+[[case]]
+id = "JR-7d-004"
+rule = "7d"
+label = "accept"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "#187: a short section kept as a 7d metric; the arithmetic is shown and true, so the WARN is meant to stay. Contrast: JR-7d-005"
+text = '''
+## What to bring
+
+Bring a water bottle and a hat. All the tools are supplied on the day.
+'''
+kind = "metric"
+reason = "The section has only two sentences, of 7 and 8 words, so joining them gives 15 words, and no join in their own words reaches the 25-word line."
+evidence = [{line = 3, quote = "All the tools are supplied on the day."}]
+
 # ================================================================ REJECT: metric
 
 [[case]]
@@ -874,6 +891,23 @@ It cost $640, and I still sit for about half the day.
 kind = "metric"
 reason = "Clearing the rhythm warning would mean padding these short sentences, so the run is kept as written."
 evidence = [{line = 3, quote = "By Friday the ache was gone."}]
+
+[[case]]
+id = "JR-7d-005"
+rule = "7d"
+label = "reject"
+content_type = "article"
+source = "constructed"
+status = "provisional"
+origin = "#187: a short section kept as a 7d metric; the reason gives no working, only that the sentences are short. Contrast: JR-7d-004"
+text = '''
+## What to bring
+
+Bring a water bottle and a hat. All the tools are supplied on the day.
+'''
+kind = "metric"
+reason = "These sentences are short, so the rhythm warning can't be cleared."
+evidence = [{line = 3, quote = "All the tools are supplied on the day."}]
 
 
 [[case]]

@@ -267,3 +267,18 @@ class Record(unittest.TestCase):
                 self.write_lint(**over)
                 with self.assertRaisesRegex(ValueError, "no current lint"):
                     judges.record_reply(self.art, "J2", self.reply(), self.reports, self.cwd)
+
+
+class RubricAgreesWithTheSkill(unittest.TestCase):  # #187: the same argument got different verdicts in round 9
+    def test_the_7d_clause_and_the_keep_rule_say_the_same_thing(self):
+        root = Path(__file__).resolve().parents[1]
+        rubric = " ".join((root / "data" / "rubrics" / "judges.md").read_text(encoding="utf-8").split())
+        guide = " ".join((root / "skills" / "check" / "references" / "fix-or-justify.md")
+                         .read_text(encoding="utf-8").split())
+        self.assertIn("an unresolved 7d is better than a padded sentence", rubric)
+        self.assertIn("When no join or split in their own words clears the line, accept", rubric)
+        self.assertIn("A reason with no working", rubric)
+        self.assertIn("never try joins on another rule or kind", rubric)  # it spilled onto a 7c load_bearing reason
+        self.assertIn("never suggests a fix that adds a word, name, detail or reason", rubric)
+        self.assertNotIn("or that a fix would pad them, is rejected", rubric)
+        self.assertIn("show the working", guide)
