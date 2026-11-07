@@ -32,7 +32,8 @@ _PROFILES_ENTRY_KEYS = {"glob", "profile"}
 _GATE_KEYS = {"paths", "strictness"}
 _BRIEF_KEYS = {"enabled"}
 _CLAIMS_KEYS = {"ledger_dir", "sources_dir", "regulated_matrix", "platforms_extra"}
-_READER_VALUE_KEYS = {"cta_phrases"}
+UNKNOWN_MODULE_MODES = ("warn", "off")
+_READER_VALUE_KEYS = {"cta_phrases", "extra_modules", "unknown_modules"}
 _INTEGRITY_KEYS = {"mode", "paths"}
 _LINT_WATCH_KEYS = {"mode", "paths"}
 _NUDGE_KEYS = {"mode"}
@@ -255,6 +256,11 @@ def _check_phase4_section(path: Path, section: str, body: dict) -> None:
     elif section == "reader_value":
         if "cta_phrases" in body and not _string_list(body["cta_phrases"]):
             raise ConfigError(f"{path}: [reader_value] cta_phrases must be a list of non-empty strings")
+        if "extra_modules" in body and not _string_list(body["extra_modules"]):
+            raise ConfigError(f"{path}: [reader_value] extra_modules must be a list of non-empty strings")
+        if "unknown_modules" in body and body["unknown_modules"] not in UNKNOWN_MODULE_MODES:
+            raise ConfigError(f"{path}: [reader_value] unknown_modules must be one of "
+                              f"{', '.join(UNKNOWN_MODULE_MODES)}, got {body['unknown_modules']!r}")
     else:
         if "mode" in body and body["mode"] not in INTEGRITY_MODES:
             raise ConfigError(f"{path}: [integrity] mode must be one of {', '.join(INTEGRITY_MODES)}, "
@@ -332,8 +338,11 @@ def claims_settings(cwd: Path) -> dict:
 
 def reader_value_settings(cwd: Path) -> dict:
     """`[reader_value]` with defaults filled in. `cta_phrases` are the project's own, added by the caller to the
-    shipped defaults; [] when unset."""
-    return {"cta_phrases": list(_section(cwd, "reader_value").get("cta_phrases", []))}
+    shipped defaults; [] when unset. `extra_modules` are the project's own action-module names, and `unknown_modules`
+    says what happens to any other name: `warn` (the default) or `off`."""
+    body = _section(cwd, "reader_value")
+    return {"cta_phrases": list(body.get("cta_phrases", [])), "extra_modules": list(body.get("extra_modules", [])),
+            "unknown_modules": body.get("unknown_modules", "warn")}
 
 
 def integrity_settings(cwd: Path) -> dict:

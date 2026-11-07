@@ -11,9 +11,11 @@ uses prose and its sources.
 `RUN reader-value modules 'FILE'` checks the markup and prints one finding per line, with the line number:
 
 - every opening marker has a matching closing marker, and modules don't nest;
-- the name is one of the three;
+- the name is one of the three, or one the project declares in `[reader_value] extra_modules` (any other name is a
+  warning, which `unknown_modules = "off"` switches off);
 - at most one module per section;
-- every jump link in a `start-here` module points at a heading that exists, by its `{#id}` or its slug;
+- every jump link in a `start-here` module points at something that exists: a heading, by its `{#id}` or its slug,
+  or an HTML `id` such as `<a id="x"></a>`;
 - no H1 or H2 heading starts with a section number.
 
 ## start-here: an early summary that routes

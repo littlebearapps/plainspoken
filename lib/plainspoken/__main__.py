@@ -783,14 +783,14 @@ def _reader_value(args: argparse.Namespace, root: Path) -> int:
         return 1 if findings else 0
     if cmd == "modules":
         try:
-            found = modules.check(args.path.read_text(encoding="utf-8"))
+            found = reader_value.check_modules(args.path.read_text(encoding="utf-8"), root)
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "check the modules in")
         for f in found:
-            print(f"line {f['line']}: {f['message']}")
+            print(f"line {f['line']}: {'warning: ' if f.get('warning') else ''}{f['message']}")
         if not found:
             print(f"modules: {args.path} has no findings")
-        return 1 if found else 0
+        return 1 if modules.failures(found) else 0
     if cmd == "template":
         try:
             print(reader_value.TEMPLATE.read_text(encoding="utf-8"), end="")
@@ -862,14 +862,14 @@ def _deliver(args: argparse.Namespace, root: Path) -> int:
     if reviewer == "self-check":
         head += f" (self-check: the writer's own reading is {rec['reading']}; only the isolated reviewer passes)"
     print(f"{head} · {len(rec['items'])} item(s): {rec['failed']} failed · {rec['unverified_evidence']} with "
-          f"unverified evidence · {len(rec['module_findings'])} module finding(s)"
+          f"unverified evidence · {len(modules.failures(rec['module_findings']))} module finding(s)"
           + (" · prose outside the JSON ignored" if rec["reply_had_prose"] else ""))
     for it in rec["items"]:
         mark = " [evidence unverified: not verbatim in the draft]" if it["evidence_verified"] is False else ""
         quote = it.get("evidence") if it.get("evidence") is not None else it.get("why")
         print(f"  {it['verdict']} {it['item']}: {str(quote)[:120]}{mark}")
     for f in rec["module_findings"]:
-        print(f"  module line {f['line']}: {f['message']}")
+        print(f"  module line {f['line']}: {'warning: ' if f.get('warning') else ''}{f['message']}")
     print(f"wrote {record_path}")
     return 0 if rec["result"] == "PASS" else 1
 

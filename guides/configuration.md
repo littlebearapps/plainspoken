@@ -166,6 +166,8 @@ The same section works in the user-wide file. Who wins:
 
     [reader_value]
     cta_phrases = ["book a site visit"]    # your own calls to action, which never count as reader value
+    extra_modules = ["try-this"]           # your site's own module names, on top of the three shipped ones
+    unknown_modules = "warn"               # warn (the default) | off: what any other module name gets
 
     [integrity]
     mode = "warn"                          # off | warn (the default) | block

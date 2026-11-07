@@ -101,8 +101,9 @@ contract (stop that call and act on its one-line message).
    run: report `reader-value: INCOMPLETE` with the reason and point the user at outline mode. Don't write a contract
    now from the draft.
 2. **Check the modules first.** `RUN reader-value modules 'FILE'`. Each printed line is a structural failure at that
-   line of the draft; it fails the gate, so report it rather than spend a review on it. A draft with no modules is
-   fine: they're optional.
+   line of the draft; it fails the gate, so report it rather than spend a review on it. A line marked `warning:` names
+   a module this project hasn't declared. It doesn't fail the gate, so report it and carry on. A draft with no modules
+   is fine: they're optional.
 3. **Run the isolated reviewer.** `RUN paths 'FILE'` prints the `delivery` record path and the `delivery-reply` path
    the reply goes to. `RUN reader-value deliver-input 'FILE' --contract 'CONTRACT'` prints one JSON object,
    including `article_sha256` and `contract_sha256` (exit 1: the contract doesn't validate; back to step 1). Start
