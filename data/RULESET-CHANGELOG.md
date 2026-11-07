@@ -2,6 +2,27 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## 4.5.0 (2026-11-07)
+
+- **Inflected forms of three multi-word bans (#199):** `move the needle`, `circle back` and `setting the stage for`
+  matched only as written, because inflection reaches single words alone. A live article carried "what actually moves
+  the needle" through its original publish. `ban_literal` now lists each form: `moves`, `moved` and `moving the needle`;
+  `circles`, `circled` and `circling back`; `set` and `sets the stage for`. The other multi-word bans have no verb head.
+- **Rule 7d's no-long test skips what no honest join can clear (#214, #201):** a sentence with over half its words
+  inside a quotation no longer counts towards the three-sentence floor, because a writer can't join or lengthen
+  someone's quoted words. A heading with deeper headings straight after it, whose own prose totals 25 words or less,
+  is a lead-in and is left alone. The short-run test, the FAQ test and a section of the writer's own sentences don't
+  change. The golden and fixture corpus doesn't move. Across 125 real long texts, 7d WARNs go from 124 to 119: the 4
+  round-11 finals #214 counted and 1 like them in round 9. No text gains a finding.
+- **Rule 7 gives a short email the same limit on every route (#190):** `check -` and the hooks lint anything under 300
+  words as `social`, so rule 7 fired at 3 near-identical sentences on ordinary 70-word emails, where a file route
+  allows 5. A `social` piece that opens with a greeting or closes with a sign-off now keeps the `article` limit. Only
+  rule 7 changes: every other social cap still applies, and a text message framed as a letter gets the same limit.
+- **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.4.0 read as stale
+  and ask for a re-check. The file's bytes change, so a pending kaizen proposal rebases.
+- Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
+  merging the pull request.
+
 ## 4.4.0 (2026-10-31)
 
 - **Rule 7d skips its no-long-sentence test in short pieces (#148):** new threshold `staccato_long_min_words = 150`.
@@ -32,27 +53,6 @@ Ruleset versions are separate from the plugin version. Every report records the 
 - **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.3.0 read as
   stale and ask for a re-check, which is right, because a 7d WARN someone justified may no longer fire. The file's
   bytes change, so a pending kaizen proposal rebases.
-- Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
-  merging the pull request.
-
-## 4.5.0 (2026-11-07)
-
-- **Inflected forms of three multi-word bans (#199):** `move the needle`, `circle back` and `setting the stage for`
-  matched only as written, because inflection reaches single words alone. A live article carried "what actually moves
-  the needle" through its original publish. `ban_literal` now lists each form: `moves`, `moved` and `moving the needle`;
-  `circles`, `circled` and `circling back`; `set` and `sets the stage for`. The other multi-word bans have no verb head.
-- **Rule 7d's no-long test skips what no honest join can clear (#214, #201):** a sentence with over half its words
-  inside a quotation no longer counts towards the three-sentence floor, because a writer can't join or lengthen
-  someone's quoted words. A heading with deeper headings straight after it, whose own prose totals 25 words or less,
-  is a lead-in and is left alone. The short-run test, the FAQ test and a section of the writer's own sentences don't
-  change. The golden and fixture corpus doesn't move. Across 125 real long texts, 7d WARNs go from 124 to 119: the 4
-  round-11 finals #214 counted and 1 like them in round 9. No text gains a finding.
-- **Rule 7 gives a short email the same limit on every route (#190):** `check -` and the hooks lint anything under 300
-  words as `social`, so rule 7 fired at 3 near-identical sentences on ordinary 70-word emails, where a file route
-  allows 5. A `social` piece that opens with a greeting or closes with a sign-off now keeps the `article` limit. Only
-  rule 7 changes: every other social cap still applies, and a text message framed as a letter gets the same limit.
-- **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.4.0 read as stale
-  and ask for a re-check. The file's bytes change, so a pending kaizen proposal rebases.
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
   merging the pull request.
 
