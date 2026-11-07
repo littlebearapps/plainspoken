@@ -5,6 +5,46 @@ new features and a patch release for fixes. release-please writes each entry fro
 "In short" lines were added by hand, and so were the corrections where a commit only referred to an issue
 but the entry said it closed it.
 
+## [0.14.0](https://github.com/littlebearapps/plainspoken/compare/v0.13.0...v0.14.0) (2026-11-07)
+
+
+### Features
+
+* **status:** say what made a check stale, and show the delivery result ([8866c07](https://github.com/littlebearapps/plainspoken/commit/8866c07e7f442ddf730c56cf836c903e67f2a578))
+
+
+### Bug Fixes
+
+* **check:** JR's 7d clause agrees with the keep-the-WARN rule ([3844ad4](https://github.com/littlebearapps/plainspoken/commit/3844ad4036f6a48abe3c7f02387252390b40fe6e))
+* **engine:** say so when an unexpanded plugin profile means the default ([027f0a9](https://github.com/littlebearapps/plainspoken/commit/027f0a989a2372aae6e342a3b03cbdac1fe4a00a))
+* **evals:** a brief date that can't go stale, one small-count rule, traces from trigger runs ([62b490c](https://github.com/littlebearapps/plainspoken/commit/62b490c2fe4b16b41835aa3db460f15e2f71ec63))
+* **evals:** the lint grader sees judge-input's stderr and a tail ([#162](https://github.com/littlebearapps/plainspoken/issues/162)) ([cdac5e7](https://github.com/littlebearapps/plainspoken/commit/cdac5e77aec7e563c09276c77f163802c3098867))
+* **lint:** r24 says how to straighten quotes in a quoted YAML value ([e21169a](https://github.com/littlebearapps/plainspoken/commit/e21169a6dda48ad119a5150598f7697d2ec704ee))
+* **reader-value:** a project can declare its own modules, and jump links can reach HTML ids ([0812645](https://github.com/littlebearapps/plainspoken/commit/0812645bc55d3527d70885162fba882f8ebcea50))
+* **register-check:** add an article kind, a sturdier R10 and a check step that records nothing ([becb1ed](https://github.com/littlebearapps/plainspoken/commit/becb1edf64b6cc734839d3035c0c74004ab15c53))
+* **voice:** name the --type route and say what each count counts ([#223](https://github.com/littlebearapps/plainspoken/issues/223)) ([82a5648](https://github.com/littlebearapps/plainspoken/commit/82a564849316ee3416530a33a700e9c71c1ff52f))
+* **write:** the report guard reads more asks and says to start with the block ([#221](https://github.com/littlebearapps/plainspoken/issues/221)) ([d5bedf5](https://github.com/littlebearapps/plainspoken/commit/d5bedf5accd07866cafffc11ded21d7a28624993))
+* **write:** the status block sits at the left margin, and open lines aren't played down ([4e6e52f](https://github.com/littlebearapps/plainspoken/commit/4e6e52f61eb7a43ed1488b9da7a01e560bbae69c))
+
+
+### Ruleset
+
+* block the inflected forms of multi-word bans ([#199](https://github.com/littlebearapps/plainspoken/issues/199)) ([4dc8c20](https://github.com/littlebearapps/plainspoken/commit/4dc8c200c7586d92ad212d0aa338f4fcaace4ce4))
+* rule 7 gives a short email the article limit on every route ([#190](https://github.com/littlebearapps/plainspoken/issues/190)) ([24a9f0b](https://github.com/littlebearapps/plainspoken/commit/24a9f0bdb641f8980c43ae229890d700fbf8a595))
+* rule 7d's no-long test skips quoted sentences and short lead-ins ([#214](https://github.com/littlebearapps/plainspoken/issues/214), [#201](https://github.com/littlebearapps/plainspoken/issues/201)) ([94e9b01](https://github.com/littlebearapps/plainspoken/commit/94e9b01be06b0fee24fd46ae1f06d58de9c51f11))
+
+
+### Documentation
+
+* **acceptance:** round 11 results and the 0.13.0 blind reader number ([ca3378c](https://github.com/littlebearapps/plainspoken/commit/ca3378cd5968b53b675250995bc6f82ade7b50c2))
+* **contributing:** a ruleset change can also go in by hand, in a pull request the owner merges ([#230](https://github.com/littlebearapps/plainspoken/issues/230)) ([3384af7](https://github.com/littlebearapps/plainspoken/commit/3384af7d985e2e0aadb33a7d4066c9104802ec8d))
+* **hermes:** one block to run the four judges and record them with --all ([82b7dcf](https://github.com/littlebearapps/plainspoken/commit/82b7dcfdd7c5c2f59f858c4640b926461c399ebf))
+* keep the setup description and two table rows on one line ([a11ae2b](https://github.com/littlebearapps/plainspoken/commit/a11ae2b6d96d36fdd7fe836af2681c0c2738efa6))
+* **roadmap:** 0.14.0 picks up what 0.13.0 left open ([d3c9eee](https://github.com/littlebearapps/plainspoken/commit/d3c9eee4892d2e4ccaf9522ae8ae799f9fccb686))
+* **roadmap:** the reader number is in, and 0.14.0 gains the review fixes ([51a28ba](https://github.com/littlebearapps/plainspoken/commit/51a28ba38ef9086c4cf391e782d31b0544bf0b73))
+* **ruleset:** put 4.5.0 at the top of the changelog ([5b429ef](https://github.com/littlebearapps/plainspoken/commit/5b429efe9b505c359d6a894e170b78aa44375992))
+* stale sweep against 0.13.0's code ([762afc9](https://github.com/littlebearapps/plainspoken/commit/762afc9e6f41fe2e3dc77edf2a6ba43b77643381))
+
 ## [0.13.0](https://github.com/littlebearapps/plainspoken/compare/v0.12.0...v0.13.0) (2026-11-01)
 
 In short: `meaning-diff` lists the numbers, limits and promises a fix dropped or changed, so the owner can check them.
