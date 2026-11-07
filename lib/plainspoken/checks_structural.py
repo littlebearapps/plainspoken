@@ -150,7 +150,7 @@ def _short_lead_in(doc: Doc, sents: list[Sentence], line: int, level: int, long_
     """A heading whose next heading is deeper, in a section whose prose totals the threshold or less: no join reaches
     it, because what the section holds sits in lists and tables under its subheadings (#201)."""
     after = [lvl for at, lvl, _ in doc.headings if at > line]
-    return line > 0 and bool(after) and after[0] > level and sum(len(s.words) for s in sents) <= long_
+    return 0 < level and line > 0 and bool(after) and after[0] > level and sum(len(s.words) for s in sents) <= long_
 
 
 def staccato(doc: Doc, cfg: Config) -> list[Finding]:
