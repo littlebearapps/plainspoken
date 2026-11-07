@@ -82,10 +82,20 @@ class HostCli(unittest.TestCase):
     def test_host_notes_say_the_lint_prints_on_stderr(self):
         for name in ("codex.md", "hermes.md"):
             text = (REPO / "hosts" / name).read_text(encoding="utf-8")
-            (line,) = [ln for ln in text.splitlines() if "RUN judge-input" in ln and "input.jsonl" in ln]
-            with self.subTest(host=name):
-                self.assertIn("the lint and any hold print on stderr", line)
-                self.assertIn("see check step 1", line)
+            lines = [ln for ln in text.splitlines() if "RUN judge-input" in ln and "input.jsonl" in ln]
+            self.assertTrue(lines, name)
+            for line in lines:
+                with self.subTest(host=name, line=line[:40]):
+                    self.assertIn("the lint and any hold print on stderr", line)
+                    self.assertIn("see check step 1", line)
+
+    def test_hermes_block_runs_all_four_judges_and_records_them_at_once(self):  # #150
+        text = (REPO / "hosts" / "hermes.md").read_text(encoding="utf-8")
+        block = text.split("one block does steps 1 to 3", 1)[1].split("```bash", 1)[1].split("```", 1)[0]
+        for needle in ("for n in 1 2 3 4; do", "RUN agent-prompt tells-judge --line $n", "--source tool", "wait",
+                       'RUN judge-record "FILE" --all --from "$T/replies.json"', 'RUN merge "FILE"'):
+            self.assertIn(needle, block)
+        self.assertIn(' > "$T/J$n.json" &\n', block)  # in parallel, not one after another
 
     def test_agent_prompt_empty_input_exits_2(self):
         r = cli("agent-prompt", "tells-judge", cwd=self.cwd, input="")
