@@ -37,7 +37,7 @@ ASKS = tuple(re.compile(p, re.IGNORECASE) for p in (
     r"\b(?:should|must|needs?\s+to|wants?\s+to|may\s+want\s+to|might\s+want\s+to)\s+(?:" + _CHECK
     + r"|approve|sign\s+off|look\s+over|read\s+over)\b",
     # a suggestion that hands the draft back, whatever the verb: "You may want to split it back." (round 11)
-    r"\byou\s+(?:may|might)\s+(?:want|wish|like|prefer)\s+to\s+(?!send|give|share|supply|provide)\w",
+    r"\byou\s+(?:may|might)\s+(?:want|wish|like|prefer)\s+to\s+(?!send|give|share|supply|provide|add)\w",
     r"\b(?!(?:it|that|there|here|what|who|he|she|let)['’]s\b)[\w'’]+(?:'s|’s)\s+"  # "needs Jo's OK", not "it's ok"
     r"(?:ok|okay|approval|sign-off|sign\s+off|blessing|go-ahead)\b",
 ))

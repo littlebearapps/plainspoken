@@ -206,7 +206,8 @@ class Asks(unittest.TestCase):
                 self.assert_caught(s)
 
     def test_a_request_for_material_is_not_a_may_want_to_ask(self):  # the same exemption as _CONDITION
-        for s in ("You may want to send me the roster date.", "You might want to share the photo with me."):
+        for s in ("You may want to send me the roster date.", "You might want to share the photo with me.",
+                  "You may want to add a line."):  # round 9: a note on what was left out, and adding isn't an edit
             with self.subTest(s=s):
                 self.assert_clean(s)
 
