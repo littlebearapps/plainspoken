@@ -61,6 +61,23 @@ here too.
    --from`). The record step validates the reply; a stale or invalid one means starting that agent again, as the
    skill says.
 
+For the check skill's four judges, one block does steps 1 to 3 in parallel and records them in one call:
+
+```bash
+T=$(mktemp -d)
+RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1 or 3: see check step 1; the lint and any hold print on stderr
+for n in 1 2 3 4; do
+  RUN agent-prompt tells-judge --line $n < "$T/input.jsonl" > "$T/J$n.prompt"
+  hermes chat --query-file "$T/J$n.prompt" --oneshot -Q -t file --source tool | RUN agent-reply > "$T/J$n.json" &
+done
+wait
+cat "$T"/J[1-4].json > "$T/replies.json"
+RUN judge-record "FILE" --all --from "$T/replies.json" && RUN merge "FILE" --plugin-profile '${user_config.profile}'
+```
+
+Exit 1 from `judge-record --all` names each judge it didn't record: rerun only that one, once, with step 2 and
+`--group Jn`.
+
 ## What's different from Claude Code
 
 - Hooks: after each `write_file` or `patch`, the lint and the claims integrity check report on the file, appended to
