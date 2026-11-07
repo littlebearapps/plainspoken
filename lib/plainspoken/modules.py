@@ -4,16 +4,18 @@ Action modules are ordinary markdown wrapped in HTML-comment markers, so the tex
 ignored and a site can style them later. NAME is `start-here` (an early summary with jump links), `decision` (a
 prioritise-or-skip comparison) or `action-plan` (numbered tasks).
 
-`check(markdown)` returns `{"line", "message"}` findings, sorted by line, `[]` when clean:
+`check(markdown, extra, unknown)` returns `{"line", "message"}` findings, sorted by line, `[]` when clean. A finding
+with `"warning": True` is reported but doesn't fail the gate (`failures` leaves it out):
 
   * every opening marker has a matching closing marker, and no closing marker stands alone;
   * modules don't nest;
-  * NAME is one of the three;
+  * NAME is one of the three, or one of the project's own (`extra`, from `[reader_value] extra_modules`). Any other
+    name is a warning, and `unknown="off"` (`[reader_value] unknown_modules`) drops it;
   * at most one module per section. A module's section is the first H1 or H2 heading inside it, else the section its
     opening marker sits in;
-  * every `[text](#anchor)` link inside a `start-here` module points at a heading id that exists: an explicit
-    `{#id}` attribute, or else the heading's GitHub-style slug (lowercase, punctuation other than hyphens and
-    underscores dropped, each space a hyphen, `-1`, `-2` … on repeats);
+  * every `[text](#anchor)` link inside a `start-here` module points at an id that exists: an explicit `{#id}`
+    attribute on a heading, else the heading's GitHub-style slug (lowercase, punctuation other than hyphens and
+    underscores dropped, each space a hyphen, `-1`, `-2` … on repeats), or an HTML `id` such as `<a id="x"></a>`;
   * no H1 or H2 heading starts with a section number (`## 1. …`, `## 2) …`). Sections are numbered when the page is
     rendered; a number in the source changes the slug and every link to it. Hand-numbered H3 steps inside an
     action plan (`### 1. Clean the trap`) are fine.
@@ -28,7 +30,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-__all__ = ["NAMES", "check", "opens", "slug"]
+__all__ = ["NAMES", "check", "failures", "opens", "slug"]
 
 NAMES = ("start-here", "decision", "action-plan")
 _MARKER = re.compile(r"<!--\s*(/?)\s*module\s*:\s*(.*?)\s*-->", re.I)
@@ -41,6 +43,7 @@ _JUMP_LINK = re.compile(r"\[(?:[^\]\\]|\\.)*\]\(\s*#([^)\s]+)\s*(?:\"[^\"]*\")?\
 _INLINE_LINK = re.compile(r"!?\[((?:[^\]\\]|\\.)*)\]\([^)]*\)")
 _TAG = re.compile(r"<[^>]+>")
 _SLUG_DROP = re.compile(r"[^\w\- ]")
+_HTML_ID = re.compile(r"""<[a-z][^<>]*?\sid\s*=\s*["']([^"'\s]+)["']""", re.I)
 # \x60 = a backtick, spelled out so "!" never sits next to one (Hermes' install scan reads that as shell).
 _CODE_SPAN = re.compile(r"(?<!\x60)(\x60+)(?!\x60)(.+?)(?<!\x60)\1(?!\x60)")
 
@@ -98,7 +101,12 @@ def opens(markdown: str, name: str) -> bool:
                for _, line in _content_lines(markdown) for m in _MARKER.finditer(_mask_code(line)))
 
 
-def check(markdown: str) -> list[dict]:
+def failures(findings: list[dict]) -> list[dict]:
+    """The findings that fail the gate: every one but a warning."""
+    return [f for f in findings if not f.get("warning")]
+
+
+def check(markdown: str, extra: tuple[str, ...] | list[str] = (), unknown: str = "warn") -> list[dict]:
     """Structural findings for every action module in `markdown`; `[]` when there are none."""
     findings: list[dict] = []
     stack: list[_Module] = []
@@ -117,6 +125,7 @@ def check(markdown: str) -> list[dict]:
             start_here.links.extend((line, a) for a in _JUMP_LINK.findall(segment))
 
     for n, line in _content_lines(markdown):
+        ids.update(_HTML_ID.findall(_mask_code(line)))
         h = _HEADING.match(line)
         if h:
             level = len(h.group(1))
@@ -146,8 +155,10 @@ def check(markdown: str) -> list[dict]:
             pos = m.end()
             closing, name = m.group(1) == "/", m.group(2)
             if not closing:
-                if name not in NAMES:
-                    say(n, f"unknown module {name!r} (expected start-here, decision or action-plan)")
+                if name not in NAMES and name not in extra and unknown != "off":
+                    findings.append({"line": n, "warning": True, "message":
+                                     f"unknown module {name!r} (expected start-here, decision or action-plan; a "
+                                     "site's own go in [reader_value] extra_modules)"})
                 if stack:
                     say(n, f"module {name!r} opens inside module {stack[-1].name!r} (line {stack[-1].line}): "
                            "modules don't nest; close the first one before opening the next")
@@ -171,8 +182,8 @@ def check(markdown: str) -> list[dict]:
             by_section.setdefault(mod.own_heading or mod.section, []).append(mod)
         for line, anchor in mod.links:
             if anchor not in ids:
-                say(line, f"start-here link to #{anchor} points at no heading: no {{#{anchor}}} id and no heading "
-                          f"whose slug is {anchor!r}")
+                say(line, f"start-here link to #{anchor} points at no heading: no {{#{anchor}}} id, no heading "
+                          f"whose slug is {anchor!r} and no HTML id")
     for key, mods in by_section.items():
         where = f"the section under the heading on line {key}" if key else "the text before the first heading"
         for mod in mods[1:]:

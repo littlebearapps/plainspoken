@@ -16,6 +16,37 @@ class Clean(unittest.TestCase):
     def test_all_three_modules_clean(self):
         self.assertEqual(check("modules-clean.md"), [])
 
+    TRY = "## A\n\n<!-- module:try-this -->\nDo the thing.\n<!-- /module:try-this -->\n"
+
+    def test_an_unknown_module_is_a_warning_that_passes_the_gate(self):  # #203
+        found = modules.check(self.TRY)
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0]["warning"])
+        self.assertIn("unknown module 'try-this'", found[0]["message"])
+        self.assertIn("extra_modules", found[0]["message"])
+        self.assertEqual(modules.failures(found), [])
+
+    def test_a_project_can_declare_its_own_module(self):  # #203
+        self.assertEqual(modules.check(self.TRY, ["try-this"]), [])
+
+    def test_a_project_can_switch_the_warning_off(self):  # #203
+        self.assertEqual(modules.check(self.TRY, unknown="off"), [])
+
+    def test_a_declared_module_keeps_the_structure_rules(self):  # #203: only the name check relaxes
+        found = modules.check("## A\n\n<!-- module:try-this -->\nDo the thing.\n", ["try-this"])
+        self.assertEqual(len(modules.failures(found)), 1)
+        self.assertIn("never closed", found[0]["message"])
+
+    def test_a_jump_link_can_point_at_an_html_id(self):  # #203
+        text = ("<!-- module:start-here -->\n[Go](#worth-it) [Too](#check-1)\n<!-- /module:start-here -->\n\n"
+                '## A\n\n<a id="worth-it"></a>\nText.\n\n## <a id="check-1"></a>B\n')
+        self.assertEqual(modules.check(text), [])
+
+    def test_an_html_id_in_inline_code_is_no_target(self):  # #203
+        text = ("<!-- module:start-here -->\n[Go](#gone)\n<!-- /module:start-here -->\n\n"
+                '## A\n\nWrite `<a id="gone"></a>` like this.\n')
+        self.assertEqual(len(modules.failures(modules.check(text))), 1)
+
     def test_no_modules_no_findings(self):
         self.assertEqual(modules.check("# Title\n\n## A section\n\nProse.\n"), [])
         self.assertEqual(modules.check(""), [])
@@ -80,7 +111,10 @@ class Negative(unittest.TestCase):
         self.assertEqual(modules.check(text), [])
 
     def test_unknown_name(self):
-        self.assert_one("modules-unknown.md", 3, "checklist", "start-here")
+        found = modules.check((FIX / "modules-unknown.md").read_text(encoding="utf-8"))
+        self.assertEqual([(f["line"], f["warning"]) for f in found], [(3, True)])
+        for needle in ("checklist", "start-here"):
+            self.assertIn(needle, found[0]["message"])
 
     def test_nested_modules(self):
         self.assert_one("modules-nested.md", 8, "decision", "inside", "start-here")

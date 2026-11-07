@@ -90,9 +90,10 @@ Each finding keeps `evidence_verified`; `unverified_evidence` counts the quotes 
 in the article nor in a pinned passage, and any of them keeps the record from PASS.
 `<key>.delivery.json` holds the delivery gate. Its `result` is PASS only when `reviewer` is `delivery-checker` (the
 isolated agent), every item in `data/rubrics/delivery.md` passed (or is a permitted `n/a`) with its evidence found
-verbatim in the draft, the reply said PASS and `modules.check` found nothing; any `fail` item or module finding makes
-it FAIL, and anything else INCOMPLETE. A `reviewer = "self-check"` record keeps the writer's `reading` beside a
-`result` that is FAIL or INCOMPLETE, never PASS. `reviewer` is the caller's declaration, not a proof: `deliver`
+verbatim in the draft, the reply said PASS and `modules.check` found nothing but warnings; any `fail` item or other
+module finding makes it FAIL, and anything else INCOMPLETE. A warning carries `"warning": true` in `module_findings`.
+A `reviewer = "self-check"` record keeps the writer's `reading` beside a `result` that is FAIL or INCOMPLETE, never
+PASS. `reviewer` is the caller's declaration, not a proof: `deliver`
 requires `--reviewer delivery-checker` or `--reviewer self-check` (no default, so leaving the flag out is a usage
 error, exit 2), and it records what it's told, the same trust model as `claims record`. A host reads the gate with
 `reader-value status <draft> [--contract PATH] [--json]`, never from `result` alone: it recomputes the draft,

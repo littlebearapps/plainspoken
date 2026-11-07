@@ -193,7 +193,8 @@ class ClaimsSections(unittest.TestCase):  # [claims], [reader_value], [integrity
         self.assertEqual(config.claims_settings(self.cwd),
                          {"ledger_dir": ".plainspoken/claims", "sources_dir": ".plainspoken/sources",
                           "regulated_matrix": None, "platforms_extra": []})
-        self.assertEqual(config.reader_value_settings(self.cwd), {"cta_phrases": []})
+        self.assertEqual(config.reader_value_settings(self.cwd),
+                         {"cta_phrases": [], "extra_modules": [], "unknown_modules": "warn"})
         self.assertEqual(config.integrity_settings(self.cwd), {"mode": "warn", "paths": None})
 
     def test_defaults_with_an_unrelated_config(self):
@@ -210,7 +211,7 @@ class ClaimsSections(unittest.TestCase):  # [claims], [reader_value], [integrity
         self.assertEqual(config.claims_settings(self.cwd),
                          {"ledger_dir": "docs/claims", "sources_dir": "docs/sources",
                           "regulated_matrix": "docs/regulated.md", "platforms_extra": ["Acme CRM"]})
-        self.assertEqual(config.reader_value_settings(self.cwd), {"cta_phrases": ["Book a Free Strategy Call"]})
+        self.assertEqual(config.reader_value_settings(self.cwd)["cta_phrases"], ["Book a Free Strategy Call"])
         self.assertEqual(config.integrity_settings(self.cwd), {"mode": "block", "paths": ["posts/**/*.md"]})
         self.assertEqual(config.resolve_profile(None, self.cwd, {}).name, "default")
         self.assertEqual(config.gate_paths(self.cwd), [])

@@ -387,6 +387,27 @@ class Cli(unittest.TestCase):
         r = run("modules", "missing.md", cwd=self.root)
         self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
 
+    def test_modules_reads_the_project_settings(self):  # #203
+        draft = self.write("d.md", "## A\n\n<!-- module:try-this -->\nA tip.\n<!-- /module:try-this -->\n")
+        r = run("modules", str(draft), cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("line 3: warning: unknown module 'try-this'", r.stdout)
+        (self.root / ".plainspoken").mkdir()
+        for body in ('extra_modules = ["try-this"]', 'unknown_modules = "off"'):
+            self.write(".plainspoken/config.toml", f"[reader_value]\n{body}\n")
+            r = run("modules", str(draft), cwd=self.root)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn("has no findings", r.stdout, body)
+
+    def test_bad_module_settings_are_refused(self):  # #203
+        draft = self.write("d.md", "Text.\n")
+        (self.root / ".plainspoken").mkdir()
+        for body, key in (('extra_modules = "try-this"', "extra_modules"), ('unknown_modules = "block"', "unknown_modules")):
+            self.write(".plainspoken/config.toml", f"[reader_value]\n{body}\n")
+            r = run("modules", str(draft), cwd=self.root)
+            self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+            self.assertIn(key, r.stderr)
+
     def test_template_prints_the_template(self):
         r = run("template", cwd=self.root)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -561,6 +582,19 @@ class DeliveryRecord(DeliveryBase):
 
     def test_reply_fail_with_no_failed_item_is_incomplete(self):
         self.assertEqual(self.record(self.reply(result="FAIL"))["result"], "INCOMPLETE")
+
+    def test_an_unknown_module_warns_and_leaves_the_gate_to_pass(self):  # #203
+        self.draft.write_text(DRAFT + "\n<!-- module:try-this -->\nA tip.\n<!-- /module:try-this -->\n", encoding="utf-8")
+        rec = self.record(self.reply())
+        self.assertEqual(rec["result"], "PASS")
+        self.assertTrue(rec["module_findings"][0]["warning"])
+
+    def test_a_declared_module_leaves_no_finding(self):  # #203
+        self.draft.write_text(DRAFT + "\n<!-- module:try-this -->\nA tip.\n<!-- /module:try-this -->\n", encoding="utf-8")
+        (self.root / ".plainspoken" / "config.toml").write_text('[reader_value]\nextra_modules = ["try-this"]\n',
+                                                                encoding="utf-8")
+        rec = self.record(self.reply())
+        self.assertEqual((rec["result"], rec["module_findings"]), ("PASS", []))
 
     def test_module_findings_fail_the_gate(self):
         self.draft.write_text(DRAFT + "\n<!-- module:decision -->\n| a |\n", encoding="utf-8")

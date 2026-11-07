@@ -44,7 +44,7 @@ from plainspoken.frontmatter import FrontmatterError
 from plainspoken.frontmatter import load as load_yaml
 
 __all__ = ["DELIVERY_ITEMS", "DELIVERY_RUBRIC", "REVIEWERS", "TEMPLATE", "ContractError", "ContractNotReady",
-           "DeliveryReplyError", "StaleDeliveryReply", "cta_phrases", "default_contract", "delivery_input",
+           "DeliveryReplyError", "StaleDeliveryReply", "check_modules", "cta_phrases", "default_contract", "delivery_input",
            "delivery_rubric_hash", "delivery_status", "load_contract", "merge_phrases", "record_delivery", "shipped_cta_phrases",
            "shipped_vague_phrases", "validate"]
 
@@ -115,6 +115,12 @@ def cta_phrases(cwd: Path) -> tuple[str, ...]:
     """The shipped CTA phrases plus the project's `[reader_value] cta_phrases`. A malformed config raises
     `ConfigError`."""
     return merge_phrases(shipped_cta_phrases(), reader_value_settings(cwd)["cta_phrases"])
+
+
+def check_modules(text: str, cwd: Path) -> list[dict]:
+    """`modules.check` with the project's `[reader_value]` settings. A malformed config raises `ConfigError`."""
+    settings = reader_value_settings(cwd)
+    return modules.check(text, settings["extra_modules"], settings["unknown_modules"])
 
 
 def _pattern(phrases: Iterable[str]) -> re.Pattern[str] | None:
@@ -345,9 +351,9 @@ def _verify_items(items: list[dict], article_text: str) -> list[dict]:
 
 
 def _reading(reply_result: object, items: list[dict], module_findings: list[dict]) -> str:
-    """FAIL when an item fails or a module check finds anything; PASS when the reply says PASS, every item passes
-    (or is a permitted n/a) and every quote verified; INCOMPLETE otherwise."""
-    if module_findings or any(it["verdict"] == "fail" for it in items):
+    """FAIL when an item fails or a module check fails (a warning doesn't); PASS when the reply says PASS, every item
+    passes (or is a permitted n/a) and every quote verified; INCOMPLETE otherwise."""
+    if modules.failures(module_findings) or any(it["verdict"] == "fail" for it in items):
         return "FAIL"
     if reply_result == "PASS" and not any(it["evidence_verified"] is False for it in items):
         return "PASS"
@@ -407,7 +413,7 @@ def record_delivery(article: Path, contract: Path, reply_text: str, record_path:
         write("INCOMPLETE", reading=None, reply=None, items=[], module_findings=[], error=str(not_ready))
         raise not_ready
     data["reply_had_prose"] = had_prose
-    module_findings = modules.check(article_text)
+    module_findings = check_modules(article_text, project_root)
     try:
         if data.get("result") not in ("PASS", "FAIL"):
             raise ValueError(f"the reply's result is {data.get('result')!r}, not PASS or FAIL")
