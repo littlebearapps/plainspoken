@@ -19,7 +19,7 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspo
 - Never send, schedule or post anything. The writer decides what goes out.
 - Every flag quotes the line it's about. No quote, no flag.
 - The checklist comes from `RUN register-checklist --kind <kind> --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'`, never
-  from memory. In v0.2 it's the shipped checklist only; a project can't add its own items yet.
+  from memory. It's the shipped checklist only; a project can't add its own items.
 - Pronoun stance, formality, locale and reader come from the active profile (and the named register, if any), not from
   a house style.
 - Pasted text instead of a file: save it to `.plainspoken/drafts/<short-slug>.md` first, then check and quote that

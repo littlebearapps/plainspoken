@@ -135,7 +135,7 @@ The optional chat-reply check reads the reply and never changes it
 ### What stays on disk
 
 With kaizen excerpts off (the default), checking and editing a draft still leave these files (`<key>` is the
-draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every path):
+draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints the per-draft report paths):
 
 - `.plainspoken/reports/<key>.lint.json`: each finding, with its excerpt copied word for word from the draft.
 - `.plainspoken/reports/<key>.checked.md`: a full copy of the draft as it was checked.
@@ -152,8 +152,14 @@ draft's report key; `python3 <plugin>/lib/run.py paths <draft>` prints every pat
   and `chat-reply-state.json` (hashes of the drafts it told you about) beside them, `linted-texts.json` also holding
   hashes of the files lint after edits read, and `.plainspoken/ledger/chat-replies.jsonl` (one line per draft: its
   shape, size and outcome, none of the text).
-- Sometimes, and none of them holds draft text: `.plainspoken/ledger/friction.jsonl` (a capture error, a refused
-  judge reply, an incomplete merge, or a plainspoken agent finishing in Claude Code), `kaizen-backstop-state.json`
+- After a full check, or humanize on a file: `.plainspoken/reports/<key>.before.md`, a full copy of the draft before
+  the
+  first edit, and `<key>.meaning.json`, which holds the sentences a fix changed. The write skill also leaves
+  `<key>.first-draft.md` for a while, a full copy of its first draft.
+- Sometimes, and none of them holds draft text: `.plainspoken/ledger/friction.jsonl` (a capture error, a tool-call
+  check
+  error, a refused judge reply, an incomplete merge, or a plainspoken agent finishing in Claude Code),
+  `kaizen-backstop-state.json`
   (that agent's id, beside the hook state above), `kaizen-nudge-state.json` (once the kaizen Stop hook has said
   proposals wait or calibrate is due) and `.plainspoken/kaizen/capture-off.txt` (when check capture is off and a
   ledger exists).
@@ -162,7 +168,7 @@ The full check adds the judge, justification and report files, and the claims an
 when you run them; each one is in [docs/report-contract.md](docs/report-contract.md). `check --no-record` saves no
 report (unless `--out` names another file) and no snapshot. With `[kaizen] capture = false`, the next check deletes
 the snapshots (the `.checked.md` and `.prev` files), saves no new ones and stamps the time in `capture-off.txt`; it
-still saves the lint file.
+still saves the lint file. It leaves the `.before.md`, `.first-draft.md` and `.meaning.json` files alone.
 
 ## Documentation
 

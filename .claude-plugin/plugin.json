@@ -79,7 +79,7 @@
     "strictness": {
       "type": "string",
       "title": "Gate strictness",
-      "description": "watch = report only, warn = warn before publish, block = block publish without a current PASS.",
+      "description": "watch = off, warn = warn before publish, block = block publish without a current PASS.",
       "options": [
         "watch",
         "warn",

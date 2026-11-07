@@ -60,7 +60,7 @@ doesn't print reaches no drafting skill.
 - `glossary`: a file next to the profile with plain-word swaps. `profile --voice` prints its full path. Who reads
   it: `plain-language`.
 - `knows`: what the reader already knows. Example: `["seasons", "watering"]`. Who reads it: nothing yet. The schema
-  accepts it, but `profile --voice` doesn't print it in v0.2.
+  accepts it, but `profile --voice` doesn't print it.
 
 ## Writing types
 
@@ -82,7 +82,7 @@ doesn't print reaches no drafting skill.
 - `registers`: `[[registers]]` entries (`name`, `pronoun`, `formality`, `notes`) for a way of writing in one setting.
   Example: an `email` register, casual-professional. Who reads it: register-check, through
   `register-checklist --register <name>` (its `pronoun` and `formality`). The plain `profile` summary lists the
-  names. `profile --voice` doesn't print registers, so drafting doesn't see them, and nothing reads `notes` in v0.2.
+  names. `profile --voice` doesn't print registers, so drafting doesn't see them, and nothing reads `notes`.
 - `anchors`: `[[anchors]]` entries, passages in the author's own voice. Each has an `id`, `tags` (section types), a
   `source`, and either `text` or `path` with `lines`. A `path` must sit inside the project. Who reads it: drafting
   and the voice check.

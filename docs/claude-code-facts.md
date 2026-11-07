@@ -172,7 +172,7 @@ denies anything it can't interpret; it must not deny ordinary push commands.
 - **Not modelled (known gaps):** `cd` earlier in the same command (the gate checks the project directory; `-C` is resolved
   from the Bash tool's cwd); `GIT_DIR`, `GIT_CONFIG_*` and similar environment assignments; commands written to a shell's standard
   input (`git push` echoed into `sh`); `xargs git` reading the subcommand from stdin; scripts and Makefiles that push; remote-
-  tracking refs mapped by a non-default `remote.<name>.fetch`; MCP publishing (out of scope for v0.1).
+  tracking refs mapped by a non-default `remote.<name>.fetch`; MCP publishing (out of scope).
 
 ## 7. Skill listing and manual-only skills
 
@@ -347,7 +347,8 @@ probe (user settings loaded, so the option said `en-AU` too) printed `locale en-
 `$plainspoken:doctor` in Codex 0.164.0 printed `locale: en-AU (user-wide config, …)`. So the user-wide file beats the
 plugin option, as documented, and it's how Codex sets the locale.
 
-Consequences: a host can make skills manual-only with the deny rule (README, Host setup), so there's no `[skills]`
+Consequences: a host can make skills manual-only with the deny rule (`guides/configuration.md`, "Narrow what
+plainspoken does"), so there's no `[skills]`
 config. Hooks still fall back to the manifest defaults, since a `--plugin-dir` session has no options (section 2),
 and the project config (`[lint_watch] paths`, `[integrity] paths`, `[gate] strictness`) still beats the option.
 
@@ -402,7 +403,8 @@ on by the main agent would have been visible.
   didn't reach it but gives no positive control.
 
 Result: **an output style reaches the main conversation only, not subagents** (project and plugin styles alike), as
-the README says. Not tested: an interactive session, `/output-style` chosen mid-session, and plugin agents
+`guides/configuration.md` says. Not tested: an interactive session, `/output-style` chosen mid-session, and plugin
+agents
 (`plainspoken:*`), which are subagents like the two tested.
 
 ## 14. Does Claude Code's sandbox stop the CLI writing `.plainspoken/`?

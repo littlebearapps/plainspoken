@@ -13,7 +13,8 @@ You need:
 
 - Python 3.11 or newer. The engine uses the standard library only, so there's nothing to install with pip.
 - git.
-- The `claude` CLI (Claude Code), to load the plugin for a session, validate the manifest and run the evals.
+- The `claude` CLI (Claude Code), to load the plugin for a session, validate the manifest, run the token budget and
+  run the evals.
 
 ## Set up and check your work
 

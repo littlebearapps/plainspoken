@@ -185,12 +185,13 @@ Two facts a host needs when it converts its own claim ledgers to plainspoken's:
 
 Each path (under the project root), what writes it, and what it holds:
 
-- `.plainspoken/ledger/YYYY-MM.jsonl`: written by `check`, `merge`, the lint-watch hook, `kaizen dismiss` / `uphold` /
+- `.plainspoken/ledger/YYYY-MM.jsonl`: written by `check`, `merge`, the lint-watch hook, the tool-call and chat-reply
+  checks, `kaizen dismiss` / `uphold` /
   `missed` / `published` / `decisions` / `apply`, `calibrate`, `mine`; holds one event per line (schema v1, at most
   4,096 bytes), in the month of its own `ts` (UTC); appended with O_APPEND, never rewritten.
-- `.plainspoken/ledger/friction.jsonl`: written on capture errors and by `merge`, `judge-record` and the backstop
-  hook; holds `{v, ts, kind, source, detail}`, with kinds `merge_incomplete`, `judge_reply_rejected`,
-  `agent_handback` (source: the agent type, detail empty), `capture_error` and `skill`.
+- `.plainspoken/ledger/friction.jsonl`: written on capture errors and by `merge`, `judge-record`, the tool-call check
+  and the backstop hook; holds `{v, ts, kind, source, detail}`, with kinds `merge_incomplete`, `judge_reply_rejected`,
+  `agent_handback` (source: the agent type, detail empty), `capture_error`, `tool_call` and `skill`.
 - `.plainspoken/kaizen/proposals/<id>.json`: written by `kaizen calibrate`, `kaizen mine`; holds one proposal
   (`KZ-YYYYMMDD-xxxxxx`): its edits as a diff, the base ruleset hash, the corpus effect, the adapter and its ref; the
   id is a hash of the edits, so a hand edit makes `apply` refuse.

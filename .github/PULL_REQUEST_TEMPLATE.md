@@ -13,6 +13,9 @@
 - [ ] `python3 scripts/dev/check_links.py .` passes
 - [ ] `python3 scripts/dev/check_doc_commands.py .` passes
 - [ ] `python3 scripts/dev/lint_frontmatter.py .` passes
+- [ ] `python3 scripts/dev/check_release_version.py .` passes
+- [ ] `python3 lib/run.py eval golden validate --require-counts` passes
+- [ ] `python3 -m scripts.dev.token_budget .` passes
 - [ ] `claude plugin validate . --strict` passes
 - [ ] Docs updated if this changes what a user sees or does
 - [ ] The commit type is right (`feat`, `fix`, `docs`, …): release-please writes the CHANGELOG from it, so

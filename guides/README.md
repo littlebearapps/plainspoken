@@ -49,7 +49,8 @@ up from where you are, that holds a plainspoken config or a git repository.
 | What | Where |
 |---|---|
 | Project settings | `.plainspoken/config.toml` |
-| User-wide settings (nudge, rule, lint after edits only) | `~/.config/plainspoken/config.toml` |
+| User-wide settings (nudge, rule, lint after edits, locale, tool-call and chat-reply checks only) |
+`~/.config/plainspoken/config.toml` |
 | Your voice profiles | `.plainspoken/profiles/<name>.toml` |
 | Check reports | `.plainspoken/reports/` |
 | Kaizen ledger | `.plainspoken/ledger/` |
@@ -57,6 +58,9 @@ up from where you are, that holds a plainspoken config or a git repository.
 | Claim ledgers | `.plainspoken/claims/` |
 | Saved source text for claims | `.plainspoken/sources/` |
 | Reader-value contracts | `.plainspoken/reader-value/` |
+| Drafts from write, adapt and the audits | `.plainspoken/drafts/` |
+| Voice samples | `.plainspoken/samples/` |
+| Eval runs and history | `.plainspoken/evals/` |
 
 Add `.plainspoken/` to your `.gitignore` so reports and hook state stay out of commits. To keep the settings and
 profiles tracked, use:

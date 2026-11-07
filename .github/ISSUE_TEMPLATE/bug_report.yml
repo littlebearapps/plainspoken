@@ -11,7 +11,7 @@ body:
         privately, as SECURITY.md describes.
   - type: input
     id: version
-    attributes: { label: plainspoken version, placeholder: "from .claude-plugin/plugin.json, e.g. 0.12.0" }
+    attributes: { label: plainspoken version, placeholder: "the version line in .claude-plugin/plugin.json" }
     validations: { required: true }
   - type: dropdown
     id: host

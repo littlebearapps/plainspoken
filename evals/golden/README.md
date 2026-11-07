@@ -33,7 +33,7 @@ isn't the format.
 owner reviewed 25 cases one by one (the doubtful ones first, stratified by group and label): all 25 are now
 `confirmed`, two with a changed label (`JR-12f-001` accept → reject, `J3-27-003` fail → pass). A second review the
 same day confirmed 6 more J3 cases with no label changes (`J3-2-008`, `J3-12c-006`, and the new pairs
-`J3-12c-007`/`-008`, `J3-17-007`/`-008`). The other 190 were constructed and then second-labelled blind by a
+`J3-12c-007`/`-008`, `J3-17-007`/`-008`). The other 191 were constructed and then second-labelled blind by a
 separate pass (226/226 agreement at the time), so judge metrics on them are an upper bound until a person confirms
 them.
 

@@ -137,14 +137,14 @@ passage, or a drafting case's brief) doesn't have. A number worked out from the 
 "seven in every ten" for 151 of 212) is listed as derived and not counted; the rules are in `rewrite.py`. Both
 commands also list what `meaning-diff` finds (a number, limit or promise the rewrite dropped or added, per arm in the
 delta); those lines never change a verdict. The smoke cases run each skill once through its slash command on a draft the case
-saves first, including the full check with its four judges, so they cost more than the trigger suite (about
-US$5 for all twelve on 2026-10-21). On Claude Code 2.1.306 the eval sandbox couldn't run the skills' old load-time
+saves first, including the full check with its four judges, so they cost more than the trigger suite (US$4.61 for all
+15 in round 8, 30 October 2026). On Claude Code 2.1.306 the eval sandbox couldn't run the skills' old load-time
 commands (see `docs/acceptance/v0.7-drafting-hooks.md`), so the slash and smoke suites ran on 2.1.303 there.
 Since #12 each skill runs that call as its first step instead, which should lift the pin; until a slash and smoke
 run on the current CLI confirms it, keep using `npx @anthropic-ai/claude-code@2.1.303 plugin eval …`. Run one CLI
 version at a time: two at once on one login revoked a token mid-run.
 
-Each smoke case except `setup`, which has no profile step, also has a `*-first` grader: the run's first
+Each smoke case except `doctor` and `setup`, which have no profile step, also has a `*-first` grader: the run's first
 `run.py` call must be the skill's first step, `run.py profile` (`run.py kaizen review` for kaizen). When it fails, the
 runner says only "pattern not found in trace", so run the suite with `--keep-temp` and `--json`, then `eval first-call`
 on that file: it prints the first engine call of each run.
@@ -208,7 +208,7 @@ The golden set and the blind-test pairs are held out. They measure the checks; t
 `scripts/dev/verdict_diff.py OLD NEW` lints one fixed public corpus with two versions of the plugin and lists every
 text whose lint status (BLOCK, WARN or CLEAN) or finding count per rule moved. OLD and NEW are git refs or checkout
 folders. The corpus is read from NEW, so both sides lint the same texts: every case in `evals/golden/` plus the
-rewrite references and the voice samples, 273 texts as of 29 October 2026. It runs the lint only, with the default
+rewrite references and the voice samples, 277 texts as of 7 November 2026. It runs the lint only, with the default
 profile. No model is called, and nothing is written into the repo. It takes about 10 seconds.
 
 On every pull request CI runs it base against head and writes the markdown to the job summary. It never
@@ -216,7 +216,7 @@ fails the build: a rule change is meant to move verdicts, and a person reads the
 moved. For a release, paste the output for the range into the release PR:
 
 ```bash
-python3 scripts/dev/verdict_diff.py v0.12.0 HEAD           # markdown; --json for the full record
+python3 scripts/dev/verdict_diff.py v0.13.0 HEAD           # markdown; --json for the full record
 ```
 
 The report names texts by path and case id, never by their words or labels, and the held-out rule above still

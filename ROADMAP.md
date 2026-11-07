@@ -24,11 +24,23 @@ open:
   the lint only ([#149](https://github.com/littlebearapps/plainspoken/issues/149)).
 - Fixes from a review of published posts: inflected bans ([#199](https://github.com/littlebearapps/plainspoken/issues/199)), 7d on short lead-ins ([#201](https://github.com/littlebearapps/plainspoken/issues/201)),
   r24's advice on YAML ([#202](https://github.com/littlebearapps/plainspoken/issues/202)), a site's own module names ([#203](https://github.com/littlebearapps/plainspoken/issues/203)), an unexpanded profile
-  ([#206](https://github.com/littlebearapps/plainspoken/issues/206)), register-check ([#207](https://github.com/littlebearapps/plainspoken/issues/207)) and voice counts ([#209](https://github.com/littlebearapps/plainspoken/issues/209)).
+  ([#206](https://github.com/littlebearapps/plainspoken/issues/206)), register-check
+  ([#207](https://github.com/littlebearapps/plainspoken/issues/207)) and voice counts
+  ([#209](https://github.com/littlebearapps/plainspoken/issues/209)), and 7d on quoted sentences
+  ([#214](https://github.com/littlebearapps/plainspoken/issues/214)).
 - Short emails linted as social posts by the hook route
   ([#190](https://github.com/littlebearapps/plainspoken/issues/190)), small eval fixes
   ([#191](https://github.com/littlebearapps/plainspoken/issues/191)), and install steps still to confirm on live hosts
   ([#123](https://github.com/littlebearapps/plainspoken/issues/123)).
+
+Issues waiting on research and a plan: long pieces ([#200](https://github.com/littlebearapps/plainspoken/issues/200),
+[#205](https://github.com/littlebearapps/plainspoken/issues/205)), published pieces
+([#204](https://github.com/littlebearapps/plainspoken/issues/204)), frontmatter
+([#208](https://github.com/littlebearapps/plainspoken/issues/208)), private names
+([#210](https://github.com/littlebearapps/plainspoken/issues/210)), `kaizen calibrate`
+([#212](https://github.com/littlebearapps/plainspoken/issues/212)),
+`meaning-diff` ([#215](https://github.com/littlebearapps/plainspoken/issues/215)) and brief instructions
+([#216](https://github.com/littlebearapps/plainspoken/issues/216)).
 
 ## Before v1.0
 
@@ -46,7 +58,7 @@ None of these is planned yet:
 - An editor agent that can rewrite a passage, not only cut what's wrong with it.
 - The human tier of the blind reader test, where people rather than models try to tell plainspoken's drafts from
   the author's own.
-- A listing in the Hermes Agent plugin catalog, which needs a `plugin.yaml` at the repository root.
+- A listing in the Hermes Agent plugin catalogue, which needs a `plugin.yaml` at the repository root.
 
 ## Have an idea?
 
