@@ -421,6 +421,23 @@ def vague(doc: Doc, cfg: Config) -> list[Finding]:
     return _count_rule(hits, cfg.thresholds_for(doc)["vague_quantifier_warn"], "25", "WARN", "Vague quantifiers")
 
 
+
+def _frontmatter_end(doc: Doc) -> int:
+    """The 1-based line of the closing `---`, or 0 with no frontmatter."""
+    if doc.lines and doc.lines[0].strip() == "---":
+        for i, line in enumerate(doc.lines[1:], 2):
+            if line.strip() == "---":
+                return i
+    return 0
+
+
+def _yaml_quote_trap(line: str) -> bool:
+    """A frontmatter line where straightening a curly quote would close the YAML string early (#202): curly doubles in
+    a double-quoted value, or curly singles in a single-quoted one."""
+    m = re.match(r"""\s*(?:-\s+)?(?:[\w.-]+:\s*)?(["'])""", line)
+    return bool(m) and re.search("[“”]" if m[1] == '"' else "[‘’]", line) is not None
+
+
 def typography(doc: Doc, cfg: Config) -> list[Finding]:
     out = []
     curly, fence = [], None
@@ -436,8 +453,12 @@ def typography(doc: Doc, cfg: Config) -> list[Finding]:
         if re.search(r"[“”‘’]", re.sub(r"`[^`]*`", "", line)):  # inline code isn't prose
             curly.append(i)
     if curly:
+        advice = "use straight quotes"
+        if any(_yaml_quote_trap(doc.lines[i - 1]) for i in curly if i <= _frontmatter_end(doc)):
+            advice += (", escaped in a quoted frontmatter value (\\\" inside double quotes, '' inside single)"
+                       " or the YAML breaks")
         out.append(Finding("24", "WARN", curly[0], doc.lines[curly[0] - 1].strip()[:160],
-                           f"Curly quotes in markdown source on {len(curly)} line(s) — use straight quotes"))
+                           f"Curly quotes in markdown source on {len(curly)} line(s) — {advice}"))
     prose = [p for p in doc.prose_paragraphs() if p.kind == "prose"]
     words = sum(len(p.text.split()) for p in prose) or 1
     bold = sum(doc.lines[ln - 1].count("**") // 2 for p in prose for ln in _block_lines(doc, p.line)

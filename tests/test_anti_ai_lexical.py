@@ -441,6 +441,25 @@ class FollowUpMinors(unittest.TestCase):
 
     def test_curly_quotes_in_tilde_fence_and_inline_code_ignored(self):
         self.assertEqual(run("24", "~~~\n“curly”\n~~~\nText."), [])
+
+    def test_r24_names_the_yaml_escape_only_where_straight_quotes_would_break_it(self):  # #202
+        def message(fm):
+            found = CHECKS["24"](parse(f"---\n{fm}\n---\n\nPlain body.\n", profile=PRODUCT), CFG)
+            self.assertEqual(len(found), 1, fm)
+            return found[0].message
+        for fm in ('description: "They said “not giant factors” in the post."',
+                   'faqs:\n  - question: "Why?"\n    answer: "They said “no” twice."',
+                   "description: 'It’s a fair point.'"):
+            self.assertIn("frontmatter value", message(fm), fm)
+            self.assertIn("YAML", message(fm), fm)
+        for fm in ('description: "It’s a fair point."',  # an apostrophe is safe in double quotes
+                   "description: 'They said “no” twice.'",  # so are doubles in single quotes
+                   "description: They said “no” twice."):  # and either in a plain value
+            self.assertEqual(message(fm), "Curly quotes in markdown source on 1 line(s) — use straight quotes", fm)
+
+    def test_r24_body_lines_keep_the_plain_advice(self):  # #202: a body line that looks like YAML isn't one
+        found = run("24", 'note: "They said “no” twice."')
+        self.assertEqual(found[0].message, "Curly quotes in markdown source on 1 line(s) — use straight quotes")
         self.assertEqual(run("24", "Use `“smart”` quotes in code."), [])
         self.assertEqual([x.severity for x in run("24", "Use `code` and “this”.")], ["WARN"])
 
