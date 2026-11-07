@@ -311,6 +311,35 @@ def lint_rules(text, content_type="article"):
     return [(f["rule"], f["message"]) for f in rep["findings"] if f["rule"] in ("7", "7d") and f["severity"] == "WARN"]
 
 
+class ShortEmailRule7(unittest.TestCase):
+    """#190: an email under 300 words gets the same rule 7 limit on every route, though stdin lints it as social."""
+    RUN3 = "The pantry roster changes next week. Shifts will now start at ten. Each shift still runs three hours."
+    RUN5 = RUN3 + " Please check your new times today. Reply to Maria by this Friday."
+
+    def rule7(self, text, content_type):
+        return CHECKS["7"](parse(text, profile=PRODUCT, content_type=content_type), CFG)
+
+    def test_a_letter_keeps_the_article_limit_on_the_social_route(self):
+        for text in (f"Hi all,\n\n{self.RUN3}\n\nThanks,\nMaria\n", f"Hi all,\n\n{self.RUN3}\n",
+                     f"{self.RUN3}\n\nCheers,\nMaria\n"):
+            self.assertEqual(self.rule7(text, "social"), [], text)
+
+    def test_every_route_gives_a_letter_the_same_answer(self):
+        for body in (self.RUN3, self.RUN5):
+            text = f"Hi all,\n\n{body}\n\nThanks,\nMaria\n"
+            self.assertEqual(len(self.rule7(text, "social")), len(self.rule7(text, "article")), body)
+
+    def test_a_long_run_in_a_letter_still_warns(self):
+        found = self.rule7(f"Hi all,\n\n{self.RUN5}\n\nThanks,\nMaria\n", "social")
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0].message.startswith("5+ consecutive"), found[0].message)
+
+    def test_a_social_post_keeps_the_social_limit(self):
+        found = self.rule7(f"{self.RUN3}\n", "social")
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0].message.startswith("3+ consecutive"), found[0].message)
+
+
 class StaccatoFloor(unittest.TestCase):
     """#214 and #201: the no-long test needs three sentences the writer can honestly join."""
     NARRATION = "Ray Petrakis leads the volunteers. He worked as an electrician for years."
@@ -363,7 +392,7 @@ class StaccatoShortPiece(unittest.TestCase):
         self.assertTrue(dict(found)["7d"].startswith("5 consecutive sentences under 12 words"), found)
 
     def test_social_unchanged(self):
-        self.assertEqual([r for r, _ in lint_rules(ISSUE_EMAIL, "social")], ["7", "7"])
+        self.assertEqual([r for r, _ in lint_rules(ISSUE_EMAIL, "social")], ["7"])  # #190: as on the article route
 
     def test_gate_zero_restores_old_behaviour(self):
         found = run_cfg("7d", "## A\n\nShort one here. Another short one. And a third.",
