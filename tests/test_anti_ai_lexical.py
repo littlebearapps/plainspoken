@@ -442,6 +442,14 @@ class FollowUpMinors(unittest.TestCase):
     def test_curly_quotes_in_tilde_fence_and_inline_code_ignored(self):
         self.assertEqual(run("24", "~~~\n“curly”\n~~~\nText."), [])
 
+    def test_multi_word_bans_with_a_verb_head_block_every_form(self):  # #199
+        for line in ("This will move the needle for most shops.", "Ask what actually moves the needle for shops.",
+                     "That moved the needle.", "Nothing is moving the needle yet.",
+                     "I'll circle back on Friday.", "She circles back every week.", "We circled back to it.",
+                     "He keeps circling back to it.", "It will set the stage for next year.",
+                     "That sets the stage for next year.", "That was setting the stage for next year."):
+            self.assertEqual([f.severity for f in run("2", line)], ["BLOCK"], line)
+
     def test_r24_names_the_yaml_escape_only_where_straight_quotes_would_break_it(self):  # #202
         def message(fm):
             found = CHECKS["24"](parse(f"---\n{fm}\n---\n\nPlain body.\n", profile=PRODUCT), CFG)

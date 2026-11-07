@@ -219,7 +219,7 @@ class LoaderValidation(unittest.TestCase):
 
 class TomlRuleset(unittest.TestCase):
     def test_version_is_semver_string(self):
-        self.assertEqual(load_config().version, "4.4.0")
+        self.assertEqual(load_config().version, "4.5.0")
 
     def test_staccato_long_min_words_default(self):  # #148: 7d's no-long test skips pieces under 150 words
         self.assertEqual(load_config().thresholds()["staccato_long_min_words"], 150)
@@ -228,7 +228,7 @@ class TomlRuleset(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
         copy = tmp / "rules.toml"
-        text = RULES.read_text(encoding="utf-8").replace('version = "4.4.0"', 'version = "9.9.9"')
+        text = RULES.read_text(encoding="utf-8").replace('version = "4.5.0"', 'version = "9.9.9"')
         copy.write_text(text, encoding="utf-8")
         old = os.environ.get("PLAINSPOKEN_RULES")
         os.environ["PLAINSPOKEN_RULES"] = str(copy)
