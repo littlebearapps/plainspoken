@@ -446,19 +446,28 @@ class EvalCases(unittest.TestCase):
                     self.assertTrue(kept.search(marked(facts_source(d, prompt))))
 
     def test_longform_lint_never_sent_to_devnull(self):  # #162: `check … >/dev/null; judge-input --keep r7d`
-        """Each longform case fails a run whose trace sends a `check` call's output to /dev/null. Other redirects
-        (a claims call's stderr, a check without one) don't count."""
+        """Each longform case fails a run whose trace loses the lint: `check`'s stdout to /dev/null or through tail,
+        or `judge-input`'s stderr to /dev/null or through tail. Other redirects (a claims call's stderr, a check
+        through head, which keeps the counts line, `judge-input`'s stdout to a file) don't count."""
         hits = [r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27 '
                 r'>/dev/null; $R judge-input"',
                 r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27 '
                 r'> /dev/null; $R judge-input"',
                 r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27 '
                 r'&>/dev/null; $R judge-input"',
-                "python3 /x/lib/run.py check a.md >/dev/null"]
+                "python3 /x/lib/run.py check a.md >/dev/null",
+                "python3 /x/lib/run.py check a.md | tail -4",
+                r'$P judge-input \"$A\" --plugin-profile \x27default\x27 --keep r7d 2>/dev/null',  # round 9, wjcFNY
+                "python3 /x/lib/run.py judge-input a.md --plugin-profile \x27default\x27 2>&1 | tail -4",  # round 9, Pbt1YQ
+                "python3 /x/lib/run.py judge-input a.md &>/dev/null",
+                "python3 /x/lib/run.py judge-input a.md >/dev/null 2>&1"]
         misses = [r'"command":"R=\"python3 /x/lib/run.py\"; $R check \"$f\" --plugin-profile \x27default\x27; '
                   r'$R judge-input"',
                   r'"command":"python3 /x/lib/run.py claims record a.md --from r.json 2>/dev/null"',
-                  "python3 /x/lib/run.py check a.md 2>/dev/null"]
+                  "python3 /x/lib/run.py check a.md 2>/dev/null",
+                  "python3 /x/lib/run.py check a.md | head -5",  # the counts line stays
+                  "python3 /x/lib/run.py judge-input a.md > input.jsonl",
+                  "python3 /x/lib/run.py judge-input a.md | python3 /x/lib/run.py agent-prompt tells-judge --line 1"]
         hits = [h.replace(r"\x27", "'") for h in hits]
         misses = [m.replace(r"\x27", "'") for m in misses]
         for d in sorted(p for p in EXTRA[0].iterdir() if p.is_dir()):
