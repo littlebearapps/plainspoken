@@ -10,7 +10,7 @@ from pathlib import Path
 from plainspoken.profile import DEFAULT_LOCALE, PRONOUNS, Profile
 
 DATA = Path(__file__).resolve().parents[2] / "data" / "register-checklist.toml"
-KINDS = ("email", "message", "post", "page", "outreach", "follow-up")
+KINDS = ("email", "message", "post", "page", "article", "outreach", "follow-up")
 _KEYS = {"id", "title", "ask", "flag_when", "applies_to", "by_pronoun"}
 _FILLS = ("formality", "reader", "locale", "pronoun_rule")  # the placeholders checklist() fills
 
@@ -72,7 +72,8 @@ def checklist(kind: str, prof: Profile, register_name: str | None = None, locale
     pronoun = (reg.pronoun if reg and reg.pronoun else prof.pronoun) or "I"
     fill = {
         "formality": (reg.formality if reg and reg.formality else "the profile's usual register"),
-        "reader": prof.reader_persona or "the reader",
+        # A reader line can carry a rule of its own, so it sits in brackets to read well inside any question (#207).
+        "reader": f"the reader ({prof.reader_persona})" if prof.reader_persona else "the reader",
         "locale": locale or prof.locale or DEFAULT_LOCALE,
     }
     out = []
