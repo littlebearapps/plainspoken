@@ -92,8 +92,7 @@ def summary_lines(p: Profile) -> list[str]:
     writer = p.voice.get("identity", {}).get("writer") or "not set"
     return [
         f"writer: {writer} (pronoun {p.pronoun}) · reader: {reader} (Year {p.comprehension_floor} floor)",
-        f"registers: {', '.join(r.name for r in p.registers) or 'none'} · blends: {blends} · "
-        anchors,
+        f"registers: {', '.join(r.name for r in p.registers) or 'none'} · blends: {blends} · {anchors}",
     ]
 
 
