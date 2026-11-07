@@ -56,6 +56,13 @@ Ruleset versions are separate from the plugin version. Every report records the 
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
   merging the pull request.
 
+## Comment revision (2026-11-07; ruleset version unchanged)
+
+- **How a ruleset change goes in:** comments only, so no rule, threshold or list changes and no version bump.
+  `rules.toml`'s header said only `kaizen apply` bumps the version, while 4.4.0 and `en_dash_max` went in by hand. It
+  now names both routes, and so does `CONTRIBUTING.md`. The file's bytes change, so a pending proposal's
+  `base_sha256` no longer matches and `kaizen apply` rebases it.
+
 ## Judges rubric revision (2026-11-07; ruleset version unchanged)
 
 - **JR's 7d clause now agrees with the keep-the-WARN rule (#187):** the check skill keeps a 7d when no join or split

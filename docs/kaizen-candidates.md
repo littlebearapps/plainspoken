@@ -33,7 +33,7 @@ rule change.
 - **Seen:** Phase 3 intake (2026-10-12): the source watch-outs and localisation files carry word tables (plain
   Australian swaps, overclaim verbs, agency soft-words, US regionalisms).
 - **Why not now:** word lists belong to the checker, never drafting prompts, and the ruleset changes
-  only through `kaizen apply` with evidence.
+  through `kaizen apply` with evidence, or by hand in a pull request the owner merges.
 - **Candidate change:** propose them as `data/rules.toml` / `data/locales/en-AU.toml` entries through calibrate, each
   checked against the golden set for false positives. The tables are not kept in the repo; they're re-derived from
   the author's own source files when the proposal is written.
@@ -55,7 +55,7 @@ rule change.
 - **Labels:** kaizen, data
 - **Seen:** Phase 3 intake (2026-10-12): the source anti-tells catalogue and the outcomes-led document carry word
   lists (buzzwords, overclaim verbs, soft words) that copy-audit doesn't restate.
-- **Why not now:** word lists belong to the checker; the ruleset changes only through `kaizen apply`.
+- **Why not now:** word lists belong to the checker; the ruleset changes through `kaizen apply`, or by hand in a pull request the owner merges.
 - **Candidate change:** fold them into the K2 proposal at the first calibrate run on a real ledger, checked against
   the golden set. They're re-derived from the author's own source files; they aren't kept in the repo.
 - **Decision needed:** at the first calibrate run on a real ledger, together with K2.

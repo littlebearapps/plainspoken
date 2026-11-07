@@ -57,11 +57,12 @@ changelog by hand: write the commit subject as the line a user should read.
     docs: explain the report-only route
     ruleset: loosen rule 7d in FAQ sections (KZ-20261101-1a2b3c)
 
-A ruleset change (an edit to `data/rules.toml` that `kaizen apply` makes, with its entry in
-`data/RULESET-CHANGELOG.md`) gets its own commit type, `ruleset`, and its own Ruleset section in the release
+A ruleset change (an edit to `data/rules.toml`, or to the lint code, that changes what the checks flag, with its
+entry in `data/RULESET-CHANGELOG.md`) gets its own commit type, `ruleset`, and its own Ruleset section in the release
 notes. Release-please groups the notes by type and never by scope, so `fix(ruleset):` would land under Bug Fixes. A
-`ruleset` commit on its own cuts a patch release, the same as `fix`. Name the proposal ids in the subject. Keep the
-ruleset change in a commit of its own, so the code and the rules each get their own line in the notes.
+`ruleset` commit on its own cuts a patch release, the same as `fix`. Name the proposal ids in the subject, or the
+issue for a change made by hand. Keep the ruleset change in a commit of its own, so the code and the rules each get
+their own line in the notes.
 
 Keep each pull request to one change, with tests for new behaviour. Link the issue it fixes (`Fixes #N`).
 
@@ -99,10 +100,12 @@ form: [False positive](https://github.com/littlebearapps/plainspoken/issues/new?
 [Pattern proposal](https://github.com/littlebearapps/plainspoken/issues/new?template=pattern-proposal.yml).
 Anonymise any text you paste.
 
-Ruleset changes don't go in as ordinary edits. They go through the kaizen loop: a proposal with its evidence, a
+Ruleset changes don't go in as ordinary edits. Most go through the kaizen loop: a proposal with its evidence, a
 person's `APPROVE:` line, then `kaizen apply`, which bumps the ruleset version and records who approved it in
 `data/RULESET-CHANGELOG.md`. `kaizen apply --all-approved --rules data/rules.toml` applies every approved proposal
-in one go and prints the commit message to use. The [kaizen guide](guides/kaizen.md) explains each step. `kaizen report --share`
+in one go and prints the commit message to use. The other route is by hand, for a change kaizen can't propose, such
+as a change to the lint code or a new threshold: a pull request with the verdict-diff counts, the version bump and
+a changelog entry that says it went in by hand. The owner approves it by merging. The [kaizen guide](guides/kaizen.md) explains each step. `kaizen report --share`
 prints counts only, with no text, if you'd like to attach your numbers to an issue.
 
 ## Evals
