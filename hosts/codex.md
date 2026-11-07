@@ -85,7 +85,8 @@ the skills' rule that you don't award your own pass holds here too.
 - A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
   `RUN check - < draft`, run `$plainspoken:check` on a long one, and remove what's flagged without adding facts.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
-  `.plainspoken/config.toml` (see the README); turn the nudge on with `$plainspoken:setup` (`RUN setup --host codex
+  `.plainspoken/config.toml` (see `guides/configuration.md`); turn the nudge on with `$plainspoken:setup` (`RUN setup
+  --host codex
   …`). Kaizen records go to `.plainspoken/` in the project.
 - Agents run on your Codex model, not the model the agent file names.
 - `$plainspoken:doctor` (or `RUN doctor --host codex`) checks python3, the plugin files, the config and whether

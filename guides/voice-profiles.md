@@ -92,8 +92,8 @@ The profile goes in `.plainspoken/profiles/<name>.toml` and is switched on with 
 - **`PLAINSPOKEN_PROFILE`** (a name or a full path) beats every project's config, so it suits a machine where all
   the writing shares one voice and no project has its own.
 
-The user-wide `~/.config/plainspoken/config.toml` can't choose a profile: it holds only the nudge, drafting rule and
-lint-after-edits switches (`/plainspoken:setup`).
+The user-wide `~/.config/plainspoken/config.toml` can't choose a profile: it holds only `[nudge]`, `[rule]`,
+`[lint_watch]`, `[locale]`, `[tool_call]` and `[chat_reply]`.
 
 ## Limits to know
 

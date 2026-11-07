@@ -11,6 +11,7 @@ one lives, which one wins when two disagree, and the optional pieces you can swi
 - [Which English the skills write in](#which-english-the-skills-write-in)
 - [Optional pieces](#optional-pieces)
 - [The tool-call check](#the-tool-call-check)
+- [The chat-reply check](#the-chat-reply-check)
 - [The setup command](#the-setup-command)
 - [Host setup](#host-setup)
 - [Narrow what plainspoken does](#narrow-what-plainspoken-does)
@@ -46,7 +47,8 @@ Claude Code asks for these when you install or enable the plugin (`userConfig` i
 | `rule` | On: every session starts with a short rule to use plainspoken whenever it drafts or rewrites something people will read | off | `[rule] enabled` |
 | `tool_call` | The tool-call check's mode: `off`, `warn`, `block-once` or `ask` ([The tool-call check](#the-tool-call-check)) | `off` | `[tool_call] mode` |
 | `chat_reply` | On: the chat-reply check tells you what the lint found in a draft written into the reply ([The chat-reply check](#the-chat-reply-check)) | off | `[chat_reply] mode` |
-| `strictness` | What the publish gate does on `git push`: `watch` reports only, `warn` warns, `block` refuses a push unless every gated file has a current PASS | `watch` | `[gate] strictness` |
+| `strictness` | What the publish gate does on `git push`: `watch` does nothing, `warn` warns, `block` refuses a push
+unless every gated file has a current PASS | `watch` | `[gate] strictness` |
 | `ledger_excerpts` | Whether the kaizen ledger stores excerpts of your text. Off keeps raw text out of it (hashes only) | off | `[kaizen] excerpts` |
 | `kaizen_adapter` | Where kaizen proposals go: `file` (Markdown in `.plainspoken/`), `github` (issues) or `trello` (cards). The project config supplies the IDs | `file` | `[kaizen] adapter` |
 
@@ -127,8 +129,11 @@ check](#the-chat-reply-check).
 
 The six sources are `check`, `merge`, `judge`, `lint-watch`, `tool-call` and `chat-reply`. `capture = false` turns
 them all off.
-The rest of `[kaizen]` (excerpts, adapter, approvers, the monthly cap, folders, GitHub and Trello IDs) is in
-[guides/kaizen.md](kaizen.md).
+The rest of `[kaizen]` (excerpts, adapter, approvers, the monthly cap, the GitHub repo and the Trello list) is in
+[guides/kaizen.md](kaizen.md). `ledger_dir` and `proposals_dir` move the ledger and proposal folders
+([docs/report-contract.md](../docs/report-contract.md)). `[kaizen.github] labels` sets the issue labels (default
+`["kaizen"]`), and `[kaizen.trello]` also takes `label_ids`, `key_env` (default `TRELLO_API_KEY`) and `token_env`
+(default `TRELLO_TOKEN`).
 
 ### `[brief]`, `[nudge]` and `[rule]`: the optional pieces
 
@@ -141,8 +146,8 @@ The rest of `[kaizen]` (excerpts, adapter, approvers, the monthly cap, folders, 
     [rule]
     enabled = true    # the drafting rule (Claude Code and Cowork)
 
-What each does: [Optional pieces](#optional-pieces). `/plainspoken:setup` writes `[nudge]`, `[rule]`,
-`[lint_watch]` and `[chat_reply]` for you.
+What each does: [Optional pieces](#optional-pieces). `/plainspoken:setup` writes `[nudge]`, `[rule]`, `[lint_watch]`,
+`[chat_reply]`, `[tool_call]` and `[locale]` for you.
 
 ### `[locale]`: which English the skills write in
 
@@ -342,8 +347,9 @@ over 10 seconds, nothing is shown.
 
 ## The setup command
 
-`/plainspoken:setup` turns the nudge, the drafting rule, lint after edits and the chat-reply check on or off for the
-app you're in, and shows what's on. Underneath it runs:
+`/plainspoken:setup` turns the nudge, the drafting rule, lint after edits, the chat-reply check and the tool-call
+check on or off for the
+app you're in, sets the spelling locale, and shows what's on. Underneath it runs:
 
     python3 <plugin>/lib/run.py setup --host <host> [--scope project|user] [--nudge on|off] [--rule on|off]
         [--lint-watch on|off] [--chat-reply on|off] [--locale en-AU|en-GB|en-US]

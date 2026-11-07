@@ -4,7 +4,7 @@
 
 OLD and NEW are each a git ref of this repo (exported with `git archive` into a temp folder, so nothing in the repo
 changes) or the path of a checkout. Examples: `verdict_diff.py origin/main HEAD` for a pull request,
-`verdict_diff.py v0.12.0 HEAD` for a release range, `verdict_diff.py ../plainspoken-old .` for two folders.
+`verdict_diff.py v0.13.0 HEAD` for a release range, `verdict_diff.py ../plainspoken-old .` for two folders.
 
 The corpus is read from NEW, so both trees lint the same texts and only the engine, the ruleset and the default
 profile differ:

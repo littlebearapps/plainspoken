@@ -92,7 +92,8 @@ here too.
 - A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
   `RUN check - < draft`, run the check skill on a long one, and remove what's flagged without adding facts.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
-  `.plainspoken/config.toml` (see the README); turn the nudge on with the setup skill (`RUN setup --host hermes
+  `.plainspoken/config.toml` (see `guides/configuration.md`); turn the nudge on with the setup skill (`RUN setup
+  --host hermes
   --scope user --nudge on` for every session of this profile). Kaizen records go to `.plainspoken/` in the project.
 - The project is the Hermes profile's working folder (`terminal.cwd` in its `config.yaml`). Put
   `.plainspoken/config.toml` and `.plainspoken/profiles/<name>.toml` there, once per Hermes profile. The user-wide

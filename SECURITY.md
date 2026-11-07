@@ -48,7 +48,7 @@ make no network calls. Two things go online, and only when you start them:
 
 - the kaizen adapters for GitHub and Trello, once you configure them: they open one issue or card per proposal and
   read the decisions posted on it;
-- the paid evals, which call models only when you start a run by hand.
+- the evals, which call models or read OpenRouter's free catalogue only when you start a run by hand.
 
 The judges and checkers are agents that your host runs, like any other agent it starts.
 

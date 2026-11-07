@@ -54,7 +54,7 @@ notes = "Short answers, then one longer sentence that walks through the job."
 persona = "a neighbour who gardens on weekends and has never read a soil report"  # register-check reads this too.
 comprehension_floor = 7    # drafting: the school year a reader needs to follow the text (1 to 12).
 # glossary = "glossary.md"  # plain-language: a file next to this profile with plain-word swaps for jargon.
-knows = ["seasons", "watering"]   # not read by any skill yet (v0.2): what the reader already knows.
+knows = ["seasons", "watering"]   # not read by any skill yet: what the reader already knows.
 
 [blends]
 # drafting: "answer-first" or "narrative", per kind of writing (article, page, email, social). Four fixed slots:
@@ -86,7 +86,7 @@ extra_bans = []
 
 [[registers]]
 # register-check: a way of writing for one setting (email to members, notice board, social). Its pronoun and
-# formality reach the register-check checklist (--register email); drafting doesn't see registers in v0.2.
+# formality reach the register-check checklist (--register email); drafting doesn't see registers.
 name = "email"
 pronoun = "I"
 formality = "casual-professional"

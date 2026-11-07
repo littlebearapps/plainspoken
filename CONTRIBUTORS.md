@@ -13,6 +13,10 @@ plainspoken is maintained by [Little Bear Apps](https://github.com/littlebearapp
 
 [NOTICE.md](NOTICE.md) has the full third-party notices and licences.
 
+## Contributors
+
+- [OKAN-SOFTWARE](https://github.com/OKAN-SOFTWARE)
+
 ## How to get listed
 
 Everyone who has a commit merged into plainspoken gets listed here. If you've contributed and you're missing, open

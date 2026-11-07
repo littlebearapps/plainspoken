@@ -5,8 +5,9 @@ the kaizen ledger, a proposal and a recorded human approval (`kaizen apply`). Ea
 filed as a GitHub issue with the `kaizen` label.
 
 The loop that acts on them ships in v0.5.0 (capture, `kaizen calibrate`, approval, `kaizen apply`; see
-[guides/kaizen.md](../guides/kaizen.md)). A production host now records a real ledger; K1 to K4 wait for its first
-calibrate runs, and go through a proposal and a recorded approval like any other change. K5 is a tooling note, not a
+[guides/kaizen.md](../guides/kaizen.md)). A production host now records a real ledger; K1 to K4 and K6 wait for its
+first calibrate runs, and go through a proposal and a recorded approval like any other change. K5 is a tooling note,
+not a
 rule change.
 
 ## K1: the fixer edits to the 12f thresholds

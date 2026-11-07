@@ -164,7 +164,7 @@ How to build and lay out a profile: [guides/voice-profiles.md](voice-profiles.md
 
 The skill and agent descriptions sit in Claude's context in every session; that's the plugin's always-on cost.
 Measured 2026-10-25 with Claude Code CLI 2.1.310, `python3 -m scripts.dev.token_budget .` reports 490 tokens, against
-a budget of 500. Hooks add none.
+a budget of 500. Hooks add none until you switch on an optional piece.
 
 That figure leaves out the nine manual-only skills (adapt, claims, copy-audit, doctor, kaizen, reader-value,
 register-check, setup and voice, about 700 tokens together), because Claude Code keeps their descriptions out of

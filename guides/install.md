@@ -118,8 +118,9 @@ read.
 
 ## Hooks outside Claude Code
 
-In Codex and Hermes, lint and the claims integrity check run after each edit, and so does the optional writing
-nudge. Codex runs them only after you trust them in `/hooks`, and again after each plainspoken update.
+In Codex and Hermes, lint and the claims integrity check run after each edit, and the optional writing nudge runs
+when a prompt asks for writing. Codex runs them only after you trust them in `/hooks`, and again after each
+plainspoken update.
 
 Since 0.12.0, both also run the publish gate (taking its strictness from `[gate] strictness` only), the shell write
 guard and the kaizen nudge. An older installed copy has none of those three, so run the check yourself before
@@ -165,5 +166,5 @@ Then remove the plugin with the app's own command:
 - **Hermes Agent:** remove it with Hermes' own plugin command (`hermes plugins --help` lists it).
 
 Your reports, ledger, claim ledgers and profiles stay in each project's `.plainspoken/` folder. Delete that folder
-if you want them gone, after copying out any profile or config you want to keep. Every file plainspoken writes there
-is listed in [docs/report-contract.md](../docs/report-contract.md).
+if you want them gone, after copying out any profile or config you want to keep. The report, claims and kaizen files
+are listed in [docs/report-contract.md](../docs/report-contract.md).
