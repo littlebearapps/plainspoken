@@ -8,8 +8,6 @@ and nothing here has a date. For what has already shipped, see [CHANGELOG.md](CH
 0.13.0 was released in November 2026; [CHANGELOG.md](CHANGELOG.md) lists what it brought. 0.14.0 picks up what it left
 open:
 
-- Rerun the blind readers, which fell in round 8 and haven't been checked since
-  ([#195](https://github.com/littlebearapps/plainspoken/issues/195)).
 - Fixes for rule 7d that still add a reason or lengthen a sentence
   ([#73](https://github.com/littlebearapps/plainspoken/issues/73)), and a claim kind that pins a promise or exclusion
   to the brief ([#178](https://github.com/littlebearapps/plainspoken/issues/178)).
@@ -24,6 +22,9 @@ open:
 - One copy-paste block to run the four judges on Hermes Agent
   ([#150](https://github.com/littlebearapps/plainspoken/issues/150)), and one wording for when a short piece gets
   the lint only ([#149](https://github.com/littlebearapps/plainspoken/issues/149)).
+- Fixes from a review of published posts: inflected bans ([#199](https://github.com/littlebearapps/plainspoken/issues/199)), 7d on short lead-ins ([#201](https://github.com/littlebearapps/plainspoken/issues/201)),
+  r24's advice on YAML ([#202](https://github.com/littlebearapps/plainspoken/issues/202)), a site's own module names ([#203](https://github.com/littlebearapps/plainspoken/issues/203)), an unexpanded profile
+  ([#206](https://github.com/littlebearapps/plainspoken/issues/206)), register-check ([#207](https://github.com/littlebearapps/plainspoken/issues/207)) and voice counts ([#209](https://github.com/littlebearapps/plainspoken/issues/209)).
 - Short emails linted as social posts by the hook route
   ([#190](https://github.com/littlebearapps/plainspoken/issues/190)), small eval fixes
   ([#191](https://github.com/littlebearapps/plainspoken/issues/191)), and install steps still to confirm on live hosts
@@ -33,11 +34,8 @@ open:
 
 v1.0 waits on evidence that plainspoken does what it says on real, long pieces. What's left:
 
-- **A current blind reader number.** Rounds 9 and 10 checked the fixes in long-form runs but didn't run the readers,
-  so the last reading is round 8's ([#195](https://github.com/littlebearapps/plainspoken/issues/195)).
-- **Open issue [#75](https://github.com/littlebearapps/plainspoken/issues/75).** In round 10, all three long-form
-  reports opened with words before the status block, which the report guard doesn't catch. It's fixed when the count
-  is zero.
+- **Open issue [#75](https://github.com/littlebearapps/plainspoken/issues/75).** In round 11, one long-form report in
+  nine still asked the owner to check something the engine doesn't list. It's fixed when the count is zero.
 - **More evidence on rewrite quality.** A blind reader test that puts plainspoken's drafts beside the author's own
   unassisted writing, read by a model panel, alongside the existing blind reads of rewrites.
 
