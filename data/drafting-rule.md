@@ -4,6 +4,8 @@ newsletters, pamphlets, flyers, letters, bios and announcements. It doesn't cove
 messages or notes for yourself.
 - Short piece, outside {write}: pipe it to `python3 {root}/lib/run.py check - --plugin-profile '{profile}'` and cut
   what it flags. Inside {write}, this lint never replaces its check and claims steps.
+- Report short lint as `lint only, judges not run`. Once {write} is loaded, finish it or say
+  `write not followed; route: short-piece lint`. A requested full check uses {write}, even for a short piece.
 - Long piece (250+ words, sources to research, an article, blog post or report): use {write} to draft, check and
   fix; for an existing draft, run {check}. A release, pamphlet, page or newsletter note from a few facts is short,
   even going out.

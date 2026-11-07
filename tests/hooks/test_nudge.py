@@ -88,6 +88,11 @@ class Matcher(unittest.TestCase):
             with self.subTest(p=p):
                 self.assertEqual(nudge.intent(p), "draft")
 
+    def test_explicit_full_check_on_a_short_piece_uses_write(self):  # #149
+        self.assertEqual(nudge.intent("Write a 120-word email to the client about Friday"), "draft")
+        self.assertEqual(nudge.intent("Write a 120-word email to the client and run the full check"),
+                         "draft-long")
+
     def test_rewrite_prompts_fire_as_rewrite(self):
         for p in REWRITE:
             with self.subTest(p=p):
@@ -204,6 +209,13 @@ class Text(unittest.TestCase):
         for host in nudge.HOSTS:
             t = nudge.nudge_text("draft", host, "/a/very/long/plugin/root/path/x", "default")
             self.assertTrue(t.endswith("this lint never replaces its check and claims steps."), host)
+
+    def test_short_draft_nudge_reports_the_lighter_route(self):  # #149
+        for host in nudge.HOSTS:
+            t = nudge.nudge_text("draft", host, "/a/very/long/plugin/root/path/x", "default")
+            self.assertIn("write not followed; route: short-piece lint", t)
+            self.assertIn("lint only, judges not run", t)
+            self.assertIn("full check", t)
 
     def test_long_text_names_write(self):
         self.assertIn("/plainspoken:write", nudge.nudge_text("draft-long", "claude-code", "/p/root", "default"))

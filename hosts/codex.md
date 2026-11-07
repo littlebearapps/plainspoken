@@ -84,6 +84,9 @@ the skills' rule that you don't award your own pass holds here too.
   count still holds.
 - A nudge or lint line in your context comes from those hooks. Follow it the same way: lint a short draft with
   `RUN check - < draft`, run `$plainspoken:check` on a long one, and remove what's flagged without adding facts.
+- Report a short lint as `lint only, judges not run`. Once `write` is loaded, finish its check and claims steps or
+  open the report with `write not followed; route: short-piece lint`. If the person asked for a full check, run `write`
+  even for a short piece; never describe the lighter route as fully checked.
 - No install-time settings. Pick a voice profile with `[engine] profile = "<name>"` in the project's
   `.plainspoken/config.toml` (see the README); turn the nudge on with `$plainspoken:setup` (`RUN setup --host codex
   …`). Kaizen records go to `.plainspoken/` in the project.

@@ -1,6 +1,6 @@
 ---
 name: write
-description: Drafts writing people will read (an article, page, email, post, text message, caption or script) from notes or a brief in the voice profile's style, then runs the check. Use when asked to write or draft any of these, short or long.
+description: Drafts writing from notes or a brief in the profile's style, then checks it. Use for a long piece (about 250+ words, or sources to research), or when the person asks for the full check on a short one.
 argument-hint: <brief or notes file> [--type article|page|email|social]
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *)
 ---
