@@ -78,7 +78,7 @@ class LengthCommand(unittest.TestCase):
             f.write_text("Two words.\nAnd three more.\n", encoding="utf-8")
             r = self.run_cli("length", str(f))
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.strip(), "chars 26 · words 5 · lines 2")
+        self.assertEqual(r.stdout.strip(), "chars 26 · words 5 · lines 2 (whole file, frontmatter and code included)")
 
     def test_chars_are_graphemes(self):  # a flag, an accented letter or a family emoji is one
         with tempfile.TemporaryDirectory() as d:
@@ -87,7 +87,7 @@ class LengthCommand(unittest.TestCase):
                          encoding="utf-8")
             r = self.run_cli("length", str(f))
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.strip(), "chars 14 · words 4 · lines 1")
+        self.assertEqual(r.stdout.strip(), "chars 14 · words 4 · lines 1 (whole file, frontmatter and code included)")
 
     def test_unreadable_exit_2(self):
         r = self.run_cli("length", "/nonexistent/v.md")

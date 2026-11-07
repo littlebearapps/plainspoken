@@ -72,7 +72,8 @@ of writing, variants and where to switch it on: [`guides/voice-profiles.md`](../
 Rewrite a draft toward the active profile.
 
 1. Read the profile with `RUN profile --voice --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'`. It prints the writer,
-   principles, tone notes, rhythm, habits and avoid moves. Never open the TOML yourself.
+   principles, tone notes, rhythm, habits and avoid moves. Never open the TOML yourself. When the draft is a kind the
+   profile has its own slot for, add `--type <type>` (`--type article`, say) to get that slot's blend and formatting.
 2. For each section type in the draft, pull 2 to 3 anchors with
    `RUN anchors --tag <type> --limit 3 --skip-missing --plugin-profile '${user_config.profile}'`.
    A `(skipped anchor …)` line goes into the report.
@@ -86,8 +87,8 @@ Rewrite a draft toward the active profile.
 
 Compare a draft with the profile. Don't edit it.
 
-1. Read `RUN profile --voice --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'` as in Apply. The `avoid moves:` lines are
-   read here and nowhere in drafting.
+1. Read `RUN profile --voice --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'` as in Apply, with `--type <type>`
+   when the draft has a slot. The `avoid moves:` lines are read here and nowhere in drafting.
 2. For each H2 section (the whole text if there are none), ask the question in `references/check.md` and compare the
    section with 2 to 3 anchors of the matching type:
    `RUN anchors --tag <type> --limit 3 --skip-missing --plugin-profile '${user_config.profile}'`.
