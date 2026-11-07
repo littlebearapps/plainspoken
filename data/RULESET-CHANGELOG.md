@@ -41,6 +41,12 @@ Ruleset versions are separate from the plugin version. Every report records the 
   matched only as written, because inflection reaches single words alone. A live article carried "what actually moves
   the needle" through its original publish. `ban_literal` now lists each form: `moves`, `moved` and `moving the needle`;
   `circles`, `circled` and `circling back`; `set` and `sets the stage for`. The other multi-word bans have no verb head.
+- **Rule 7d's no-long test skips what no honest join can clear (#214, #201):** a sentence with over half its words
+  inside a quotation no longer counts towards the three-sentence floor, because a writer can't join or lengthen
+  someone's quoted words. A heading with deeper headings straight after it, whose own prose totals 25 words or less,
+  is a lead-in and is left alone. The short-run test, the FAQ test and a section of the writer's own sentences don't
+  change. The golden and fixture corpus doesn't move. Across 125 real long texts, 7d WARNs go from 124 to 119: the 4
+  round-11 finals #214 counted and 1 like them in round 9. No text gains a finding.
 - **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.4.0 read as stale
   and ask for a re-check. The file's bytes change, so a pending kaizen proposal rebases.
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
