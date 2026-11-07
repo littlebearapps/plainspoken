@@ -135,6 +135,24 @@ def _faq_answer_sentences(doc: Doc) -> list[Sentence]:
     return [s for s in out if s.words]
 
 
+def _own_sentences(doc: Doc, sents: list[Sentence]) -> list[Sentence]:
+    """`sents` less those that are mostly someone else's words: wholly quoted, or with over half their words inside a
+    quotation ("Half the toasters just need a clean," Ray said). A writer can't join or lengthen those (#214)."""
+    def kept(s: Sentence) -> bool:
+        if s.quoted:
+            return False
+        left = len(doc.masked(s.text, s.line).split())
+        return left * 2 >= len(s.text.split())
+    return [s for s in sents if kept(s)]
+
+
+def _short_lead_in(doc: Doc, sents: list[Sentence], line: int, level: int, long_: int) -> bool:
+    """A heading whose next heading is deeper, in a section whose prose totals the threshold or less: no join reaches
+    it, because what the section holds sits in lists and tables under its subheadings (#201)."""
+    after = [lvl for at, lvl, _ in doc.headings if at > line]
+    return line > 0 and bool(after) and after[0] > level and sum(len(s.words) for s in sents) <= long_
+
+
 def staccato(doc: Doc, cfg: Config) -> list[Finding]:
     """Blog: WARN if a section has no sentence over the long threshold, OR has a run of short sentences.
 
@@ -149,6 +167,9 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
 
     A line that's only a link or a button label (#186), a greeting that opens the piece and a sign-off that closes it
     (#148) aren't sentences here. Other rules and the word count still see them.
+
+    The no-long test also needs something the writer can honestly join: quoted sentences can't be changed (#214), and
+    a short lead-in before subsections can't reach the threshold (#201). `_own_sentences` and `_short_lead_in` say so.
     """
     t = cfg.thresholds_for(doc)
     long_, short_len, run_len = t["staccato_long_sentence"], t["staccato_short_len"], t["staccato_short_run"]
@@ -173,7 +194,8 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
                 out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
                                    f"{faq_run} consecutive sentences under {short_len} words in the FAQ — join two {_JOIN}"))
             continue
-        no_long = max(len(s.words) for s in sents) <= long_
+        no_long = (max(len(s.words) for s in sents) <= long_ and len(_own_sentences(doc, sents)) >= 3
+                   and not _short_lead_in(doc, sents, line, level, long_))
         run_end = _short_run(sents, short_len, run_len)
         if narrative and any(p.search(heading) for p in doc.profile.long_sentence_headings) and no_long and not short_piece:
             out.append(Finding("7d", "WARN", at, where,

@@ -311,6 +311,40 @@ def lint_rules(text, content_type="article"):
     return [(f["rule"], f["message"]) for f in rep["findings"] if f["rule"] in ("7", "7d") and f["severity"] == "WARN"]
 
 
+class StaccatoFloor(unittest.TestCase):
+    """#214 and #201: the no-long test needs three sentences the writer can honestly join."""
+    NARRATION = "Ray Petrakis leads the volunteers. He worked as an electrician for years."
+
+    def no_long(self, section):
+        return [f for f in run("7d", section + ABOVE_GATE) if "No sentence over" in f.message]
+
+    def test_a_quote_with_attribution_doesnt_reach_the_floor(self):  # #214
+        self.assertEqual(self.no_long(f'## Ray\n\n{self.NARRATION} "Half the toasters just need a clean," Ray said.'), [])
+
+    def test_a_wholly_quoted_sentence_doesnt_reach_the_floor(self):  # #214
+        self.assertEqual(self.no_long(f'## Ray\n\n{self.NARRATION}\n\n"Half the toasters just need a good clean."'), [])
+
+    def test_three_sentences_of_the_writers_own_still_warn(self):  # #214: no loss of real hits
+        self.assertEqual(len(self.no_long(f"## Ray\n\n{self.NARRATION} Toasters are the most common job.")), 1)
+
+    def test_a_short_quote_inside_a_sentence_stays_the_writers_own(self):  # #214: over half the words are narration
+        section = f'## Ray\n\n{self.NARRATION} Most people call the back room "the shed" and leave their tools there.'
+        self.assertEqual(len(self.no_long(section)), 1)
+
+    def test_a_short_lead_in_before_subsections_is_left_alone(self):  # #201
+        section = ("## Tools\n\nEverything above is here. All of it is free. Paid ones are labelled.\n\n"
+                   "### Free tools\n\nA tool for this thing.")
+        self.assertEqual(self.no_long(section), [])
+
+    def test_a_lead_in_a_join_can_clear_still_warns(self):  # #201: 26 words joined reach the line
+        section = ("## Tools\n\nEverything mentioned above is listed here for you today. All of it costs nothing to "
+                   "use at home. Paid ones carry a label beside them.\n\n### Free tools\n\nA tool for this thing.")
+        self.assertEqual(len(self.no_long(section)), 1)
+
+    def test_the_same_short_section_with_no_subsections_still_warns(self):  # #201: lead-ins only
+        self.assertEqual(len(self.no_long("## Tools\n\nEverything above is here. All of it is free. Paid ones are labelled.")), 1)
+
+
 class StaccatoShortPiece(unittest.TestCase):
     """#148 (ruleset 4.4.0): under `staccato_long_min_words` (150) words, 7d runs only its short-run test, as social
     already did. A short email whose fix would be a padded sentence no longer gets the no-long WARN."""
