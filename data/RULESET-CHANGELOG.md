@@ -2,13 +2,6 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
-## Comment revision (2026-11-07; ruleset version unchanged)
-
-- **How a ruleset change goes in:** comments only, so no rule, threshold or list changes and no version bump.
-  `rules.toml`'s header said only `kaizen apply` bumps the version, while 4.4.0 and `en_dash_max` went in by hand. It
-  now names both routes, and so does `CONTRIBUTING.md`. The file's bytes change, so a pending proposal's
-  `base_sha256` no longer matches and `kaizen apply` rebases it.
-
 ## 4.4.0 (2026-10-31)
 
 - **Rule 7d skips its no-long-sentence test in short pieces (#148):** new threshold `staccato_long_min_words = 150`.
@@ -41,6 +34,13 @@ Ruleset versions are separate from the plugin version. Every report records the 
   bytes change, so a pending kaizen proposal rebases.
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
   merging the pull request.
+
+## Comment revision (2026-11-07; ruleset version unchanged)
+
+- **How a ruleset change goes in:** comments only, so no rule, threshold or list changes and no version bump.
+  `rules.toml`'s header said only `kaizen apply` bumps the version, while 4.4.0 and `en_dash_max` went in by hand. It
+  now names both routes, and so does `CONTRIBUTING.md`. The file's bytes change, so a pending proposal's
+  `base_sha256` no longer matches and `kaizen apply` rebases it.
 
 ## Judges rubric revision (2026-11-07; ruleset version unchanged)
 
