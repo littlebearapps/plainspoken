@@ -88,6 +88,32 @@ class Matcher(unittest.TestCase):
             with self.subTest(p=p):
                 self.assertEqual(nudge.intent(p), "draft")
 
+    def test_explicit_full_check_on_a_short_piece_uses_write(self):  # #149
+        for prompt in (
+            "Write a 120-word email to the client and run the full check",
+            "Draft a short email to the client; please run a full check",
+            "Write a short email to the client. Could you perform the full check?",
+            "Please run the full check, and write a short email to the client",
+            "Write a short email to Sam, then do the full-check",
+            '"Write a 120-word email to the client and run the full check"',
+        ):
+            with self.subTest(prompt=prompt):
+                self.assertEqual(nudge.intent(prompt), "draft-long")
+
+    def test_full_check_mentions_in_short_draft_content_do_not_escalate(self):  # #149 review
+        # "note" isn't a matched writing type; even then, mentioning the check must not select write.
+        self.assertNotEqual(nudge.intent("Write a short note telling Sam the full check passed"), "draft-long")
+        for prompt in (
+            "Write a 120-word email to the client about Friday",
+            "Write a short message telling Sam the full check passed",
+            "Write a short email telling Sam to run the full check",
+            "Write a short email explaining why we run the full check",
+            'Write a short message to Sam saying "please run the full check"',
+            "Write a short email about the full check results",
+        ):
+            with self.subTest(prompt=prompt):
+                self.assertEqual(nudge.intent(prompt), "draft")
+
     def test_rewrite_prompts_fire_as_rewrite(self):
         for p in REWRITE:
             with self.subTest(p=p):
@@ -204,6 +230,13 @@ class Text(unittest.TestCase):
         for host in nudge.HOSTS:
             t = nudge.nudge_text("draft", host, "/a/very/long/plugin/root/path/x", "default")
             self.assertTrue(t.endswith("this lint never replaces its check and claims steps."), host)
+
+    def test_short_draft_nudge_reports_the_lighter_route(self):  # #149
+        for host in nudge.HOSTS:
+            t = nudge.nudge_text("draft", host, "/a/very/long/plugin/root/path/x", "default")
+            self.assertIn("write not followed; route: short-piece lint", t)
+            self.assertIn("lint only, judges not run", t)
+            self.assertIn("full check", t)
 
     def test_long_text_names_write(self):
         self.assertIn("/plainspoken:write", nudge.nudge_text("draft-long", "claude-code", "/p/root", "default"))
