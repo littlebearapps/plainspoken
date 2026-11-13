@@ -59,13 +59,13 @@ def anchor_text(a: Anchor) -> str:
     return "\n".join(lines).strip()
 
 
-def anchors_for(p: Profile, tag: str | None, limit: int) -> list[tuple[Anchor, str]]:
+def anchors_for(p: Profile, tag: str | None, limit: int, include_private: bool = False) -> list[tuple[Anchor, str]]:
     """The first `limit` anchors with `tag` (all anchors when it's None), in profile order. Raises on an unreadable one."""
     picked = [a for a in p.anchors if tag is None or tag in a.tags][:max(limit, 0)]
-    return [(a, anchor_text(a)) for a in picked]
+    return [(a, anchor_text(a) if include_private or not a.private else "[private anchor]") for a in picked]
 
 
-def anchors_lenient(p: Profile, tag: str | None, limit: int) -> tuple[list[tuple[Anchor, str]], list[str]]:
+def anchors_lenient(p: Profile, tag: str | None, limit: int, include_private: bool = False) -> tuple[list[tuple[Anchor, str]], list[str]]:
     """Like anchors_for, but an unreadable anchor is skipped (with a message) and the next one fills its place."""
     found: list[tuple[Anchor, str]] = []
     skipped: list[str] = []
@@ -73,7 +73,7 @@ def anchors_lenient(p: Profile, tag: str | None, limit: int) -> tuple[list[tuple
         if len(found) >= max(limit, 0):
             break
         try:
-            found.append((a, anchor_text(a)))
+            found.append((a, anchor_text(a) if include_private or not a.private else "[private anchor]"))
         except VoiceError as e:
             skipped.append(str(e))
     return found, skipped
@@ -96,7 +96,8 @@ def summary_lines(p: Profile) -> list[str]:
     ]
 
 
-def voice_lines(p: Profile, content_type: str | None = None, locale: str | None = None) -> list[str]:
+def voice_lines(p: Profile, content_type: str | None = None, locale: str | None = None,
+                include_private: bool = False) -> list[str]:
     """Everything the skills draft and check from, as plain lines (`profile --voice`). `locale` is the resolved
     spelling locale with its source, e.g. `en-US (plugin option)`; None leaves the line out."""
     v = p.voice
@@ -105,8 +106,13 @@ def voice_lines(p: Profile, content_type: str | None = None, locale: str | None 
     glossary = reader.get("glossary")
     glossary_path = str((Path(p.source).parent / glossary).resolve()) if glossary else "none"
     notes = voice_t.get("tone_notes", {})
-    tone = ", ".join(f"{k} {val}" + (f" ({notes[k]})" if k in notes else "")
+    private_tones = set(voice_t.get("private_tone_notes", []))
+    tone = ", ".join(f"{k} {val}" + (f" ({'[private note]' if not include_private and k in private_tones else notes[k]})" if k in notes else "")
                      for k, val in voice_t.get("tone", {}).items()) or "not set"
+    rhythm_text = " · ".join(f"{k.replace('_', ' ')} " +
+                             ("[private note]" if k == "notes" and rhythm.get("notes_private") and not include_private
+                              else str(val))
+                             for k, val in rhythm.items() if k != "notes_private") or "not set"
     kinds = [content_type] if content_type else list(v.get("blends", {}) | v.get("formatting", {}))
     out = [
         f"voice profile: {p.name}",
@@ -118,7 +124,7 @@ def voice_lines(p: Profile, content_type: str | None = None, locale: str | None 
         f"humour: {voice_t.get('humour', 'not set')} · emoji max {voice_t.get('emoji_max', 'not set')} · "
         f"exclamation max {voice_t.get('exclamation_max', 'not set')}",
         f"tone: {tone}",
-        "rhythm: " + (" · ".join(f"{k.replace('_', ' ')} {val}" for k, val in rhythm.items()) or "not set"),
+        "rhythm: " + rhythm_text,
         "habits: " + (" · ".join(f"{k} " + ", ".join(f'"{x}"' for x in lex[k])
                                  for k in ("starters", "fillers", "closers") if lex.get(k)) or "none"),
     ]

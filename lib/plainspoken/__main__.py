@@ -256,6 +256,7 @@ def _main(argv: list[str] | None) -> int:
     pr.add_argument("--plugin-profile")
     pr.add_argument("--plugin-locale", help="the Claude Code locale option (skills pass ${user_config.locale})")
     pr.add_argument("--voice", action="store_true", help="print the voice sections the skills draft and check from")
+    pr.add_argument("--show-private", action="store_true", help="with --voice: reveal notes marked private")
     pr.add_argument("--type", help="with --voice: only this content type's blend and formatting "
                                    f"({', '.join(CONTENT_KINDS)})")
     pr.add_argument("--json", action="store_true", help="print the stamps a report is bound to: name, path, "
@@ -270,6 +271,7 @@ def _main(argv: list[str] | None) -> int:
     an.add_argument("--limit", type=int, default=3)
     an.add_argument("--skip-missing", action="store_true",
                     help="skip an anchor whose file can't be read (one line each) instead of exiting 2")
+    an.add_argument("--show-private", action="store_true", help="reveal anchors marked private")
     an.add_argument("--profile")
     an.add_argument("--plugin-profile")
     rc = sub.add_parser("register-checklist", help="print the register-check items for one message kind")
@@ -454,7 +456,8 @@ def _main(argv: list[str] | None) -> int:
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2
         if args.voice:
-            print("\n".join(voice.voice_lines(prof, args.type, f"{locale.variant} ({locale.label})")))
+            print("\n".join(voice.voice_lines(prof, args.type, f"{locale.variant} ({locale.label})",
+                                             include_private=args.show_private)))
             return 0
         try:
             gate = "{} ({})".format(*config.gate_strictness(root, os.environ))
@@ -615,9 +618,11 @@ def _main(argv: list[str] | None) -> int:
         try:
             prof = _profile(args, root)
             if args.skip_missing:
-                found, skipped = voice.anchors_lenient(prof, args.tag, args.limit)
+                found, skipped = voice.anchors_lenient(prof, args.tag, args.limit,
+                                                       include_private=args.show_private)
             else:
-                found = voice.anchors_for(prof, args.tag, args.limit)
+                found = voice.anchors_for(prof, args.tag, args.limit,
+                                          include_private=args.show_private)
         except _INPUT_ERRORS as e:  # VoiceError and ProfileError are ValueErrors
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2
@@ -628,7 +633,10 @@ def _main(argv: list[str] | None) -> int:
                   else f"(no anchors in profile {prof.name})")
             return 0
         for a, text in found:
-            print(f"--- anchor {a.id} ({', '.join(a.tags)}) from {a.source or a.path or 'the profile'}\n{text}\n")
+            if a.private and not args.show_private:
+                print("--- private anchor\n[private anchor]\n")
+            else:
+                print(f"--- anchor {a.id} ({', '.join(a.tags)}) from {a.source or a.path or 'the profile'}\n{text}\n")
         return 0
     if args.cmd == "register-checklist":
         try:

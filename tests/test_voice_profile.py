@@ -163,6 +163,50 @@ class Anchors(unittest.TestCase):
         self.assertIn("wobble you could see from the door", r.stdout)
 
 
+class PrivateVoiceOutput(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.profile = self.tmp / "private.toml"
+        self.profile.write_text(
+            '[profile]\nname = "private"\n'
+            '[voice.tone]\nformal_casual = 0.5\n'
+            '[voice.tone_notes]\nformal_casual = "Client Acme needs bespoke wording"\n'
+            '[voice]\nprivate_tone_notes = ["formal_casual"]\n'
+            '[rhythm]\nnotes = "Discuss internal case Lily"\nnotes_private = true\n'
+            '[[anchors]]\nid = "private-text"\ntags = ["opening"]\n'
+            'source = "Client Acme note"\ntext = "Contact Lily at Acme"\nprivate = true\n'
+            '[[anchors]]\nid = "private-file"\ntags = ["opening"]\n'
+            'path = "does-not-exist.md"\nprivate = true\n',
+            encoding="utf-8",
+        )
+
+    def test_private_anchors_mask_text_and_source_without_reading_file(self):
+        r = cli("anchors", "--tag", "opening", "--profile", str(self.profile))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.count("[private anchor]"), 2)
+        self.assertNotIn("Acme", r.stdout)
+        self.assertNotIn("Lily", r.stdout)
+        self.assertNotIn("does-not-exist", r.stdout)
+
+    def test_explicit_flag_reveals_private_inline_anchor(self):
+        r = cli("anchors", "--tag", "opening", "--limit", "1", "--show-private",
+                "--profile", str(self.profile))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Contact Lily at Acme", r.stdout)
+
+    def test_private_notes_are_masked_unless_explicitly_requested(self):
+        base = cli("profile", "--voice", "--profile", str(self.profile))
+        self.assertEqual(base.returncode, 0, base.stderr)
+        self.assertIn("[private note]", base.stdout)
+        self.assertNotIn("Acme", base.stdout)
+        self.assertNotIn("Lily", base.stdout)
+        shown = cli("profile", "--voice", "--show-private", "--profile", str(self.profile))
+        self.assertEqual(shown.returncode, 0, shown.stderr)
+        self.assertIn("Client Acme needs bespoke wording", shown.stdout)
+        self.assertIn("Discuss internal case Lily", shown.stdout)
+
+
 class AnchorConfinement(unittest.TestCase):
     """An anchor file must be a regular file inside the profile's project, and not too big."""
 

@@ -53,6 +53,13 @@ voice, not the author's. Anchors are always verbatim lines the author wrote or a
 Anchors and samples are verbatim text, so keep anything taken from a client's material out of a profile you commit
 or publish.
 
+For a local profile that contains private names, add `private = true` to the relevant `[[anchors]]` entry.
+`anchors` then prints `[private anchor]` without opening the passage file or printing its source. Set
+`private_tone_notes = ["formal_casual"]` under `[voice]` to mask that scale's note, or `notes_private = true`
+under `[rhythm]` to mask its note. `profile --voice` and `anchors` hide marked material by default;
+`--show-private` reveals it when you explicitly need to review it. These flags prevent accidental terminal
+output, not disclosure of the profile file itself. Never commit client material to a public repository.
+
 **When a kind has no samples**, fill its `formatting` line from the author's stated rules or style guide, give it no
 anchors, and say so in a comment. Don't stretch habits from one kind onto another: a sign-off that's right for
 email is wrong for a report. Note in `[rhythm]` which kinds it was measured on, and measure again when samples of
