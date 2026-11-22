@@ -581,7 +581,8 @@ class LocaleCli(unittest.TestCase):  # #121: the locale option is read, and show
     def test_json_stamps_unchanged(self):
         r = self.run_cli("profile", "--json", "--plugin-profile", "default", "--plugin-locale", "en-US")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(set(json.loads(r.stdout)), {"name", "path", "profile_sha256", "ruleset_version", "root"})
+        self.assertEqual(set(json.loads(r.stdout)), {"name", "path", "profile_sha256", "ruleset_version", "root",
+                                                     "profile_version", "profile_updated"})
 
     def test_register_checklist_uses_the_resolved_locale(self):
         r = self.run_cli("register-checklist", "--kind", "email", "--profile", "default", "--plugin-locale", "en-US")

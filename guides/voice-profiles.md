@@ -77,6 +77,23 @@ different layout: a formal voice for regulated clients, say, or a second brand.
 - **Profiles don't inherit.** A variant is a whole profile, so keep one master and copy the shared layer into the
   variant whenever the master changes (a short script, or a checklist), or the two will drift.
 
+## Versions and what's new
+
+Give the profile a version and the date it last changed, under `[profile]`, and bump both on every edit:
+
+    [profile]
+    name = "me"
+    version = "1.2"
+    updated = 2026-11-22
+
+`version` is your own numbering, in quotes. `updated` is a date without quotes. Both are optional. `profile` prints
+them, and every lint and report carries them as `profile_version` and `profile_updated`, so two copies of one master
+profile show which is newer. They take the place of a comment header such as `# Profile version: 1.0 · updated
+2026-11-22`, which nothing reads. They're for people: `profile_sha256` is still what ties a report to the profile.
+
+When plainspoken adds a profile key, `doctor` shows it. Its `profile keys` rows list, by section, every key this
+version reads that your profile doesn't set. That's information only: a key left out keeps its default.
+
 ## Switching it on
 
 The profile goes in `.plainspoken/profiles/<name>.toml` and is switched on with `[engine] profile = "<name>"` in

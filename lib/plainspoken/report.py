@@ -94,6 +94,13 @@ def lint_doc(doc, profile: Profile, content_type: str, cfg) -> tuple[list[str], 
                         else f for f in findings]
 
 
+def version_stamps(profile: Profile) -> dict[str, str | None]:
+    """`profile_version` and `profile_updated` (#251): the profile's own numbering and date, or None when it sets
+    none. They're for people and bind nothing; `profile_sha256` does that."""
+    return {"profile_version": profile.version,
+            "profile_updated": profile.updated.isoformat() if profile.updated else None}
+
+
 def run_lint(path: Path, profile: Profile, content_type: str = "article", cfg=None) -> dict:
     """Lint one article. `cfg` is the ruleset to use (the caller's, so capture sees the same lists); None loads the
     default ruleset as before."""
@@ -116,6 +123,7 @@ def lint_text(text: str, profile: Profile, content_type: str = "article", cfg=No
         "article": label,
         "profile": profile.name,
         "profile_sha256": profile.sha256,
+        **version_stamps(profile),
         "ruleset_version": cfg.version,
         "content_type": content_type,
         "fields_read": doc.fields_read(),  # #110: what was in scope (additive; older lint files lack it)
@@ -331,8 +339,8 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
         status = "PASS"
     merged = {
         "article": str(article),
-        "profile": profile.name, "profile_sha256": profile.sha256, "ruleset_version": cfg.version,
-        "content_type": ctype, "article_sha256": sha,
+        "profile": profile.name, "profile_sha256": profile.sha256, **version_stamps(profile),
+        "ruleset_version": cfg.version, "content_type": ctype, "article_sha256": sha,
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "status": status,
         "blocks": blocks, "warns": warns,
         "unresolved": unresolved, "justified": res["justified"], "unused_justifications": res["unused"],

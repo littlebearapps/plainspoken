@@ -11,6 +11,10 @@ doesn't print reaches no drafting skill.
 - `[profile]` `name`, `locale`, `flags`: the profile's name, its spelling conventions and any extra switches
   (`narrative` relaxes the sentence-rhythm rules). Example: `name = "my-voice"`. Who reads it: the checker, except
   `locale`, which only drafting and register-check read. Leave `locale` out unless the writer always spells one way.
+- `[profile]` `version`, `updated`: the profile's own version and the date of its last edit, for people. `version`
+  is a string in your own numbering; `updated` is a TOML date, written without quotes. Example: `version = "1.2"`,
+  `updated = 2026-11-22`. Bump both on every edit. Who reads it: `profile`, `profile --voice`, `doctor` and the
+  reports (`profile_version`, `profile_updated`). No check reads them, and `profile_sha256` stays what binds a report.
 - `[thresholds]`: numeric limits that replace the ruleset's defaults, by the name the ruleset uses. Example: a higher
   em-dash cap (`em_dash_max = 5`) for a writer who uses them, or `em_dash_max = 0` and `en_dash_max = 0` for one who
   never does. `en_dash_max` defaults to -1, no limit; once set, every en dash counts, number ranges like `9am–6pm`

@@ -62,7 +62,8 @@ of writing, variants and where to switch it on: [`guides/voice-profiles.md`](../
 5. Pick 3 to 8 anchors: passages of 1 to 4 sentences that sound most like the author. Tag each by section type
    (`opening`, `explainer`, `opinion`, `story`, `list-intro`, `closing`) and give each a `source`. Use `path` and
    `lines` when the sample is a file in the project, and `text` otherwise.
-6. Show the whole profile. When the user agrees, write `.plainspoken/profiles/<name>.toml`. Then, from the project
+6. Show the whole profile. When the user agrees, write `.plainspoken/profiles/<name>.toml` with `[profile] version`
+   bumped (`"1.0"` for a new one) and `updated` set to today's date, unquoted. Then, from the project
    root (a relative `--profile` path resolves against the current folder), run
    `RUN profile --profile .plainspoken/profiles/<name>.toml --plugin-locale '${user_config.locale}'`. Exit 2 names the file and the key to fix: fix it and rerun.
 7. Tell the user how to switch it on: `[engine] profile = "<name>"` in `.plainspoken/config.toml`, in each folder

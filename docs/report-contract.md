@@ -179,13 +179,17 @@ a label: find the report by its key, and check `article_sha256` against the file
 **Check the report is current.** `python3 lib/run.py profile --json [<article>]` prints the stamps a report is bound
 to:
 
-    {"name": …, "path": …, "profile_sha256": …, "ruleset_version": …, "root": …}
+    {"name": …, "path": …, "profile_sha256": …, "ruleset_version": …, "root": …, "profile_version": …,
+     "profile_updated": …}
 
 With an article it reports that file's profile (its `[engine] profiles` match first, as `check` and `merge` resolve
 it); without one, the project's profile. Pass the same `--profile` / `--plugin-profile` (or `PLAINSPOKEN_PROFILE`)
 that `check` and `merge` got. `root` is the project root the command used. A report is current only when its
 `article_sha256` is the sha256 of the article's bytes now and its `profile_sha256` and `ruleset_version` equal the
-ones `profile --json` prints; otherwise rerun `check` and `merge` before trusting `status`.
+ones `profile --json` prints; otherwise rerun `check` and `merge` before trusting `status`. `profile_version` and
+`profile_updated` are the profile's own `[profile] version` and `updated` (null when unset). The lint and report
+files carry them too, for people; they bind nothing, and a report whose `profile_sha256` matches is current whatever
+they say.
 
 ## Host adapter notes (claims ledgers)
 

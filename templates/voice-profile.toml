@@ -11,6 +11,8 @@
 name = "my-voice"          # checker: names the profile in reports. Lowercase letters, digits, - and _.
 # locale = "en-AU"         # drafting, register-check: only if you always spell one way. The project's [locale] wins.
 flags = []                 # checker: "narrative" relaxes the sentence-rhythm rules for story writing.
+version = "1.0"            # people: your own numbering. Bump it, and the date below, every time you edit this file.
+updated = 2026-11-22       # people: the date of the last edit, no quotes. profile and reports print both.
 
 [identity]
 pronoun = "I"   # drafting, voice check, register-check: "I", "we" or "either".
