@@ -2,7 +2,7 @@
 # owner merges.
 # No human-readable rule reference ships yet: guides/ holds no per-rule text, and Phase 6 added none.
 # Ported from the author's earlier private ruleset (v4).
-version = "4.5.0"
+version = "4.6.0"
 
 [thresholds."default"]
 em_dash_max = 3

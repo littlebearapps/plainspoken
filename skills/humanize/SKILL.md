@@ -24,7 +24,7 @@ Calibration — these override anything below:
    rules and evidence it gave you; don't re-derive limits from memory. A rhythm finding (7, 7d) is fixed only by
    joining two neighbouring sentences with "and", "but", a comma or a semicolon in their own words, or by splitting
    one. Never pad a sentence or say a fact again to reach a length; if no such join or split clears it, leave it
-   and say so (check keeps and justifies it).
+   and say so (check keeps it).
 4. **The voice comes from the writer.** Use the writer's own words and the profile's voice notes for
    replacements. When unsure, prefer the shorter, plainer version. Write it the way the person who sends it would:
    the shop owner, the club secretary, the parent. A plain greeting, invitation or sign-off ("come by", "see you

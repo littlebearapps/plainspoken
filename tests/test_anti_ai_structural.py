@@ -4,7 +4,7 @@ import unittest
 
 from plainspoken import metrics, report
 from plainspoken.checks_lexical import CHECKS as LEXICAL
-from plainspoken.checks_structural import CHECKS
+from plainspoken.checks_structural import CHECKS, NO_JOIN, _JOIN
 from plainspoken.doc import parse
 from plainspoken.profile import load as load_profile
 from plainspoken.registry import load_config
@@ -31,6 +31,8 @@ def with_thresholds(**over):
     return dataclasses.replace(CFG, _thresholds=t)
 
 
+TWELVE = "One two three four five six seven eight nine ten eleven twelve."
+THIRTEEN = "One two three four five six seven eight nine ten eleven twelve thirteen."
 LONG = "This sentence goes on for quite a while because it needs more than twenty five words to count as a long flowing sentence in the section."
 
 # #148: rule 7d's no-long-sentence test skips pieces under 150 words. A fixture that needs that test appends this
@@ -95,7 +97,7 @@ class Structural(unittest.TestCase):
         self.assertEqual(run("HM", "I think it's fine. But not always."), [])
 
     def test_rhythm_remedies_fit_the_fix_rule(self):  # #30: a fix cuts, joins, splits or restates; it never adds
-        staccato = run("7d", "## A\n\nShort one here. Another short one. And a third." + ABOVE_GATE)
+        staccato = run("7d", f"## A\n\n{TWELVE} {THIRTEEN} Short one here." + ABOVE_GATE)
         uniform = run("7", "One two three four five. " * 5)
         bursty = [f for f in run("12f", " ".join(["The cat sat on the mat."] * 60)) if f.excerpt.startswith("burstiness")]
         markers = run("HM", "The system processes requests. The system returns responses. Latency remains consistently low.")
@@ -114,13 +116,19 @@ class Structural(unittest.TestCase):
         run5 = "## A\n\n" + " ".join(["Tiny one."] * 5) + " " + LONG
         faq7 = "## FAQ\n\n" + " ".join(["It is short."] * 7) + " " + LONG
         nar7 = "## Match\n\n" + " ".join(["Goal kicked here."] * 7)
-        venue = "## Venue profile: Harbour Oval\n\n" + " ".join(["The stand faces west."] * 4) + ABOVE_GATE
-        found = (run("7d", "## A\n\nShort one here. Another short one. And a third." + ABOVE_GATE) + run("7d", run5)
-                 + run("7d", faq7) + run("7d", nar7, profile=NARRATIVE) + run("7d", venue, profile=NARRATIVE))
+        joinable = f"## A\n\n{TWELVE} {THIRTEEN} Short one here."  # 12 + 13 + "and" clears 25
+        venue = f"## Venue profile: Harbour Oval\n\nThe stand faces west. {TWELVE} {THIRTEEN}"
+        found = (run("7d", joinable + ABOVE_GATE) + run("7d", run5)
+                 + run("7d", faq7) + run("7d", nar7, profile=NARRATIVE) + run("7d", venue + ABOVE_GATE, profile=NARRATIVE))
         self.assertEqual(len(found), 5)
         for f in found:
             self.assertIn('join two neighbours with "and" or "but" in their own words, or keep it; never pad one',
                           f.message)
+        unjoinable = (run("7d", "## A\n\nShort one here. Another short one. And a third." + ABOVE_GATE)
+                      + run("7d", "## Venue profile: Harbour Oval\n\n" + "The stand faces west. " * 4 + ABOVE_GATE,
+                            profile=NARRATIVE))
+        self.assertEqual([f.message.endswith(NO_JOIN) for f in unjoinable], [True, True])  # #73 option B
+        for f in found + unjoinable:
             self.assertNotRegex(f.message, r"\b(?:so|because|merge)\b")  # "so" and "because" add a reason
             self.assertLessEqual(len(f.message), 140, f.message)  # the lint summary cuts a message at 140
 
@@ -375,6 +383,50 @@ class StaccatoFloor(unittest.TestCase):
 
     def test_the_same_short_section_with_no_subsections_still_warns(self):  # #201: lead-ins only
         self.assertEqual(len(self.no_long("## Tools\n\nEverything above is here. All of it is free. Paid ones are labelled.")), 1)
+
+
+class StaccatoNoJoin(unittest.TestCase):
+    """#73 option B: when no two neighbours joined with "and" (their words plus one) get over the line, the no-long
+    WARN says to keep it with no reason. Any join that clears it keeps the join remedy, and JR as before."""
+
+    def no_long(self, section, profile=PRODUCT):
+        return [f for f in run("7d", section + ABOVE_GATE, profile=profile) if "No sentence over" in f.message]
+
+    def test_no_join_reaches_the_line(self):  # 12 + 12 + "and" = 25, not over 25
+        found = self.no_long(f"## A\n\n{TWELVE} {TWELVE} {TWELVE}")
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0].message.endswith(NO_JOIN), found[0].message)
+        self.assertNotIn("join two neighbours", found[0].message)
+
+    def test_one_join_that_clears_keeps_the_join_remedy(self):  # 12 + 13 + "and" = 26
+        found = self.no_long(f"## A\n\n{TWELVE} Short one here. {TWELVE} {THIRTEEN}")
+        self.assertEqual(len(found), 1)
+        self.assertNotIn(NO_JOIN, found[0].message)
+        self.assertTrue(found[0].message.endswith(f"join two {_JOIN}"), found[0].message)
+
+    def test_neighbours_across_a_paragraph_break_count(self):  # a join may run two paragraphs together
+        found = self.no_long(f"## A\n\nShort one here. {TWELVE}\n\n{THIRTEEN} Short one too.")
+        self.assertNotIn(NO_JOIN, found[0].message)
+
+    def test_narrative_heading_form_is_marked_too(self):
+        venue = "## Venue profile: Harbour Oval\n\n" + " ".join(["The stand faces west."] * 4)  # under the run of 7
+        found = self.no_long(venue, profile=NARRATIVE)
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0].message.endswith(NO_JOIN), found[0].message)
+
+    def test_a_run_of_short_sentences_takes_the_finding(self):  # a join clears a run, so it isn't kept as it is
+        for body, profile, start in (("## A\n\n" + "Pick a sunny bed. " * 5, PRODUCT, "5 consecutive"),
+                                     ("## Venue profile: Harbour Oval\n\n" + "The stand faces west. " * 7, NARRATIVE,
+                                      "7 consecutive")):
+            found = run("7d", body + ABOVE_GATE, profile=profile)
+            self.assertEqual([f.message[:13] for f in found], [start], found)
+            self.assertTrue(found[0].message.endswith(f"join two {_JOIN}"), found[0].message)
+
+    def test_the_other_7d_forms_keep_the_join_remedy(self):  # the short-run and FAQ forms aren't the no-long test
+        run5 = "## A\n\n" + " ".join(["Tiny one."] * 5) + " " + LONG
+        faq7 = "## FAQ\n\n" + " ".join(["It is short."] * 7) + " " + LONG
+        for f in run("7d", run5) + run("7d", faq7):
+            self.assertNotIn(NO_JOIN, f.message)
 
 
 class StaccatoShortPiece(unittest.TestCase):

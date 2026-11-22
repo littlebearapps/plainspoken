@@ -9,11 +9,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from plainspoken import justify
 from plainspoken.justify import file_sha
 from plainspoken.registry import load_config
-from plainspoken.report import lint_status, merge, report_key, report_paths, run_lint
+from plainspoken.report import lint_status, merge, merge_lines, report_key, report_paths, run_lint
 from tests._profiles import PRODUCT, NARRATIVE, CONSULTING
-from tests.test_anti_ai_structural import ABOVE_GATE
+from tests.test_anti_ai_structural import ABOVE_GATE, THIRTEEN, TWELVE
 
 REPO = Path(__file__).resolve().parents[1]
 FIX = REPO / "tests" / "fixtures" / "profiles"
@@ -334,6 +335,31 @@ class Merge(unittest.TestCase):
         m = merge(self.art, _rdir(self.art), PRODUCT)
         self.assertEqual((m["status"], m["warns"], m["unresolved"]), ("UNRESOLVED", ["7b"], ["7b"]))
 
+    def _7d(self, *sections: str) -> dict:
+        """Merge a lint-clean piece whose only open lint line is 7d in `sections`, every judge passing."""
+        body = self.BODY + "".join(f"\n\n## {chr(65 + i)}\n\n{s}" for i, s in enumerate(sections)) + ABOVE_GATE
+        self.art, self.sha = self._prep(body)
+        self._judges()
+        return merge(self.art, _rdir(self.art), PRODUCT)
+
+    def test_a_7d_no_plain_join_can_clear_needs_no_reason(self):  # #73 option B
+        m = self._7d("Short one here. Another short one. And a third.")
+        self.assertEqual((m["status"], m["warns"], m["unresolved"], m["justified"]), ("PASS", ["7d"], [], []))
+        self.assertIn("  kept, no reason needed: 7d (no join of two neighbours clears the line)", merge_lines(m))
+        self.assertEqual(justify.template(m)["items"], [])  # nothing for the writer to fill in
+
+    def test_a_7d_a_plain_join_can_clear_still_needs_a_reason(self):
+        m = self._7d(f"{TWELVE} {THIRTEEN} Short one here.")  # 12 + 13 + "and" = 26 words
+        self.assertEqual((m["status"], m["warns"], m["unresolved"]), ("UNRESOLVED", ["7d"], ["7d"]))
+        self.assertFalse(any(line.startswith("  kept") for line in merge_lines(m)))
+        self.assertEqual(justify.template(m)["items"], [{"rule": "7d", "kind": "", "reason": ""}])
+
+    def test_jr_sees_only_the_7d_lines_that_need_a_reason(self):
+        m = self._7d("Short one here. Another short one. And a third.", f"{TWELVE} {THIRTEEN} Short one here.")
+        self.assertEqual((m["status"], m["unresolved"]), ("UNRESOLVED", ["7d"]))
+        payload = justify.review_input(m, {"items": [{"rule": "7d", "kind": "metric", "reason": REASON}]}, "0" * 64)
+        self.assertEqual([e["excerpt"] for e in payload["items"][0]["evidence"]], ["B"])
+
     def test_merge_never_writes_rewrite_advised(self):
         self._judges(fails=("7b", "7c", "16", "21"))
         self.assertEqual(merge(self.art, _rdir(self.art), PRODUCT)["status"], "UNRESOLVED")
@@ -606,8 +632,9 @@ class Merge(unittest.TestCase):
         m = merge(self.art, _rdir(self.art), PRODUCT)
         self.assertEqual((m["status"], m["blocks"]), ("FAIL", ["2"]))
         self._judges()
-        m = merge(self.art, _rdir(self.art), PRODUCT)  # a genuine mention: J3 passes it (the short fixture's 7d WARN is unrelated)
-        self.assertEqual((m["status"], m["blocks"], m["unresolved"]), ("UNRESOLVED", [], ["7d"]))
+        m = merge(self.art, _rdir(self.art), PRODUCT)  # a genuine mention: J3 passes it
+        # The short fixture's 7d WARN is unrelated, and no plain join can clear it, so it needs no reason (#73)
+        self.assertEqual((m["status"], m["blocks"], m["warns"], m["unresolved"]), ("PASS", [], ["7d"], []))
 
 
 

@@ -43,7 +43,8 @@ writing. It explains the check step by step, what each result means, and what th
 5. **Up to two fix passes.** A fix pass cuts, joins or splits sentences, or restates plainly what's already there. A
    join uses "and" or "but", or merges two sentences; it never adds a clause, detail or reason. Rhythm fixes (rules
    7 and 7d) join two neighbouring sentences in their own words or split one, and never pad a sentence to reach a
-   length; when that can't clear the warning, the warning is kept and justified. In a piece under 150 words, rule 7d
+   length; when that can't clear the warning, the warning is kept and justified. A rule 7d section where no join of
+   two neighbours could reach the length is kept with no reason needed. In a piece under 150 words, rule 7d
    flags only a run of short sentences, never a section that lacks a long one. A greeting or sign-off line, and a
    line that's only a link or button label, don't count as sentences for rule 7d. A fix never adds a fact, number, name, quote, example or opinion. After each pass
    the lint and all four judges run again, because the text changed. A pass doesn't count when all that's left is

@@ -62,9 +62,10 @@ class NotABlogPost(unittest.TestCase):
         self.assertEqual([f.message for f in found],
                          ['4 consecutive sentences under 8 words — join two neighbours with "and" or "but" in their '
                           'own words, or keep it; never pad one'])
-        # the same text as an article still gets the no-long-sentence WARN
+        # the same text as an article gets the article's limits: its run of five takes the finding, as no join can
+        # clear its no-long test (#73)
         art = STRUCTURAL["7d"](parse(five_short + ABOVE_GATE, profile=PRODUCT), CFG)  # #148: past the 150-word gate
-        self.assertTrue([f for f in art if "No sentence over" in f.message], art)
+        self.assertTrue([f for f in art if f.message.startswith("5 consecutive sentences under 12 words")], art)
 
     def test_unknown_content_type_fails(self):
         with self.assertRaises(ValueError):

@@ -2,6 +2,28 @@
 
 Ruleset versions are separate from the plugin version. Every report records the ruleset version it used.
 
+## 4.6.0 (2026-11-22)
+
+- **A rule 7d no plain join can clear is kept with no reason (#73, option B):** when a section has no sentence over
+  25 words and no two neighbouring sentences joined with "and" would get past 25 (their words plus one, across a
+  paragraph break too), the no-long WARN now ends "keep it, no reason needed". Merge keeps that 7d with no JR
+  reason, `justify --template` leaves it out, and merge prints a `kept, no reason needed` line under its status line.
+  A 7d with any line a join can clear still needs an accepted reason, and JR sees only those lines. When such a
+  section also holds a run of short sentences, the run takes the finding instead (its usual line and message),
+  because joining two of them does clear a run. The FAQ form doesn't change, and no section gains or loses a 7d.
+- **Why:** the check and write skills already said to keep a 7d no honest join can clear, but keeping it still meant
+  a reason JR might reject, and the reason joins kept coming ("because" in rounds 6 to 9, "so" in round 11), all in
+  write step 6's lint-only passes. In round 11, three of the five "so" joins that shipped (one clear, two mild) and
+  the one 4-word lengthening, later cut, were made in first-draft sections where no plain join could clear the line.
+  Under this change those sections needed no edit at all.
+- **Measured effect (lint only, no model calls):** the verdict-diff corpus doesn't move (279 texts, no status or
+  finding count changed). Of 77 no-long 7d lines in 130 real long texts, 1 becomes "no reason needed"; in the 12
+  saved first drafts of rounds 10 and 11, 11 of 51 do, though only 1 of those drafts has no other 7d line.
+- **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.5.0 read as stale
+  and ask for a re-check. The file's bytes change, so a pending kaizen proposal rebases.
+- Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
+  merging the pull request.
+
 ## 4.5.0 (2026-11-07)
 
 - **Inflected forms of three multi-word bans (#199):** `move the needle`, `circle back` and `setting the stage for`
