@@ -28,6 +28,8 @@ allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py *), Write(.plainspo
 - With no argument, print the three modes (build, apply, check) with one line each, and stop. Build makes a profile
   from samples, apply rewrites a draft toward the active profile, and check compares a draft with it and edits
   nothing.
+- Modes an agent may run: `check`, as `/plainspoken:read-only voice FILE`, which edits nothing. `build` and `apply`
+  write, so they start only when the person asks.
 
 **First, before any other step:** run
 `python3 ${CLAUDE_PLUGIN_ROOT}/lib/run.py profile --plugin-profile '${user_config.profile}' --plugin-locale '${user_config.locale}'` and read what it prints.

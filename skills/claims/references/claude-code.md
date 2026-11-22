@@ -2,6 +2,8 @@
 
 - The skill is manual-only (`disable-model-invocation: true`): run it as `/plainspoken:claims <article>`. It never
   triggers on its own.
+- An agent can check an existing ledger without the person: `/plainspoken:read-only claims <article>` runs
+  gaps, validate, recheck and the checker, never touches the ledger, and pre-approves no write.
 - The checker is the `plainspoken:claims-checker` subagent. Start it with the Agent tool in the foreground (never
   `run_in_background`), one agent per run, and give it only the prompt SKILL.md step 6 names. It's read-only
   (Read, Grep, Glob) and runs without the project's CLAUDE.md. Save only the JSON object of its reply (first `{`

@@ -4,7 +4,8 @@ This guide is for anyone who wants a piece to be honest about what it says and w
 the claims skill, the reader-value skill, the integrity hook, the CLI commands underneath them and their settings.
 
 Both skills are manual: they run only when you call them. `write` uses both. It runs the reader-value outline
-before it drafts, and the claims skill on the saved draft.
+before it drafts, and the claims skill on the saved draft. Their checks can also start on their own, through
+`read-only`, which writes nothing: deliver mode, and the claims checker on a ledger that already exists.
 
     /plainspoken:reader-value outline drafts/hot-water.md   # the contract, before drafting; parks a piece with no honest benefit
     /plainspoken:reader-value deliver drafts/hot-water.md   # an isolated reviewer: does the draft deliver the contract?

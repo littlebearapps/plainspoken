@@ -23,7 +23,7 @@ EXTRA = (EVALS / "longform", EVALS / "fix")
 CASE_KEYS = {"schema_version", "name", "description", "tags", "plugins", "runs", "expected_outcome", "model",
              "max_turns", "timeout_seconds", "allowed_tools", "append_system_prompt", "env"}
 GRADER_TYPES = {"regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"}
-AUTO = {"check", "humanize", "write", "plain-language"}
+AUTO = {"check", "humanize", "write", "plain-language", "read-only"}
 MANUAL = {"voice", "copy-audit", "register-check", "adapt", "claims", "reader-value", "kaizen", "setup", "doctor"}
 READ_ONLY = {"Read", "Glob", "Grep", "Skill"}
 CLI_GRANT = "Bash(python3 *)"  # the run grants it with --allow-tools; covers `python3 <plugin>/lib/run.py …`

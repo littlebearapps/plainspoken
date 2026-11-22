@@ -10,3 +10,5 @@
   `.plainspoken/profiles/*.toml` and `.plainspoken/samples/*`. The list grants; it doesn't restrict. Any other
   write, such as saving an Apply rewrite over the draft, goes through the normal permission check (how that
   behaves in `claude -p`: `docs/claude-code-facts.md`, section 9).
+- An agent can start check mode without the person: `/plainspoken:read-only voice <file>` runs it with no
+  write pre-approved (`skills/read-only/`). Build and apply stay manual.

@@ -160,12 +160,18 @@ These run only when you call them:
     /plainspoken:register-check email.md --kind follow-up  # flag a message that reads wrong for its kind (flags only)
     /plainspoken:adapt post.md linkedin bluesky            # draft platform versions of a post (drafts only, nothing is posted)
 
+The checks among them can also start on their own, through `read-only`, which changes nothing: an agent can run a
+register check, a voice check, a copy audit, a claims check on an existing ledger or a reader-value delivery check
+on a draft and report back. A rewrite, a new profile, a contract or a ledger still waits for you.
+
+    /plainspoken:read-only register-check email.md --kind follow-up  # the same flags; an agent may start it
+
 How to build and lay out a profile: [guides/voice-profiles.md](voice-profiles.md).
 
 ## Always-on token cost
 
 The skill and agent descriptions sit in Claude's context in every session; that's the plugin's always-on cost.
-Measured 2026-10-25 with Claude Code CLI 2.1.310, `python3 -m scripts.dev.token_budget .` reports 490 tokens, against
+Measured 2026-11-22 with Claude Code CLI 2.1.330, `python3 -m scripts.dev.token_budget .` reports 488 tokens, against
 a budget of 500. Hooks add none until you switch on an optional piece.
 
 That figure leaves out the nine manual-only skills (adapt, claims, copy-audit, doctor, kaizen, reader-value,

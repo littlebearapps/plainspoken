@@ -8,7 +8,7 @@ from plainspoken.registry import load_config
 from scripts.dev.lint_frontmatter import parse_frontmatter
 
 REPO = Path(__file__).resolve().parents[1]
-AUTO = {"check", "humanize", "write", "plain-language"}
+AUTO = {"check", "humanize", "write", "plain-language", "read-only"}
 MARK = "<!-- plainspoken: quotes tells on purpose -->"
 # #12: no load-time command; the skill's first step runs the profile call explicitly (same command, same flags).
 FIRST_STEP = "**First, before any other step:** run"
