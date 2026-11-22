@@ -16,6 +16,10 @@ Each file, what writes it, and what it's bound to:
   bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint) and input_digest (a hash
   of the whole `judge-input` line; `judge-record` rebuilds that line for the current draft and refuses a reply
   whose digest doesn't match it; `merge` doesn't read it, so judge files with the older digest still merge).
+- `<key>.J1.input.json` … `<key>.J4.input.json`: written by `judge-input --write`, one judge's line each, exactly
+  as `judge-input` prints it without `--write`; the check skill's judge prompt names the file. Deleted at the start
+  of every `--write` run, so a held run leaves none. Bound to nothing itself: the line's input_digest is what
+  `judge-record` checks (scratch).
 - `<key>.justify.json`: written by `justify --template --write` (then filled in by the check skill); bound to
   article_sha256.
 - `<key>.JR.judge.json`: written by `judge-record --group JR`; bound to article_sha256 + justify_sha256,

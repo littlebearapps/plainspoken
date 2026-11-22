@@ -74,23 +74,23 @@ edit FILE, and its bytes stay unchanged.
 
 ## Steps
 
-1. **Lint and judge input.** On the first step 1 of a run (not a rerun), first run
-   `RUN meaning-diff FILE --start`. Then `RUN judge-input FILE --plugin-profile '${user_config.profile}'` (plus
-   `--content-type social` if needed). It lints FILE and prints the lint first (stderr), then four JSON lines, J1 to
-   J4; read it in full, the lint first, and never send it, or any part of it, to `/dev/null` or cut it with a pipe.
-   Never build or edit a JSON line. Exit 1 → it names lint lines still open. Before the first judges, fix its BLOCK
-   and WARN lines under the fix rule and run step 1 again (at most two lint-only passes, counting a caller's, such
-   as write step 6's), so the judges read a lint-clean draft. A line you leave (a WARN you have a real reason to
-   keep, a 7d line the rhythm rule can't clear, one still there after two, or any once the judges have started) gets
-   `--keep <rule>`, only for a rule the lint above printed: rerun step 1 with it. Justify a kept WARN in step 7
-   rather than fix it: a fix after the judges means all four again. Exit 2 for a `--keep` for a rule with no open
-   line → rerun step 1 once without it; any other exit 2 → stop with its message. Exit 3 → FILE has a claim ledger
-   that isn't current, and it prints why. From write, finish the claims step (write steps 6 and 7 say how), then
-   step 1 again. On its own, rerun step 1 with `--ignore-claims` and say so in step 8.
-2. **Judge input.** Step 1 already printed it; this is the same call. Its four JSON lines go to step 3.
+1. **Lint and judge input.** On the first step 1 of a run (not a rerun), first run `RUN meaning-diff FILE --start`.
+   Then `RUN judge-input FILE --plugin-profile '${user_config.profile}' --write` (plus `--content-type social` if
+   needed). It lints FILE and prints the lint first (stderr), then four `Jn <path>` lines, J1 to J4, each naming the
+   file that holds that judge's input; read it in full, the lint first, and never send it, or any part of it, to
+   `/dev/null` or cut it with a pipe. Never build, edit or retype an input. Exit 1 → it names lint lines still open.
+   Before the first judges, fix its BLOCK and WARN lines under the fix rule and run step 1 again (at most two
+   lint-only passes, counting a caller's, such as write step 6's), so the judges read a lint-clean draft. A line you
+   leave (a WARN you have a real reason to keep, a 7d line the rhythm rule can't clear, one still there after two, or
+   any once the judges have started) gets `--keep <rule>`, only for a rule the lint above printed: rerun step 1 with
+   it. Justify a kept WARN in step 7 rather than fix it: a fix after the judges means all four again. Exit 2 for a
+   `--keep` for a rule with no open line → rerun step 1 once without it; any other exit 2 → stop with its message.
+   Exit 3 → FILE has a claim ledger that isn't current, and it prints why. From write, finish the claims step (write
+   steps 6 and 7 say how), then step 1 again. On its own, rerun step 1 with `--ignore-claims` and say so in step 8.
+2. **Judge input.** Step 1 already printed it; this is the same call. Its four paths go to step 3.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
-   this. Your input:" followed by that line verbatim. Nothing else: no file contents, no opinion, no hint about who
-   wrote it.
+   this. Your input is in <path>." with that judge's path from step 1. Nothing else: no file contents, no opinion,
+   no hint about who wrote it.
 4. **Record** all four at once. From each reply take only its JSON object (its first `{` to its last `}`): drop any
    code fence or trailing agent metadata. In one Write, save the four objects unchanged, one after another, as the
    file at the `reply` path from `RUN paths FILE`. In the same message, run
