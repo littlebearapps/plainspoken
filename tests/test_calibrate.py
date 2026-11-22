@@ -24,6 +24,7 @@ RECENT = NOW - timedelta(days=30)   # a ledger too young for the dormant trigger
 OLD = NOW - timedelta(days=100)     # old enough
 SHA = "a" * 64
 DOCS = [ledger.label_id(f"doc-{i}") for i in range(30)]
+GOLDEN = "not run (calibrate checks no labelled cases; the golden set measures the judges, not lint settings)"
 TOTAL_ONLY = 'density_total_only = [\n  "then",\n  "so",\n  "now",\n]'
 
 
@@ -161,7 +162,7 @@ class Fp(TmpCase):
         self.assertIn("-claude_warn_total = 4", p["diff"])
         self.assertIn("+claude_warn_total = 5", p["diff"])
         self.assertEqual(p["base_sha256"], hashlib.sha256(RULES.read_bytes()).hexdigest())
-        self.assertEqual(p["effect"], {"corpus": "not measured (no corpus)", "golden": "not available until Phase 6"})
+        self.assertEqual(p["effect"], {"corpus": "not measured (no corpus)", "golden": GOLDEN})
         self.assertEqual(p["evidence"]["fires"], 25)
         self.assertEqual(p["evidence"]["dismissed"], 4)
         self.assertNotIn("\n", p["summary"])
@@ -242,18 +243,23 @@ class Kept(TmpCase):
         return out
 
     def test_kept_12d_in_faqs_turns_the_faq_knob(self):
-        cands = self.cands(self.kept_12d(["faq", "faq", "other"]))
-        self.assertEqual([(c["rule"], c["action"], c["narrow"]) for c in cands], [("12d", "loosen", True)])
+        if not any(k["rule"] == "12d" and k["facet"] == "section" and k["value"] == "faq"
+                   for k in self.settings["knobs"]):
+            self.skipTest("no 12d FAQ knob in data/kaizen.toml (#208)")
+        cands = self.cands(self.kept_12d(["faq", "faq", "faq", "other"]))  # 3 docs need the FAQ knob, 1 doesn't
+        self.assertEqual([(c["rule"], c["action"], c["narrow"], c["docs"]) for c in cands],
+                         [("12d", "loosen", True, 3)])
+        self.assertEqual(cands[0]["evidence"]["covered_docs"], 3)
         p = calibrate.materialise(cands[0], None, CFG, None, [], NOW)
         self.assertEqual(p["edits"], [{"kind": "set_threshold", "table": "default", "key": "paragraph_uniform_faq_run",
                                        "old": 4, "new": 5}])
         self.assertEqual(p["targets"], ["ruleset", "profile"])
 
-    def test_kept_12d_elsewhere_turns_the_broad_knob(self):
-        cands = self.cands(self.kept_12d(["faq", "other", "question"]))
+    def test_kept_12d_elsewhere_turns_the_prose_knob(self):
+        cands = self.cands(self.kept_12d(["faq", "other", "question", "intro"]))
         p = calibrate.materialise(cands[0], None, CFG, None, [], NOW)
         self.assertEqual(p["edits"][0]["key"], "paragraph_uniform_run")
-        self.assertFalse(cands[0]["narrow"])
+        self.assertEqual((cands[0]["docs"], cands[0]["evidence"]["covered_docs"]), (3, 3))  # not the FAQ doc
 
     def test_two_docs_is_not_enough(self):
         self.assertEqual(self.cands(kept_4b_events()[:4], cfg=load_config(self.copy(total_only=False))), [])
@@ -264,6 +270,117 @@ class Kept(TmpCase):
             events.append(fired("1", f"dash{d}", doc=d, severity="BLOCK"))
             events.append(ev("publish", "publish", "survived_publish", "1", "BLOCK", d, f"dash{d}"))
         self.assertEqual(self.cands(events), [])
+
+
+class KeptFacets(TmpCase):
+    """#212: a kept proposal turns only a setting that clears the findings it cites, else asks for a review."""
+
+    def kept(self, rule, facets_by_doc, kind="format"):
+        """A ledger fixture: per doc, the lint fire, then the justification and JR accept as `merge` logs them
+        (span rule + `*`, the covered findings' facets, `kind` on the JR event)."""
+        out = []
+        for doc, facets in enumerate(facets_by_doc, start=1):
+            out.append(fired(rule, f"f{doc}", doc=doc, facets=facets))
+            out.append(ev("justify", "human", f"justified:{kind}", rule, "WARN", doc, "*", facets=facets))
+            out.append(ev("jr", "jr", "jr_accept", rule, "WARN", doc, "*", facets={**facets, "kind": kind}))
+        return out
+
+    def keys(self, cands):
+        return [calibrate.materialise(c, None, CFG, None, [], NOW)["edits"][0]["key"] if c["edits"] else "review"
+                for c in cands]
+
+    def without(self, key):
+        self.settings = {**self.settings, "knobs": [k for k in self.settings["knobs"] if k["edit"].get("key") != key]}
+
+    def test_7d_kept_no_long_never_turns_the_short_run(self):
+        cands = self.cands(self.kept("7d", [{"form": "no-long", "section": "other"}] * 4))
+        self.assertEqual(self.keys(cands), ["staccato_long_sentence"])
+        self.without("staccato_long_sentence")  # with no no-long knob: a review, not the broad run knob
+        self.assertEqual(self.keys(self.cands(self.kept("7d", [{"form": "no-long", "section": "other"}] * 4))),
+                         ["review"])
+
+    def test_the_3_nov_7d_case(self):  # 4 docs, 5 kept findings: 4 no-long, 1 short run sharing a doc with one
+        docs = [{"form": "no-long", "section": "other"}] * 3 + [{"section": "other"}]  # mixed form: no form facet
+        (c,) = self.cands(self.kept("7d", docs))
+        self.assertEqual(self.keys([c]), ["staccato_long_sentence"])
+        self.assertEqual((c["docs"], c["evidence"]["covered_docs"], c["evidence"]["kept_docs"]), (3, 3, 4))
+        self.assertIn("the setting covers 3", c["reason"])
+
+    def test_7d_short_runs_in_prose_turn_the_short_run(self):
+        cands = self.cands(self.kept("7d", [{"form": "short-run", "section": s}
+                                            for s in ("other", "question", "intro")]))
+        self.assertEqual(self.keys(cands), ["staccato_short_run"])
+
+    def test_12d_kept_in_faqs_never_turns_the_prose_knob(self):
+        events = self.kept("12d", [{"section": "faq"}] * 4)
+        faq = any(k["edit"].get("key") == "paragraph_uniform_faq_run" for k in self.settings["knobs"])
+        self.assertEqual(self.keys(self.cands(events)), ["paragraph_uniform_faq_run" if faq else "review"])
+        self.without("paragraph_uniform_faq_run")  # #208 retires the FAQ knob: then it's a review
+        self.assertEqual(self.keys(self.cands(events)), ["review"])
+
+    def test_the_3_nov_12d_case(self):  # FAQ blocks plus one action-plan block
+        self.without("paragraph_uniform_faq_run")
+        (c,) = self.cands(self.kept("12d", [{"section": "faq"}] * 3 + [{"section": "other"}]))
+        self.assertEqual((c["action"], c["edits"]), ("review", []))
+        self.assertIn("no setting fits", c["reason"])
+
+    def test_evidence_with_no_facet_asks_for_a_review(self):  # an old ledger: justify had no facets before #212
+        for rule in ("7d", "12d"):
+            with self.subTest(rule=rule):
+                (c,) = self.cands(self.kept(rule, [{}] * 4))
+                self.assertEqual((c["rule"], c["trigger"], c["action"], c["edits"]), (rule, "kept", "review", []))
+
+    def test_a_rule_with_no_facet_knob_still_loosens_on_old_evidence(self):
+        (c,) = self.cands(self.kept("23", [{}] * 3))
+        self.assertEqual(self.keys([c]), ["filler_warn"])
+        self.assertEqual(c["evidence"]["kept_records"], 3)  # one per justified doc, not a count of findings
+
+    def test_a_doc_justified_twice_needs_both_covered(self):  # its facets are the union of its accepts
+        events = self.kept("12d", [{"section": "other"}] * 3)
+        events.append(ev("jr", "jr", "jr_accept", "12d", "WARN", 1, "*", facets={"section": "faq", "kind": "format"},
+                         when=NOW - timedelta(days=1)))
+        (c,) = self.cands(events)
+        self.assertEqual((self.keys([c]), c["action"]), (["review"], "review"))  # doc 1 kept a FAQ run as well
+
+    def test_the_proposal_says_what_was_checked(self):
+        from plainspoken import adapters
+        (c,) = self.cands(self.kept("7d", [{"form": "no-long", "section": "other"}] * 4))
+        body = adapters.render(calibrate.materialise(c, None, CFG, None, [], NOW), [], outward=False)
+        self.assertIn("- corpus: not measured (no corpus)", body)
+        self.assertIn("- golden set: not run (calibrate checks no labelled cases", body)
+        self.assertNotIn("Phase 6", body)
+
+
+class KnobConditions(TmpCase):
+    def write(self, text):
+        path = self.tmp / "kaizen.toml"
+        path.write_text('[triggers]\nfp_min_fires = 20\nfp_rate = 0.1\nkept_min_docs = 3\nmissed_min_docs = 2\n'
+                        'dormant_days = 90\ncycle_days = 28\ncooldown_days = 60\nmax_proposals = 3\n' + text,
+                        encoding="utf-8")
+        return path
+
+    def test_where_and_value_lists_load(self):
+        s = calibrate.load_settings(self.write(
+            '[[knobs]]\nrule = "7d"\nfacet = "form"\nvalue = "short-run"\nwhere = { section = ["other"] }\n'
+            'direction = "loosen"\nedit = { kind = "set_threshold", key = "staccato_short_run", step = 1 }\n'))
+        self.assertEqual(s["knobs"][0]["when"], {"form": ("short-run",), "section": ("other",)})
+
+    def test_bad_conditions_fail_at_load(self):
+        edit = 'direction = "loosen"\nedit = { kind = "set_threshold", key = "paragraph_uniform_run", step = 1 }\n'
+        for knob in ('facet = "section"\nvalue = "faqs"\n', 'facet = "section"\nvalue = []\n',
+                     'where = { section = "faq" }\n', 'facet = "section"\nvalue = "faq"\nwhere = { term = "x" }\n'):
+            with self.subTest(knob=knob), self.assertRaises(ValueError):
+                calibrate.load_settings(self.write(f'[[knobs]]\nrule = "12d"\n{knob}{edit}'))
+
+    def test_fp_honours_every_condition(self):  # the share test, per condition
+        knob = next(k for k in self.settings["knobs"] if k["edit"].get("key") == "staccato_short_run")
+        view = calibrate._view(CFG)
+        cal = {"triggers": self.settings["triggers"], "knobs": [knob]}
+        runs = {"form": {"short-run": 4}, "section": {"other": 4}}
+        self.assertIsNotNone(calibrate._pick("7d", "loosen", 4, runs, cal, view))
+        self.assertIsNone(calibrate._pick("7d", "loosen", 4, {**runs, "section": {"faq": 4}}, cal, view))
+        self.assertIsNone(calibrate._pick("7d", "loosen", 4, {"form": {"no-long": 4}, "section": {"other": 4}},
+                                          cal, view))
 
 
 class Stuck(TmpCase):
@@ -488,7 +605,7 @@ class Effect(TmpCase):
         self.assertEqual(corpus["files"], 2)
         self.assertEqual(corpus["changed"], ["a"])
         self.assertGreater(corpus["before"].get("4b", 0), corpus["after"].get("4b", 0))
-        self.assertEqual(p["effect"]["golden"], "not available until Phase 6")
+        self.assertEqual(p["effect"]["golden"], GOLDEN)
 
 
 def cli(*args, cwd: Path, env: dict | None = None):

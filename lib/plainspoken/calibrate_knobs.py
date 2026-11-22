@@ -1,9 +1,11 @@
 """Kaizen calibrate's settings and knobs (Phase 5; split from `calibrate`).
 
 - `load_settings`: `data/kaizen.toml`, validated against the ruleset: the `[triggers]` thresholds and the
-  `[[knobs]]` (each a rule, an optional facet and value, a direction and one edit: `set_threshold` with a `step` or
-  `value`, or `list_add` from the term facet).
-- `_pick`: the first knob of a rule and direction that fits the evidence and changes something.
+  `[[knobs]]` (each a rule, an optional facet and value (or list of values), optional `where` conditions on other
+  facets, a direction and one edit: `set_threshold` with a `step` or `value`, or `list_add` from the term facet).
+  A knob's facet, value and `where` say which findings its edit clears (#212).
+- `_pick`: the first knob of a rule and direction that fits the evidence and changes something; `_pick_kept`, the
+  same for the `kept` trigger, by the docs whose every kept span the knob covers.
 - `_concrete`: edit intents as `rulesedit` edits, with `old` read from the ruleset (`_view` builds what it reads from
   a loaded Config; the thresholds come through the public `Config.thresholds()`).
 """
@@ -20,7 +22,9 @@ DEFAULT = Path(__file__).resolve().parents[2] / "data" / "kaizen.toml"
 DIRECTIONS = ("loosen", "demote")
 _TRIGGER_TYPES = {"fp_min_fires": int, "fp_rate": float, "kept_min_docs": int, "missed_min_docs": int,
                   "dormant_days": int, "cycle_days": int, "cooldown_days": int, "max_proposals": int}
-_KNOB_KEYS = {"rule", "facet", "value", "direction", "edit"}
+_KNOB_KEYS = {"rule", "facet", "value", "where", "direction", "edit"}
+# The facet values a knob condition may name: the ledger's own, so a typo fails at load.
+_FACET_VALUES = {"section": ledger.FACET_SECTIONS, "form": ledger.FACET_FORMS, "metric": ledger.FACET_METRICS}
 
 
 def _number(v) -> bool:
@@ -39,6 +43,16 @@ def _knob(where: str, k: object, cfg) -> dict:
         raise ValueError(f"{where}: unknown facet {facet!r}")
     if (facet is None or facet == "term") == ("value" in k):
         raise ValueError(f"{where}: a facet knob needs a value (a term knob doesn't), and a broad knob has neither")
+    if "where" in k and (facet is None or facet == "term"):
+        raise ValueError(f"{where}: only a facet knob with a value takes where")
+    when = {} if facet is None or facet == "term" else {facet: _values(where, facet, k["value"])}
+    extra = k.get("where", {})
+    if not isinstance(extra, dict) or not all(isinstance(f, str) for f in extra):
+        raise ValueError(f"{where}: where must be a table of facet = value or [values]")
+    for f, v in extra.items():
+        if f not in ledger.FACET_KEYS or f in ("term", facet):
+            raise ValueError(f"{where}: where can't name facet {f!r}")
+        when[f] = _values(where, f, v)
     if direction not in DIRECTIONS:
         raise ValueError(f"{where}: direction must be one of {', '.join(DIRECTIONS)}")
     if not isinstance(edit, dict):
@@ -64,8 +78,32 @@ def _knob(where: str, k: object, cfg) -> dict:
             raise ValueError(f"{where}: a list_add knob takes only a list, and its values from the term facet")
     else:
         raise ValueError(f"{where}: edit kind must be set_threshold or list_add, got {kind!r}")
-    return {"rule": rule, "facet": facet, "value": None if "value" not in k else str(k["value"]),
-            "direction": direction, "edit": dict(edit)}
+    value = k.get("value")
+    return {"rule": rule, "facet": facet, "value": None if value is None else
+            str(value) if not isinstance(value, list) else [str(x) for x in value],
+            "when": when, "direction": direction, "edit": dict(edit)}
+
+
+def _values(where: str, facet: str, v: object) -> tuple[str, ...]:
+    """A condition's values: a string or a non-empty list of strings, each one the ledger allows for the facet."""
+    values = [v] if isinstance(v, str) else v
+    if not isinstance(values, list) or not values or not all(isinstance(x, str) for x in values):
+        raise ValueError(f"{where}: facet {facet} needs a string or a list of strings")
+    allowed = _FACET_VALUES.get(facet)
+    if allowed is not None and set(values) - set(allowed):
+        raise ValueError(f"{where}: facet {facet} must be one of {', '.join(allowed)}")
+    return tuple(values)
+
+
+def _when(k: Mapping) -> dict[str, tuple[str, ...]]:
+    """The knob's conditions, {facet: allowed values}: what `_knob` built, or (a knob made in code) its facet and
+    value. A term knob and a broad knob have none."""
+    if "when" in k:
+        return dict(k["when"])
+    if k.get("facet") is None or k["facet"] == "term":
+        return {}
+    v = k.get("value")
+    return {k["facet"]: tuple(v) if isinstance(v, (list, tuple)) else (str(v),)}
 
 
 def load_settings(path: Path = DEFAULT, cfg=None) -> dict:
@@ -168,25 +206,65 @@ def _concrete(intents: Iterable[dict], raw: Mapping) -> list[dict]:
     return out
 
 
+def _intent(k: Mapping, terms: Iterable[str]) -> dict:
+    edit = k["edit"]
+    if edit["kind"] == "list_add":
+        return {"kind": "list_add", "list": edit["list"], "values": sorted(set(terms))}
+    return {"kind": "set_threshold", "table": "default", "key": edit["key"],
+            **({"step": edit["step"]} if "step" in edit else {"value": edit["value"]})}
+
+
+def _changes(intent: dict, view: Mapping) -> bool:
+    try:
+        _concrete([intent], view)
+    except rulesedit.EditError:
+        return False
+    return True
+
+
 def _pick(rule: str, direction: str, n_spans: int, facets: Mapping, cal: dict, view: Mapping):
     """(knob, intent) for the first knob of `rule` + `direction` that fits the evidence and changes something:
-    facet knobs (in file order) when at least half the evidence spans carry the value, then the broad knob."""
+    facet knobs (in file order) when at least half the evidence spans carry an allowed value of each of the knob's
+    facets, then the broad knob."""
     knobs = [k for k in cal["knobs"] if k["rule"] == rule and k["direction"] == direction]
     for k in sorted(knobs, key=lambda k: k["facet"] is None):
-        edit = k["edit"]
-        if k["facet"] is not None:
-            seen = facets.get(k["facet"], {})
-            share = sum(seen.values()) if k["facet"] == "term" else seen.get(k["value"], 0)
+        if k["facet"] == "term":
+            share = sum(facets.get("term", {}).values())
             if not n_spans or not share or share * 2 < n_spans:
                 continue
-        if edit["kind"] == "list_add":
-            intent = {"kind": "list_add", "list": edit["list"], "values": sorted(facets.get("term", {}))}
-        else:
-            intent = {"kind": "set_threshold", "table": "default", "key": edit["key"],
-                      **({"step": edit["step"]} if "step" in edit else {"value": edit["value"]})}
-        try:
-            _concrete([intent], view)
-        except rulesedit.EditError:
+        elif k["facet"] is not None:
+            shares = [sum(facets.get(f, {}).get(v, 0) for v in values) for f, values in _when(k).items()]
+            if not n_spans or not all(share and share * 2 >= n_spans for share in shares):
+                continue
+        intent = _intent(k, facets.get("term", {}))
+        if _changes(intent, view):
+            return k, intent
+    return None
+
+
+def _fits(k: Mapping, span: Mapping[str, set]) -> bool:
+    """Whether the knob's edit is one that clears this span: a term knob needs a term, a facet knob every one of its
+    facets present with only allowed values. A broad knob fits any span. A span with no facet never fits a facet
+    knob, so old evidence (a justification logged before #212) can't turn one."""
+    if k["facet"] == "term":
+        return bool(span.get("term"))
+    return all(span.get(f) and set(span[f]) <= set(values) for f, values in _when(k).items())
+
+
+def _pick_kept(rule: str, kept: Mapping[tuple, Mapping[str, set]], min_docs: int, cal: dict, view: Mapping):
+    """(knob, intent, covered docs) for the `kept` trigger: the first loosen knob of `rule` (facet knobs in file
+    order, then the broad one) that covers at least `min_docs` docs and changes something. A doc is covered when
+    the knob fits every span kept in it (`_fits`), so a proposal turns only a setting that clears what it cites;
+    None (a review) otherwise."""
+    docs: dict = {}
+    for (doc, _span), facets in kept.items():
+        docs.setdefault(doc, []).append(facets)
+    knobs = [k for k in cal["knobs"] if k["rule"] == rule and k["direction"] == "loosen"]
+    for k in sorted(knobs, key=lambda k: k["facet"] is None):
+        covered = {d for d, spans in docs.items() if all(_fits(k, s) for s in spans)}
+        if len(covered) < max(1, min_docs):
             continue
-        return k, intent
+        intent = _intent(k, (t for d in covered for s in docs[d] for t in s.get("term", ())))
+        if _changes(intent, view):
+            return k, intent, covered
     return None

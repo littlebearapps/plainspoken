@@ -552,6 +552,21 @@ def first_quote(evidence: object) -> tuple[str | None, int | None]:
     return None, None
 
 
+def covered_facets(rid: str, entry: object, doc: Doc | None) -> dict:
+    """The `form` and `section` of the findings a justification for `rid` covers (what JR saw: `justify.evidence`),
+    each only when every one of them has the same value (#212). A justification's span is rule + `*`, so these are
+    all the ledger knows of which findings it kept; a mixed or unknown value is left out, and calibrate then asks for
+    a review rather than turn a form or section knob."""
+    items = [f for f in justify.evidence(entry) if isinstance(f, dict)] if isinstance(entry, dict) else []
+    out: dict = {}
+    for key, value_of in (("form", lambda f: _form({**f, "rule": rid}, doc)),
+                          ("section", lambda f: section_of(f.get("line"), doc))):
+        values = {value_of(f) for f in items}
+        if len(values) == 1 and None not in values:
+            out[key] = values.pop()
+    return out
+
+
 def merge_events(merged: dict, doc: Doc | None, cfg, root: Path, *, doc_id: str | None = None) -> list[dict]:
     """The events a merged report adds to the ledger:
     - each rule entry a judge decided (`source` `judge:Jn`): `fired` for the judge's own `fail`, `passed` for its
@@ -560,7 +575,8 @@ def merge_events(merged: dict, doc: Doc | None, cfg, root: Path, *, doc_id: str 
       else rule + `*`. On a lint+judge rule, facet `agree` is (the entry's lint findings hold a BLOCK or CANDIDATE
       for the rule) == (the judge failed it); `section` comes from the quote's line;
     - each JR-reviewed justification: `justified:<kind>` (event `justify`, actor `human`), then `jr_accept` or
-      `jr_reject` (event `jr`, actor `jr`, facet `kind`), both WARN on rule + `*`, never with the reason.
+      `jr_reject` (event `jr`, actor `jr`, facet `kind`), both WARN on rule + `*`, never with the reason. Both carry
+      the `form` and `section` of the findings the justification covers (`covered_facets`, #212);
     Lint-only entries are left to `check`, and a `carried` entry (#188) to the merge of the draft its judge read, as
     a `carried` justification is to the merge whose JR review accepted it.
     Each entry's findings are the ones the merge used (the saved lint when it was current, else a fresh one), so the
@@ -602,10 +618,11 @@ def merge_events(merged: dict, doc: Doc | None, cfg, root: Path, *, doc_id: str 
             continue  # a carried accept (#188) is logged by the merge whose JR review it was
         rid, kind = item["rule"], item["kind"]
         span_text = ledger.span_hash(rid, NO_SPAN)
+        covered = covered_facets(rid, (rules or {}).get(rid) if isinstance(rules, dict) else None, doc)
         out.append(ledger.make_event(event="justify", actor="human", outcome=f"justified:{kind}", rule=rid,
-                                     severity="WARN", span_hash=span_text, **base))
+                                     severity="WARN", span_hash=span_text, facets=covered, **base))
         out.append(ledger.make_event(event="jr", actor="jr", outcome=_REVIEWS[item["review"]], rule=rid,
-                                     severity="WARN", span_hash=span_text, facets={"kind": kind}, **base))
+                                     severity="WARN", span_hash=span_text, facets={**covered, "kind": kind}, **base))
     return ledger.distinct(out)
 
 

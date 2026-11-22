@@ -8,7 +8,9 @@ The triggers, in priority order (one candidate per rule, its highest-priority tr
 2. `fp`: fires ≥ `fp_min_fires` and effective FP > `fp_rate` → loosen through a knob; else demote a BLOCK rule;
    else shadow a lint WARN rule; else review.
 3. `missed`: `missed` events on one rule or pattern in ≥ `missed_min_docs` docs → review.
-4. `kept`: `kept_docs` ≥ `kept_min_docs` (WARN spans only) → loosen through a knob, else review.
+4. `kept`: `kept_docs` ≥ `kept_min_docs` (WARN spans only) → loosen through a knob that fits every span kept in
+   `kept_min_docs` of those docs, citing those only (`_pick_kept`; #212: evidence with no form or section never
+   fits a knob that names one), else review.
 5. `dormant`: no fire in `dormant_days`, on a ledger at least that old → deprecate → shadow (lint) or remove → remove,
    one step per `cycle_days` since the rule's last applied proposal.
 
@@ -44,10 +46,11 @@ from pathlib import Path
 from plainspoken import (adapters, config, kaizen, ledger, profile as _profile, proposals, registry, report,
                          rulesedit)
 # The settings (data/kaizen.toml) and the knobs live in calibrate_knobs; these names stay calibrate's public face.
-from plainspoken.calibrate_knobs import DEFAULT, DIRECTIONS, _cal, _concrete, _pick, _view, load_settings  # noqa: F401
+from plainspoken.calibrate_knobs import (DEFAULT, DIRECTIONS, _cal, _concrete, _pick, _pick_kept, _view,  # noqa: F401
+                                         load_settings)
 
 TRIGGERS = ("stuck", "fp", "missed", "kept", "dormant")
-GOLDEN = "not available until Phase 6"
+GOLDEN = "not run (calibrate checks no labelled cases; the golden set measures the judges, not lint settings)"
 _FIRES = ("BLOCK", "WARN")
 _NATURAL = re.compile(r"(\d*)(.*)", re.S)
 
@@ -79,21 +82,24 @@ def _natural(rule: str) -> tuple:
 
 
 def _span_facets(events: list[dict], pred) -> dict[str, dict]:
-    """{rule: {span key: {facet: value}}} over the events `pred` accepts."""
+    """{rule: {span key: {facet: {values}}}} over the events `pred` accepts: every value any of a span's events
+    carries (a doc justified twice with findings in different sections holds both)."""
     out: dict[str, dict] = {}
     for e in events:
         if e.get("rule") and pred(e):
             bucket = out.setdefault(str(e["rule"]), {}).setdefault((e.get("doc_id"), e.get("span_hash")), {})
-            bucket.update({str(k): _facet_value(v) for k, v in (e.get("facets") or {}).items()})
+            for k, v in (e.get("facets") or {}).items():
+                bucket.setdefault(str(k), set()).add(_facet_value(v))
     return out
 
 
 def _counts(spans: Mapping) -> dict[str, dict[str, int]]:
     out: dict[str, dict[str, int]] = {}
     for facets in spans.values():
-        for k, v in facets.items():
-            out.setdefault(k, {})
-            out[k][v] = out[k].get(v, 0) + 1
+        for k, values in facets.items():
+            for v in values:
+                out.setdefault(k, {})
+                out[k][v] = out[k].get(v, 0) + 1
     return out
 
 
@@ -204,18 +210,20 @@ def _rule_candidates(rule, m, ctx) -> list[dict]:
                          excerpts=_excerpts(evs, rule.id, lambda e: e.get("outcome") == "missed")))
     if m["kept_docs"] >= t["kept_min_docs"]:
         kept = ctx["kept"].get(rule.id, {})
-        facets = m["facets"]["kept"]
         reason = f"kept in {m['kept_docs']} docs"
-        evidence = {"kept_docs": m["kept_docs"], "kept_spans": len(kept), "jr_accept": m["jr_accept"],
-                    "survived": m["survived"], "facets": facets}
-        ex = _excerpts(evs, rule.id, ctx["is_kept"])
-        picked = _pick(rule.id, "loosen", len(kept), facets, cal, view)
+        # kept_records: one per rule justified in a doc (span rule + `*`), one per WARN kept to publication (#212)
+        evidence = {"kept_docs": m["kept_docs"], "kept_records": len(kept), "jr_accept": m["jr_accept"],
+                    "survived": m["survived"], "facets": m["facets"]["kept"]}
+        picked = _pick_kept(rule.id, kept, t["kept_min_docs"], cal, view)
+        covered = picked[2] if picked else {k[0] for k in kept}
+        ex = _excerpts(evs, rule.id, lambda e: ctx["is_kept"](e) and e.get("doc_id") in covered)
         if picked:
-            out.append(_cand(rule.id, "kept", "loosen", [picked[1]], reason, evidence, m["kept_docs"],
-                             picked[0]["facet"] is not None, ex))
+            evidence["covered_docs"] = len(covered)
+            out.append(_cand(rule.id, "kept", "loosen", [picked[1]], f"{reason}; the setting covers {len(covered)}",
+                             evidence, len(covered), picked[0]["facet"] is not None, ex))
         else:
-            out.append(_cand(rule.id, "kept", "review", [], f"{reason}; no knob fits", evidence, m["kept_docs"],
-                             excerpts=ex))
+            out.append(_cand(rule.id, "kept", "review", [], f"{reason}; no setting fits the form and section kept "
+                             f"in {t['kept_min_docs']} of them", evidence, m["kept_docs"], excerpts=ex))
     if ctx["old_enough"]:
         c = _dormant(rule, m, evs, ctx["profiles"], ctx["aliases"], ctx["knobbed"], t,
                      ctx["now"])

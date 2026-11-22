@@ -148,7 +148,8 @@ draft), never hold text.
 `merge` records what the judges decided once the report is written: each judge rule entry's own verdict (`fired`
 for the judge's `fail`, `passed` for its `pass`), with facet `agree` on rules both the lint and a judge look at, and
 each JR-reviewed justification as `justified:<kind>` then `jr_accept` or `jr_reject` (a carried one adds nothing,
-as its accept was logged when JR gave it). Judge evidence and
+as its accept was logged when JR gave it). Both carry the `form` and `section` of the findings the justification
+covers, each only when they all share it (#212). Judge evidence and
 justification reasons are never stored, even with excerpts on. An INCOMPLETE merge logs `merge_incomplete` friction,
 and a reply `judge-record` refuses logs `judge_reply_rejected` friction (both with the engine's message, file names
 and values taken out). In `<key>.report.json`, each judge rule entry carries `judge_verdict`, the judge's own call,
