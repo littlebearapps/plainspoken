@@ -174,6 +174,17 @@ class CheckSkill(unittest.TestCase):
         step6 = " ".join(self.text[self.text.index("6. **Fix pass**"):self.text.index("7. **Justify")].split())
         self.assertIn("at most two in the whole run, not counting a free one", step6)
 
+    def test_the_shortcut_is_the_engine_s_call(self):  # #188: judge-input's exit 4, never judged by eye
+        step = self.step1()
+        self.assertIn("Exit 4 → the shortcut", step)
+        self.assertIn("Start no judges: go to step 5, and say so in step 8", step)
+        step6 = " ".join(self.text[self.text.index("6. **Fix pass**"):self.text.index("7. **Justify")].split())
+        self.assertIn("all four judges rerun unless step 1 exits 4", step6)
+        for host in ("codex", "hermes"):
+            notes = (REPO / "hosts" / f"{host}.md").read_text(encoding="utf-8")
+            self.assertNotIn("# exit 1 or 3:", notes)
+            self.assertIn("# exit 1, 3 or 4: see check step 1", notes)
+
 if __name__ == "__main__":
     unittest.main()
 

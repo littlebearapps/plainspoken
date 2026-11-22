@@ -49,7 +49,8 @@ writing. It explains the check step by step, what each result means, and what th
    line that's only a link or button label, don't count as sentences for rule 7d. A fix never adds a fact, number, name, quote, example or opinion. After each pass
    the lint and all four judges run again, because the text changed. A pass doesn't count when all that's left is
    a judge's first find on text no fix had changed (`merge` lists those rules as `pre-existing:`), up to two of
-   those in a run.
+   those in a run. Once a run, a pass that only joined two sentences or split one, after judges who passed everything
+   and with only lint rules failing, reruns the lint and JR but not the four judges (`merge` prints `shortcut:`).
 6. **What the fixes changed.** Before its first lint the check saves the draft as it was (`meaning-diff --start`), and
    when it has edited the draft it compares the two (`meaning-diff`). Any number, price, qualifier ("over 22 years"),
    negation, condition, exclusion or promise that a fix dropped or added, and any "because" it added or "so" it used

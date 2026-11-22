@@ -261,14 +261,22 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
             entry["verdict"] = "pending-judge"
         rules_out[rid] = entry
 
-    for g in sorted({r.group for r in expected.values() if r.group}):
-        j = read_json(paths[g])
+    groups = sorted({r.group for r in expected.values() if r.group})
+    judged = {g: read_json(paths[g]) for g in groups}
+    carry = None  # #188: the judged draft whose verdicts carry to this one, when the shortcut applies
+    if any(isinstance(j, dict) and j.get("article_sha256") != sha for j in judged.values()):
+        carry = _shortcut(article, sha, paths, judged, profile, cfg)["base"]
+    carried: set[str] = set()
+    for g in groups:
+        j = judged[g]
         if j is None:
             problems.append(f"{g}: judge file missing or not valid JSON")
             continue
-        if j.get("article_sha256") != sha:
+        if j.get("article_sha256") != sha and not (carry and j.get("article_sha256") == carry):
             problems.append(f"{g}: judged a different version of the article (stale) — rerun the judge")
             continue
+        if j.get("article_sha256") != sha:
+            carried.add(g)
         if j.get("profile_sha256") != profile.sha256 or j.get("ruleset_version") != cfg.version:
             problems.append(f"{g}: judged under another profile or ruleset (stale) — rerun the judge")
             continue
@@ -295,6 +303,7 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
                 "severity": "BLOCK" if lint_block or judge_block else expected[rid].severity,
                 "evidence": v.get("evidence", []),
                 "findings": prev.get("findings", []),
+                **({"carried": True} if g in carried else {}),
             }
 
     missing = sorted(rid for rid in expected if rules_out.get(rid, {}).get("verdict") in (None, "pending-judge"))
@@ -309,7 +318,7 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     from plainspoken import rounds  # local: rounds → sentdiff → capture imports this module
     try:  # a marker only: when it can't run, nothing is marked and the merge goes on
         rounds.mark(rules_out, article.read_text(encoding="utf-8"), sha, paths["rounds"],
-                    complete=not (missing or problems))
+                    complete=not (missing or problems), carried=bool(carried))
     except (OSError, ValueError):
         pass
     if missing or problems:
@@ -337,6 +346,25 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     return merged
 
 
+def _shortcut(article: Path, sha: str, paths: dict[str, Path], judged: dict, profile: Profile, cfg) -> dict:
+    from plainspoken import rounds  # local: rounds → sentdiff → capture imports this module
+    try:
+        return rounds.shortcut(article.read_text(encoding="utf-8"), sha, paths["rounds"], judged,
+                               {"profile_sha256": profile.sha256, "ruleset_version": cfg.version})
+    except (OSError, ValueError):
+        return {"base": None, "second": False, "why": "the draft or its rounds can't be read"}
+
+
+def shortcut(article: Path, reports_dir: Path, profile: Profile, cwd: Path, content_type: str = "article") -> dict:
+    """#188, for `judge-input`: whether merge would carry the judges' verdicts on the last judged draft to this
+    one, so the judges needn't run (`rounds.shortcut`: `base`, `why`, `second`)."""
+    cfg = load_config()
+    paths = report_paths(article, reports_dir, cwd)
+    groups = sorted({r.group for r in cfg.rules_for_profile(profile, content_type)
+                     if r.group and r.method != "n/a" and r.status != "shadow"})
+    return _shortcut(article, sha256(article), paths, {g: read_json(paths[g]) for g in groups}, profile, cfg)
+
+
 def merge_lines(merged: dict) -> list[str]:
     """What `merge` prints: its status line, then any `missing verdicts:` and `problem:` lines."""
     cov = merged["coverage"]
@@ -350,6 +378,10 @@ def merge_lines(merged: dict) -> list[str]:
     if pre:
         lines.append(f"  pre-existing: {', '.join(pre)} (a judge's first find on text unchanged since the judges "
                      "last read it)")
+    carried = sorted({e["source"].split(":", 1)[1] for e in merged["rules"].values() if e.get("carried")})
+    if carried:  # #188
+        lines.append(f"  shortcut: {', '.join(carried)} carried from the last judged draft (they passed everything, "
+                     "and the fix since only joined or split sentences)")
     if cov["missing"]:
         lines.append(f"  missing verdicts: {', '.join(cov['missing'])}")
     return lines + [f"  problem: {p}" for p in merged["problems"]]

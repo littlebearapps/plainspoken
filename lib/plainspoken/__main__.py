@@ -2,7 +2,8 @@
 register-checklist|claims|reader-value|kaizen|setup|doctor|eval} …
 Exit 0 ok · 1 findings, INCOMPLETE / UNRESOLVED / FAIL (merge), a check or claims result other than PASS (status),
 invalid justifications or nothing to review (justify), a lint BLOCK or WARN left
-without --keep (judge-input; 3 while the draft's claim ledger isn't current, unless --ignore-claims), claims findings,
+without --keep (judge-input; 3 while the draft's claim ledger isn't current, unless --ignore-claims; 4 for the
+shortcut, #188: the judges' verdicts carry, so start none), claims findings,
 gaps, a failed recheck, a status or checker record other than PASS, a stale ledger
 (checker-input, record), reader-value or action-module findings, a delivery record or status other than a
 current PASS (every self-check), a stale delivery reply or a contract that doesn't validate (deliver-input,
@@ -564,6 +565,13 @@ def _main(argv: list[str] | None) -> int:
             print("plainspoken: open lint lines kept with --keep (merge still counts each one):", file=sys.stderr)
             for f in kept:
                 print(f"  {f['severity']:5} r{f['rule']:<4} L{f.get('line', '?')}", file=sys.stderr)
+        cut = report.shortcut(args.path, reports_dir, prof, root, ctype)
+        if cut["base"]:  # #188: merge carries the judges' verdicts, so none are started
+            print(f"plainspoken: shortcut: {cut['why']}, so the judges' verdicts carry to this draft. Don't start "
+                  "the judges: run merge (check step 5).", file=sys.stderr)
+            return 4
+        if cut["second"]:
+            print(f"plainspoken: no shortcut: {cut['why']}.", file=sys.stderr)
         if args.write:  # the line exactly as printed without --write, so its input_digest still matches
             try:
                 for item in items:

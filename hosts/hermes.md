@@ -38,7 +38,7 @@ here too.
 
    ```bash
    T=$(mktemp -d)
-   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1 or 3: see check step 1; the lint and any hold print on stderr
+   RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1, 3 or 4: see check step 1; the lint and any hold print on stderr
    RUN agent-prompt tells-judge --line 1 < "$T/input.jsonl" > "$T/J1.prompt"    # and --line 2, 3, 4
    ```
 
@@ -67,7 +67,7 @@ For the check skill's four judges, one block does steps 1 to 3 in parallel and r
 
 ```bash
 T=$(mktemp -d)
-RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1 or 3: see check step 1; the lint and any hold print on stderr
+RUN judge-input "FILE" --plugin-profile '${user_config.profile}' > "$T/input.jsonl"  # exit 1, 3 or 4: see check step 1; the lint and any hold print on stderr
 for n in 1 2 3 4; do
   RUN agent-prompt tells-judge --line $n < "$T/input.jsonl" > "$T/J$n.prompt"
   hermes chat --query-file "$T/J$n.prompt" --oneshot -Q -t file --source tool | RUN agent-reply > "$T/J$n.json" &
