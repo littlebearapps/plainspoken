@@ -29,8 +29,10 @@ Each file, what writes it, and what it's bound to:
   each a different version, as the draft's sha256, a hash per sentence and the sentences each failed judge rule
   quoted. It holds none of the draft's text. `merge` compares the draft with the latest one that isn't this version
   to mark a judge rule entry `pre_existing` in the report: every quote is in a sentence unchanged since the judges
-  last read the draft, and that round didn't fail the rule on those sentences (#200). Deleted by
-  `meaning-diff FILE --start`.
+  last read the draft, and that round didn't fail the rule on those sentences (#200). Each round also keeps a hash
+  of each sentence as written (`exact`) and whether only lint-owned rules failed (`lint_only`), and `shortcuts`
+  lists the drafts whose merge carried the judges' verdicts (#188, below); a carried merge saves no round. Deleted
+  by `meaning-diff FILE --start`.
 - `<key>.reply.json`: written by the check skill (all four judge replies one after another, or one reply on a
   retry or for JR), deleted by `judge-record --from`; bound to nothing (scratch).
 - `<key>.claims.json`: written by `claims status`; bound to article_sha256, ledger_sha256 (the status, its reasons,
@@ -140,6 +142,12 @@ and values taken out). In `<key>.report.json`, each judge rule entry carries `ju
 beside `verdict`: when a lint BLOCK forces the verdict to `fail`, `judge_verdict` still says what the judge decided,
 and that's what the ledger records. A judge entry may also carry `pre_existing: true` (see `<key>.rounds.json`
 above); `merge` prints those rules on a `pre-existing:` line. It never changes a verdict, a status or an exit code.
+A judge entry carries `carried: true` when the shortcut (#188) took it from the last draft the judges read, not
+this one. `judge-input` and `merge` both take it, once a run, only when that round's judges passed everything, only
+lint-owned rules failed, the judge files are for that draft, and this draft is that one with one pair of
+neighbouring sentences joined (by a comma, a semicolon, "and" or "but") or one sentence split, every word kept.
+`judge-input` then exits 4 with no judge lines, and `merge` prints a `shortcut:` line. The ledger records no judge
+event for a carried entry.
 A rule 7d WARN whose every line ends "no reason needed" (no join of two neighbours clears its section) stays
 in `warns` but not in `unresolved`, needs no justification, and `merge` prints it on a `kept, no reason
 needed:` line (ruleset 4.6.0, #73).

@@ -90,6 +90,8 @@ edit FILE, and its bytes stay unchanged.
    `--keep` for a rule with no open line → rerun step 1 once without it; any other exit 2 → stop with its message.
    Exit 3 → FILE has a claim ledger that isn't current, and it prints why. From write, finish the claims step (write
    steps 6 and 7 say how), then step 1 again. On its own, rerun step 1 with `--ignore-claims` and say so in step 8.
+   Exit 4 → the shortcut: the judges passed everything and the fix since only joined or split two sentences, so
+   their verdicts carry. Start no judges: go to step 5, and say so in step 8.
 2. **Judge input.** Step 1 already printed it; this is the same call. Its four paths go to step 3.
 3. **Judges.** In ONE message, start four `plainspoken:tells-judge` subagents, one per line. Each prompt is: "Judge
    this. Your input is in <path>." with that judge's path from step 1. Nothing else: no file contents, no opinion,
@@ -110,8 +112,8 @@ edit FILE, and its bytes stay unchanged.
    the list of failing rules and their evidence from `RUN paths FILE` → the `report` file. If it can't be started (the project may deny it),
    follow `${CLAUDE_PLUGIN_ROOT}/skills/humanize/SKILL.md` yourself. Fix every BLOCK and every failing WARN under
    the fix rules above; a 7 or 7d WARN the rhythm rule can't clear goes to step 7 instead, never lengthened. Then
-   go back to step 1 (the hash changed, so all four judges rerun). When both passes are spent and merge still says
-   FAIL → step 8 and report it. If it says UNRESOLVED → step 7, then step 8.
+   go back to step 1 (the hash changed, so all four judges rerun unless step 1 exits 4). When both passes are
+   spent and merge still says FAIL → step 8 and report it. If it says UNRESOLVED → step 7, then step 8.
 7. **Justify what you kept** (after the last fix pass you'll make). When no BLOCK remains but a WARN still fails and you have a real reason to keep it,
    follow `references/fix-or-justify.md` (template → fill → review input → one JR judge → record → merge). A JR
    reject leaves the rule UNRESOLVED: fix it, or rewrite the reason once.

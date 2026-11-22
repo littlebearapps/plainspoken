@@ -561,8 +561,9 @@ def merge_events(merged: dict, doc: Doc | None, cfg, root: Path, *, doc_id: str 
       for the rule) == (the judge failed it); `section` comes from the quote's line;
     - each JR-reviewed justification: `justified:<kind>` (event `justify`, actor `human`), then `jr_accept` or
       `jr_reject` (event `jr`, actor `jr`, facet `kind`), both WARN on rule + `*`, never with the reason.
-    Lint-only entries are left to `check`. Each entry's findings are the ones the merge used (the saved lint when
-    it was current, else a fresh one), so the lint isn't read again. `doc` is the parsed merged text (or None: no
+    Lint-only entries are left to `check`, and a `carried` entry (#188) to the merge of the draft its judge read.
+    Each entry's findings are the ones the merge used (the saved lint when it was current, else a fresh one), so the
+    lint isn't read again. `doc` is the parsed merged text (or None: no
     `section`). `doc_id` overrides the path-derived id. Damaged entries are skipped."""
     did = doc_id or ledger.doc_id(Path(merged["article"]), root)
     base = {"ruleset_version": str(merged["ruleset_version"]), "profile": str(merged["profile"]), "doc_id": did,
@@ -575,8 +576,8 @@ def merge_events(merged: dict, doc: Doc | None, cfg, root: Path, *, doc_id: str 
         group = JUDGE_SOURCE.fullmatch(str(entry.get("source", "")))
         verdict = entry.get("judge_verdict", entry.get("verdict"))
         severity = entry.get("severity")
-        if group is None or verdict not in _VERDICTS or severity not in ledger.SEVERITIES:
-            continue
+        if group is None or verdict not in _VERDICTS or severity not in ledger.SEVERITIES or entry.get("carried"):
+            continue  # a carried verdict (#188) is the last judged draft's: no judge read this one
         quote, line = first_quote(entry.get("evidence"))
         facets: dict = {}
         rule = cfg.rules.get(rid)
