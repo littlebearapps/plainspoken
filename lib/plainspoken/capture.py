@@ -561,7 +561,8 @@ def merge_events(merged: dict, doc: Doc | None, cfg, root: Path, *, doc_id: str 
       for the rule) == (the judge failed it); `section` comes from the quote's line;
     - each JR-reviewed justification: `justified:<kind>` (event `justify`, actor `human`), then `jr_accept` or
       `jr_reject` (event `jr`, actor `jr`, facet `kind`), both WARN on rule + `*`, never with the reason.
-    Lint-only entries are left to `check`, and a `carried` entry (#188) to the merge of the draft its judge read.
+    Lint-only entries are left to `check`, and a `carried` entry (#188) to the merge of the draft its judge read, as
+    a `carried` justification is to the merge whose JR review accepted it.
     Each entry's findings are the ones the merge used (the saved lint when it was current, else a fresh one), so the
     lint isn't read again. `doc` is the parsed merged text (or None: no
     `section`). `doc_id` overrides the path-derived id. Damaged entries are skipped."""
@@ -597,8 +598,8 @@ def merge_events(merged: dict, doc: Doc | None, cfg, root: Path, *, doc_id: str 
                                      facets=facets, **base))
     for item in merged.get("justified") or ():
         if not (isinstance(item, dict) and isinstance(item.get("rule"), str) and item["rule"]
-                and item.get("kind") in justify.KINDS and item.get("review") in _REVIEWS):
-            continue
+                and item.get("kind") in justify.KINDS and item.get("review") in _REVIEWS) or item.get("carried"):
+            continue  # a carried accept (#188) is logged by the merge whose JR review it was
         rid, kind = item["rule"], item["kind"]
         span_text = ledger.span_hash(rid, NO_SPAN)
         out.append(ledger.make_event(event="justify", actor="human", outcome=f"justified:{kind}", rule=rid,

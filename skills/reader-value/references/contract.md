@@ -35,6 +35,8 @@ example. Replace every value.
 | `stop_condition` | procedural types | when to stop, skip the step, or get help |
 | `prerequisites` | optional | what the reader needs before they start |
 | `evidence_trail` | history types | the sources, places or questions the piece equips the reader to explore |
+| `retrofit` | optional | `true` when the contract was written after the piece was published (see Retrofits) |
+| `brief_source` | retrofits | where a retrofit's intent came from: the original brief or planning notes |
 
 ## Types
 
@@ -71,6 +73,22 @@ cta_phrases = ["Acme Drain Service", "Acme Care Plan", "get a quote"]
 
 They're matched as whole words, case-insensitively, and added to the shipped phrases. Validate reads the config at
 the project root, so run it from there.
+
+## Retrofits: a piece that's already published
+
+A back-catalogue review has no contract written before drafting, because the piece came first. Write a retrofit:
+set `retrofit = true` and say in `brief_source` where the intent came from, such as "the post's planning notes,
+March 2026" or "the original brief in the client's folder". `validate` rejects a retrofit with no `brief_source`, and
+a `brief_source` on a contract that isn't a retrofit. `reader-value status` and `status` print `retrofit contract`
+beside the delivery result, and the delivery record keeps the mark, so a reader knows the contract followed
+publication.
+
+A retrofit draws on what the piece set out to do before it was written: the brief, the planning or state notes, the
+reader and problem it was commissioned for. It never draws on the finished text's specifics, its steps, figures or
+wording, because a contract copied from the draft passes whatever the draft says. Where no brief survives, write the
+contract from the reader and the problem the piece is for, say so in `brief_source` ("no brief survives: written from
+the reader the post was for"), and let deliver mode find what's missing. A retrofit that fails is a finding about the
+published piece, not a reason to loosen the contract.
 
 ## Figures are claims
 

@@ -48,9 +48,10 @@ _SCHEMA: dict[str, dict[str, str]] = {
     "judges": {"calibration_notes": "str"},
     "identity": {"pronoun": "pronoun", "writer": "str"},
     "voice": {"principles": "str_list", "opinion_pattern": "str", "humour": "str", "emoji_max": "count",
-              "exclamation_max": "count", "tone": "unit_table", "tone_notes": "str_table"},
+              "exclamation_max": "count", "tone": "unit_table", "tone_notes": "str_table",
+              "private_tone_notes": "str_list"},
     "rhythm": {"sentence_mean": "number", "sentence_sd": "number", "burstiness": "number",
-               "long_share": "unit", "short_share": "unit", "notes": "str"},
+               "long_share": "unit", "short_share": "unit", "notes": "str", "notes_private": "bool"},
     "reader": {"persona": "str", "comprehension_floor": "year", "glossary": "str", "knows": "str_list"},
     "blends": {k: "blend" for k in CONTENT_KINDS},
     "formatting": {k: "str" for k in CONTENT_KINDS},
@@ -61,7 +62,7 @@ _SCHEMA["lexicon"].update({k: "str_list" for k in _LEXICON_HABITS})
 _ARRAYS: dict[str, dict[str, str]] = {
     "registers": {"name": "name", "pronoun": "pronoun", "formality": "str", "notes": "str"},
     "anchors": {"id": "name", "tags": "name_list", "text": "str", "path": "str", "lines": "line_range",
-                "source": "str"},
+                "source": "str", "private": "bool"},
 }
 _REQUIRED = {"registers": ("name",), "anchors": ("id", "tags")}
 # Keys `unset_keys` never lists: [thresholds] takes any ruleset name, `name` and the array ids are required, an
@@ -84,6 +85,7 @@ class Anchor:
     lines: tuple[int, int] | None = None
     source: str = ""
     base: str = ""
+    private: bool = False
 
 
 @dataclass(frozen=True)
@@ -141,6 +143,8 @@ def _is_number(value) -> bool:
 
 def _check_type(path: Path, section: str, key: str, value, kind: str, where: str | None = None) -> None:
     where = where or f"{path}: [{section}] {key}"
+    if kind == "bool" and not isinstance(value, bool):
+        raise ProfileError(f"{where}: expected true or false")
     if kind in ("str", "pronoun", "blend", "version") and not isinstance(value, str):
         raise ProfileError(f"{where}: expected a string, got {type(value).__name__}")
     if kind == "version" and not value.strip():
@@ -305,7 +309,7 @@ def load(ref: str | Path, search: tuple[Path, ...] = ()) -> Profile:
         registers=tuple(Register(**r) for r in raw.get("registers", [])),
         anchors=tuple(Anchor(id=a["id"], tags=tuple(a["tags"]), text=a.get("text", ""), path=a.get("path", ""),
                              lines=tuple(a["lines"]) if "lines" in a else None, source=a.get("source", ""),
-                             base=str(path.parent)) for a in raw.get("anchors", [])),
+                             base=str(path.parent), private=a.get("private", False)) for a in raw.get("anchors", [])),
         voice=voice,
     )
 

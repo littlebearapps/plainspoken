@@ -46,7 +46,7 @@ class Keys(unittest.TestCase):
         p = report.report_paths(self.cwd / "post.md", self.cwd / ".plainspoken" / "reports", self.cwd)
         self.assertEqual(set(p), {"lint", "J1", "J2", "J3", "J4", "JR", "justify", "report", "reply", "claims",
                                   "claims-check", "delivery", "delivery-reply", "checked", "before", "first-draft",
-                                  "meaning", "J1-input", "J2-input", "J3-input", "J4-input", "rounds"})
+                                  "meaning", "J1-input", "J2-input", "J3-input", "J4-input", "rounds", "carry"})
         key = report.report_key(self.cwd / "post.md", self.cwd)
         self.assertEqual(p["claims"].name, f"{key}.claims.json")
         self.assertEqual(p["claims-check"].name, f"{key}.claims-check.json")
@@ -60,6 +60,7 @@ class Keys(unittest.TestCase):
         self.assertEqual(p["before"].name, f"{key}.before.md")
         self.assertEqual(p["meaning"].name, f"{key}.meaning.json")
         self.assertEqual(p["rounds"].name, f"{key}.rounds.json")  # #200: merge's judged rounds
+        self.assertEqual(p["carry"].name, f"{key}.carry.json")  # #188: JR accepts that carry across a fix
 
 
 class TwoIndexFiles(unittest.TestCase):

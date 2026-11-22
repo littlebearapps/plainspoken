@@ -45,8 +45,8 @@ from plainspoken.frontmatter import load as load_yaml
 
 __all__ = ["DELIVERY_ITEMS", "DELIVERY_RUBRIC", "REVIEWERS", "TEMPLATE", "ContractError", "ContractNotReady",
            "DeliveryReplyError", "StaleDeliveryReply", "check_modules", "cta_phrases", "default_contract", "delivery_input",
-           "delivery_rubric_hash", "delivery_status", "load_contract", "merge_phrases", "record_delivery", "shipped_cta_phrases",
-           "shipped_vague_phrases", "validate"]
+           "delivery_rubric_hash", "delivery_status", "load_contract", "merge_phrases", "record_delivery", "retrofit_of",
+           "shipped_cta_phrases", "shipped_vague_phrases", "validate"]
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "templates" / "reader-value.toml"
@@ -155,7 +155,20 @@ def validate(contract: dict, ctas: tuple[str, ...], vague_phrases: tuple[str, ..
     if isinstance(value, str) and " ".join(value.strip().rstrip(".").split()).casefold() in vague:
         findings.append(_error("original_value is vague filler: name the actual method, data or experience the "
                                "piece contributes"))
+    if contract.get("retrofit") is True and "brief_source" not in contract:
+        findings.append(_error("a retrofit contract needs brief_source: say where the piece's intent came from "
+                               "(the original brief, the planning notes), never the published text"))
+    if "brief_source" in contract and contract.get("retrofit") is not True:
+        findings.append(_error("brief_source is only for a retrofit contract: set retrofit = true if the piece "
+                               "was published before this contract was written, or delete brief_source"))
     return findings
+
+
+def retrofit_of(contract: dict) -> dict | None:
+    """`{"brief_source": ...}` for a retrofit contract (#204), else None."""
+    if isinstance(contract, dict) and contract.get("retrofit") is True:
+        return {"brief_source": contract.get("brief_source")}
+    return None
 
 
 # --- loading ----------------------------------------------------------------------------------------------------
@@ -376,7 +389,8 @@ def record_delivery(article: Path, contract: Path, reply_text: str, record_path:
     article_sha, contract_sha = claims.article_hash(article), claims.article_hash(contract)
     article_text = Path(article).read_text(encoding="utf-8")
     base = {**display, "article_sha256": article_sha, "contract_sha256": contract_sha,
-            "rubric_sha256": delivery_rubric_hash(), "reviewer": reviewer}
+            "rubric_sha256": delivery_rubric_hash(), "reviewer": reviewer,
+            "retrofit": retrofit_of(load_contract(contract))}
 
     def write(result: str, *, reading: str | None, reply: dict | None, items: list, module_findings: list,
               error: str | None) -> dict:
@@ -426,13 +440,20 @@ def record_delivery(article: Path, contract: Path, reply_text: str, record_path:
 
 
 def delivery_status(article: Path, contract: Path, record_path: Path, project_root: Path) -> dict:
-    """`{"status": PASS | FAIL | INCOMPLETE | STALE, "reasons": [...], "record": <the record or None>}` for the
+    """`{"status": PASS | FAIL | INCOMPLETE | STALE, "reasons": [...], "record": <the record or None>,
+    "retrofit": {"brief_source": ...} or None}` for the
     delivery record at `record_path`, read against the draft, contract and rubric on disk now. Writes nothing.
 
     PASS needs a readable record whose `article_sha256`, `contract_sha256` and `rubric_sha256` all match now, whose
     `reviewer` is "delivery-checker" and whose `result` is PASS, and a contract that still validates. A hash that moved
     is STALE (an old PASS never stands for new text). A self-check record is never PASS, whatever its `result` says.
     OSError / ValueError when the draft or contract can't be read (ContractError names the file)."""
+    st = _delivery_status(article, contract, record_path, project_root)
+    st["retrofit"] = retrofit_of(load_contract(contract))
+    return st
+
+
+def _delivery_status(article: Path, contract: Path, record_path: Path, project_root: Path) -> dict:
     findings = _ready_contract(article, contract, project_root)
     now = {"article_sha256": claims.article_hash(article), "contract_sha256": claims.article_hash(contract),
            "rubric_sha256": delivery_rubric_hash()}

@@ -32,6 +32,7 @@ def fired(rule, span, doc=D1, severity="WARN", **kw):
 
 
 STAR = "*"
+SHADOW_RULE = "29"  # a `status = "shadow"` rule in the shipped ruleset
 
 
 def sample() -> list[dict]:
@@ -171,6 +172,23 @@ class Metrics(unittest.TestCase):
     def test_days_since_fired(self):
         self.assertEqual(self.m["4b"]["days_since_fired"], 8)
 
+    def test_shadow_counts_info_fires_of_a_shadow_rule(self):  # #240
+        self.assertEqual(CFG.rules[SHADOW_RULE].status, "shadow")
+        events = [fired(SHADOW_RULE, "s1", severity="INFO", ts="2026-10-13T09:00:00+00:00"),
+                  fired(SHADOW_RULE, "s1", severity="INFO", sha=SHA_B),  # a new draft, the same span: once
+                  fired(SHADOW_RULE, "s2", doc=D2, severity="INFO")]
+        r = kaizen.rule_metrics(events, CFG, NOW)[SHADOW_RULE]
+        self.assertEqual((r["shadow"], r["fires"], r["docs"]), (2, 0, 0))
+        self.assertEqual(r["last_fired"], "2026-10-13T09:00:00+00:00")
+        for key in ("fix_rate", "justify_rate", "dismiss_rate", "effective_fp"):
+            self.assertIsNone(r[key], key)  # rates still run over `fires` only
+
+    def test_info_on_a_live_rule_is_not_shadow(self):  # a quote or allow marker takes a live rule's hit to INFO
+        self.assertEqual(self.m["4b"]["shadow"], 0)  # sample()'s INFO `shadowish` fire on 4b
+        self.assertEqual(self.m["4b"]["fires"], 2)
+        for rid, r in self.m.items():
+            self.assertEqual(r["shadow"], 0, rid)  # sample() has no shadow-rule events
+
     def test_pattern_missed_never_a_rule_row(self):
         self.assertNotIn("?", self.m)
         self.assertEqual(kaizen.pattern_metrics(sample()),
@@ -229,6 +247,20 @@ class Report(unittest.TestCase):
         lines = kaizen.report_lines(kaizen.rule_metrics([], CFG, NOW), 0, kaizen.friction_summary([], []), {})
         self.assertIn("no kaizen events yet", "\n".join(lines))
 
+    def test_shad_column(self):  # #240: a shadow rule's row shows its fires; other rows print 0
+        evs = sample() + [fired(SHADOW_RULE, "s1", severity="INFO"),
+                          fired(SHADOW_RULE, "s2", doc=D2, severity="INFO")]
+        lines = kaizen.report_lines(kaizen.rule_metrics(evs, CFG, NOW), 0, kaizen.friction_summary([], evs), {})
+        header = lines[0].split()
+        col = header.index("shad")
+        self.assertEqual(header[col - 1], "fires")
+        cells = {ln.split()[0]: ln.split() for ln in lines if ln.split() and ln.split()[0] in CFG.rules}
+        self.assertEqual(cells[SHADOW_RULE][1:3], ["0", "2"])  # fires 0, shad 2
+        self.assertEqual(cells["4b"][1:3], ["2", "0"])
+        widths = {len(ln) for ln in lines if ln.split() and (ln.split()[0] == "rule" or ln.split()[0] in cells)}
+        self.assertEqual(len(widths), 1, lines)  # still fixed width
+        self.assertIn("shad = shadow", " ".join(lines))
+
 
 def _walk(obj):
     if isinstance(obj, dict):
@@ -253,9 +285,15 @@ class Share(unittest.TestCase):
         self.assertEqual(out["ruleset_version"], CFG.version)
         self.assertEqual(out["window"], {"since": "2026-10-01T00:00:00+00:00", "until": None})
         self.assertEqual(set(out["rules"]), {"2", "4b", "7", "15", "21"})
-        self.assertEqual(set(out["rules"]["4b"]), {"fires", "docs", "fixed", "justified", "jr_accept", "jr_reject",
-                                                    "dismissed", "upheld", "missed", "survived"})
+        self.assertEqual(set(out["rules"]["4b"]), {"fires", "shadow", "docs", "fixed", "justified", "jr_accept",
+                                                    "jr_reject", "dismissed", "upheld", "missed", "survived"})
         self.assertEqual(out["rules"]["4b"]["fires"], 2)
+        self.assertEqual(out["rules"]["4b"]["shadow"], 0)
+
+    def test_shadow_key(self):  # #240
+        evs = [fired(SHADOW_RULE, "s1", severity="INFO"), fired(SHADOW_RULE, "s2", severity="INFO")]
+        out = kaizen.share(kaizen.rule_metrics(evs, CFG, NOW), CFG, "9.9.9")
+        self.assertEqual((out["rules"][SHADOW_RULE]["shadow"], out["rules"][SHADOW_RULE]["fires"]), (2, 0))
         keys = {k for k, _ in _walk(out) if k is not None}
         self.assertFalse(keys & FORBIDDEN_KEYS)
         values = [v for _, v in _walk(out) if isinstance(v, str)]

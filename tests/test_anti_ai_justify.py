@@ -69,7 +69,7 @@ class Resolve(unittest.TestCase):
         d = _tmp(self)
         (d / "999-t.justify.json").write_text("{garbage")
         self.assertEqual(justify.resolve(d, "999-t", "a" * 64, []),
-                         {"accepted": set(), "justified": [], "unused": [], "problems": []})
+                         {"accepted": set(), "justified": [], "unused": [], "problems": [], "reviewed": {}})
 
     def test_missing_file_resolves_nothing_and_is_not_a_problem(self):
         got = justify.resolve(_tmp(self), "999-t", "a" * 64, ["7b"])

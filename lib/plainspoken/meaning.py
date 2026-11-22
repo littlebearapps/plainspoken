@@ -491,6 +491,7 @@ def start(path: Path, root: Path, reports_dir: Path) -> int | None:
     report.write_atomic(p["before"], data)
     p["meaning"].unlink(missing_ok=True)
     p["rounds"].unlink(missing_ok=True)  # #200: merge's judged rounds belong to the earlier run
+    p["carry"].unlink(missing_ok=True)  # #188: and so do the JR accepts that carry across a fix
     return claimed
 
 
