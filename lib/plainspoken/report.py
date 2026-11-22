@@ -8,7 +8,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plainspoken import _util, justify, metrics
+from plainspoken import _util, carry, justify, metrics
 from plainspoken.checks_lexical import CHECKS as LEXICAL
 from plainspoken.checks_structural import CHECKS as STRUCTURAL
 from plainspoken.doc import CONTENT_TYPES, parse
@@ -79,6 +79,7 @@ def report_paths(article: Path, reports_dir: Path, cwd: Path) -> dict[str, Path]
     out["first-draft"] = Path(reports_dir) / f"{key}.first-draft.md"  # meaning-diff: write's first draft, before any edit
     out["meaning"] = Path(reports_dir) / f"{key}.meaning.json"  # meaning-diff's result, bound to both texts
     out["rounds"] = Path(reports_dir) / f"{key}.rounds.json"  # #200: merge's last two judged drafts, no text
+    out["carry"] = Path(reports_dir) / f"{key}.carry.json"  # #188: JR accepts that carry across a fix, no text
     return out
 
 
@@ -263,16 +264,16 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
 
     groups = sorted({r.group for r in expected.values() if r.group})
     judged = {g: read_json(paths[g]) for g in groups}
-    carry = None  # #188: the judged draft whose verdicts carry to this one, when the shortcut applies
+    base = None  # #188: the judged draft whose verdicts carry to this one, when the shortcut applies
     if any(isinstance(j, dict) and j.get("article_sha256") != sha for j in judged.values()):
-        carry = _shortcut(article, sha, paths, judged, profile, cfg)["base"]
+        base = _shortcut(article, sha, paths, judged, profile, cfg)["base"]
     carried: set[str] = set()
     for g in groups:
         j = judged[g]
         if j is None:
             problems.append(f"{g}: judge file missing or not valid JSON")
             continue
-        if j.get("article_sha256") != sha and not (carry and j.get("article_sha256") == carry):
+        if j.get("article_sha256") != sha and not (base and j.get("article_sha256") == base):
             problems.append(f"{g}: judged a different version of the article (stale) — rerun the judge")
             continue
         if j.get("article_sha256") != sha:
@@ -311,7 +312,11 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     warns = sorted(rid for rid, e in rules_out.items() if e["verdict"] == "fail" and e["severity"] == "WARN")
     # fix or justify (2026-09-29): a WARN fail needs an accepted reason, except a 7d no plain join can clear (#73)
     needs = [rid for rid in warns if justify.needs_reason(rid, rules_out[rid])]
-    res = justify.resolve(d, key, sha, needs, stamps={"profile_sha256": profile.sha256, "ruleset_version": cfg.version})
+    _spans(rules_out, needs, article, profile, ctype)
+    cstamps = {"profile_sha256": profile.sha256, "ruleset_version": cfg.version, "content_type": ctype}
+    record = carry.load(paths["carry"], cstamps)
+    res = justify.resolve(d, key, sha, needs, stamps={"profile_sha256": profile.sha256, "ruleset_version": cfg.version},
+                          rules=rules_out, record=record)
     problems += res["problems"]
     rejected = {j["rule"] for j in res["justified"] if j["review"] == "reject"}
     unresolved = [rid for rid in needs if not _resolved(rid, res["accepted"], rejected, cfg.aliases)]
@@ -321,6 +326,11 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
                     complete=not (missing or problems), carried=bool(carried))
     except (OSError, ValueError):
         pass
+    if res["reviewed"] and not (missing or problems):  # #188: save JR's accepts (and drop its rejects) to carry
+        try:
+            write_atomic(paths["carry"], carry.payload(cstamps, carry.updated(record, rules_out, res["reviewed"], sha)))
+        except OSError:
+            pass  # nothing carries; the next fix asks JR again, as before
     if missing or problems:
         status = "INCOMPLETE"
     elif blocks:
@@ -344,6 +354,22 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     # data/schemas/report.schema.json.
     write_atomic(paths["report"], json.dumps(merged, indent=2, ensure_ascii=False) + "\n")
     return merged
+
+
+def _spans(rules_out: dict, needs: list[str], article: Path, profile: Profile, ctype: str) -> None:
+    """#188: give each lint-owned rule that needs a reason its evidence `spans` (`carry.spans`), what lets JR's accept
+    carry to a later draft. A draft that can't be parsed gets none, so nothing carries."""
+    lint_owned = [rid for rid in needs if rules_out[rid].get("source") == "lint"]
+    if not lint_owned:
+        return
+    try:
+        doc = parse(article.read_text(encoding="utf-8"), path=str(article), profile=profile, content_type=ctype)
+    except (OSError, ValueError):
+        return
+    for rid in lint_owned:
+        got = carry.spans(rid, justify.evidence(rules_out[rid]), doc)
+        if got:
+            rules_out[rid]["spans"] = got
 
 
 def _shortcut(article: Path, sha: str, paths: dict[str, Path], judged: dict, profile: Profile, cfg) -> dict:
@@ -382,6 +408,10 @@ def merge_lines(merged: dict) -> list[str]:
     if carried:  # #188
         lines.append(f"  shortcut: {', '.join(carried)} carried from the last judged draft (they passed everything, "
                      "and the fix since only joined or split sentences)")
+    moved = sorted(j["rule"] for j in merged.get("justified", []) if j.get("carried"))
+    if moved:  # #188
+        lines.append(f"  carried: {', '.join(moved)} (JR accepted the same reason on an earlier draft, and the fix "
+                     "since didn't change its evidence)")
     if cov["missing"]:
         lines.append(f"  missing verdicts: {', '.join(cov['missing'])}")
     return lines + [f"  problem: {p}" for p in merged["problems"]]

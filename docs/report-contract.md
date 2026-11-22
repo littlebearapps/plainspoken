@@ -21,7 +21,7 @@ Each file, what writes it, and what it's bound to:
   of every `--write` run, so a held run leaves none. Bound to nothing itself: the line's input_digest is what
   `judge-record` checks (scratch).
 - `<key>.justify.json`: written by `justify --template --write` (then filled in by the check skill); bound to
-  article_sha256.
+  article_sha256, except for a rule whose JR accept carries (`<key>.carry.json`, below).
 - `<key>.JR.judge.json`: written by `judge-record --group JR`; bound to article_sha256 + justify_sha256,
   profile_sha256, ruleset_version.
 - `<key>.report.json`: written by `merge`; bound to everything above.
@@ -33,6 +33,17 @@ Each file, what writes it, and what it's bound to:
   of each sentence as written (`exact`) and whether only lint-owned rules failed (`lint_only`), and `shortcuts`
   lists the drafts whose merge carried the judges' verdicts (#188, below); a carried merge saves no round. Deleted
   by `meaning-diff FILE --start`.
+- `<key>.carry.json`: written by `merge` when it completes after reading a current JR review (#188); bound to
+  profile_sha256, ruleset_version and content_type. For each lint-owned rule JR accepted in this run, it keeps the
+  kind, the reason, JR's reason and the rule's `spans`; a later reject of that rule deletes it. It holds none of the
+  draft's text. A later draft's justification for that rule carries the accept, with no JR review, only when its
+  kind and reason are the accepted ones, character for character, and every one of the rule's `spans` now is one
+  that accept saw. Each span hashes a lint finding (its line number left out) with the text it's about: its H2
+  section as written for rules 7, 7d, NR-2, 12e and 13, the whole draft for every other rule and any finding with no
+  line. A judge-owned rule never carries. `merge` then accepts the rule even from a justification file written for
+  an older version (its problem line names what carried, when something else didn't), `justify --template` fills
+  in the carried kind and reason and names them on a `carried:` line, and `justify --review-input` leaves them out.
+  Deleted by `meaning-diff FILE --start`.
 - `<key>.reply.json`: written by the check skill (all four judge replies one after another, or one reply on a
   retry or for JR), deleted by `judge-record --from`; bound to nothing (scratch).
 - `<key>.claims.json`: written by `claims status`; bound to article_sha256, ledger_sha256 (the status, its reasons,
@@ -136,7 +147,8 @@ draft), never hold text.
 
 `merge` records what the judges decided once the report is written: each judge rule entry's own verdict (`fired`
 for the judge's `fail`, `passed` for its `pass`), with facet `agree` on rules both the lint and a judge look at, and
-each JR-reviewed justification as `justified:<kind>` then `jr_accept` or `jr_reject`. Judge evidence and
+each JR-reviewed justification as `justified:<kind>` then `jr_accept` or `jr_reject` (a carried one adds nothing,
+as its accept was logged when JR gave it). Judge evidence and
 justification reasons are never stored, even with excerpts on. An INCOMPLETE merge logs `merge_incomplete` friction,
 and a reply `judge-record` refuses logs `judge_reply_rejected` friction (both with the engine's message, file names
 and values taken out). In `<key>.report.json`, each judge rule entry carries `judge_verdict`, the judge's own call,
@@ -149,6 +161,8 @@ lint-owned rules failed, the judge files are for that draft, and this draft is t
 neighbouring sentences joined (by a comma, a semicolon, "and" or "but") or one sentence split, every word kept.
 `judge-input` then exits 4 with no judge lines, and `merge` prints a `shortcut:` line. The ledger records no judge
 event for a carried entry.
+A `justified` entry carries `carried: true` when its accept came from `<key>.carry.json`, not a review of this
+draft, and `merge` prints those rules on a `carried:` line. A lint entry that needs a reason carries its `spans`.
 A rule 7d WARN whose every line ends "no reason needed" (no join of two neighbours clears its section) stays
 in `warns` but not in `unresolved`, needs no justification, and `merge` prints it on a `kept, no reason
 needed:` line (ruleset 4.6.0, #73).
