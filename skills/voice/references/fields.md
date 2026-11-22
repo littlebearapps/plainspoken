@@ -25,6 +25,11 @@ doesn't print reaches no drafting skill.
   checker.
 - `[lexicon]` `extra_bans`: words or names you never want in print. Example: `["Acme"]`, a former employer's name.
   Who reads it: the checker.
+- `[lexicon]` `exempt_terms`: names you have to print that hold a banned word, matched as whole phrases in any case.
+  Example: a competitor's trading name that starts with a word rule 2 bans. Rule 2 lets the word through inside the
+  name only, and the same word elsewhere still blocks. A project can list names for every profile in
+  `.plainspoken/config.toml` under the same key.
+  Who reads it: the checker.
 - `[document]`: how a file is read (visible frontmatter keys, the FAQ key, headings that hold lists, headings that
   may carry long sentences). Who reads it: the checker.
 - `[rules]` `disabled`: rule ids switched off for this profile. Who reads it: the checker.

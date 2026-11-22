@@ -16,6 +16,9 @@ changes the locale, is never WARN, and setup doesn't print it.
 The `profile keys` rows are information too (#251): the profile `profile` resolves, its version and last-updated
 date, then one row per section listing the keys this plugin version reads that the file doesn't set. A key left out
 keeps its default, so none of this is a fault, and the plugin's own profiles get the first row only.
+
+The `exempt terms` row is information as well (#243): every name rule 2 lets a banned word through inside, the
+ruleset's, the profile's and the project's together, with how many came from each.
 """
 from __future__ import annotations
 
@@ -47,7 +50,7 @@ CHAT_NAMES = {"claude-ai": "claude.ai", "chatgpt": "ChatGPT"}
 _VERSION = re.compile(r"Python (\d+)\.(\d+)(?:\.(\d+))?")
 # System locale names (encoding and @modifier stripped) that suggest a variant; anything else suggests nothing.
 _SYSTEM_LOCALES = {"en_AU": "en-AU", "en_GB": "en-GB", "en_US": "en-US"}
-INFO_ROWS = ("locale", "profile keys")  # rows that inform and never warn: setup leaves them to doctor
+INFO_ROWS = ("locale", "profile keys", "exempt terms")  # rows that inform and never warn: setup leaves them to doctor
 _WIDTH = len(NOT_CHECKED) + 2
 
 
@@ -234,6 +237,17 @@ def _profile_keys(root: Path, env: Mapping[str, str], plugin_profile: str | None
     return rows
 
 
+def _exempt_terms(root: Path, env: Mapping[str, str], plugin_profile: str | None) -> Check:
+    """The merged set of rule 2's exempt terms and where each part came from (#243). Never WARN."""
+    from plainspoken.registry import load_config  # local: doctor otherwise never loads the ruleset
+    prof = config.resolve_profile(None, root, env, "" if plugin_profile is None else plugin_profile)
+    parts = (("ruleset", load_config().lists["ban_exempt_terms"]), (f"profile {prof.name}", prof.exempt_terms),
+             ("project config", prof.project_exempt_terms))
+    merged = list(dict.fromkeys(t for _, terms in parts for t in terms))
+    counts = ", ".join(f"{len(terms)} from the {where}" for where, terms in parts)
+    return Check("exempt terms", OK, f"{len(merged)} ({counts}): " + "; ".join(merged))
+
+
 def _tool_call(root: Path, env: Mapping[str, str]) -> Check:
     """The tool-call check's mode and where it came from. Off is the default and says so."""
     try:
@@ -263,6 +277,7 @@ def _shell(host: str, root: Path, env: Mapping[str, str], plugin_profile: str | 
                      ("user-wide config", lambda: _user_config(host, env)),
                      ("locale", lambda: _locale(root, env, plugin_profile, plugin_locale)),
                      ("profile keys", lambda: _profile_keys(root, env, plugin_profile)),
+                     ("exempt terms", lambda: _exempt_terms(root, env, plugin_profile)),
                      ("tool-call check", lambda: _tool_call(root, env)),
                      ("chat-reply check", lambda: _chat_reply(root, env))):
         out += _safe(name, fn)

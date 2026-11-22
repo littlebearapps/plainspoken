@@ -32,7 +32,7 @@
       "description": "The article path exactly as it was given to `merge`: it can be relative to the directory merge ran in. Resolve it against the project root (docs/report-contract.md), never against the reader's own directory."
     },
     "profile": {"type": "string", "minLength": 1, "description": "The profile's [profile] name."},
-    "profile_sha256": {"$ref": "#/$defs/sha256", "description": "The profile file plus its calibration-notes file."},
+    "profile_sha256": {"$ref": "#/$defs/sha256", "description": "The profile file plus its calibration-notes file, and the project config's [lexicon] exempt_terms when it sets any."},
     "profile_version": {"type": ["string", "null"], "description": "The profile's [profile] version, or null when it sets none. For people: it binds nothing (#251)."},
     "profile_updated": {"type": ["string", "null"], "format": "date", "description": "The profile's [profile] updated date, YYYY-MM-DD, or null. Binds nothing."},
     "ruleset_version": {"type": "string", "minLength": 1},

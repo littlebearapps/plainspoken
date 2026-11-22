@@ -501,6 +501,41 @@ class FollowUpExemptTerms(unittest.TestCase):
         self.assertEqual(sorted(x.severity for x in f), ["BLOCK", "INFO"])
 
 
+class ProfileExemptTerms(unittest.TestCase):  # #243: a profile or project names a business with a banned word in it
+    BODY = "I met Elevate Partners on Tuesday. Their pitch was that I should elevate your brand, their words."
+
+    def sevs(self, body: str, **terms) -> list[str]:
+        return [x.severity for x in run("2", body, profile=dataclasses.replace(PRODUCT, **terms))]
+
+    def test_a_project_term_is_info_and_the_word_elsewhere_still_blocks(self):
+        f = run("2", self.BODY, profile=dataclasses.replace(PRODUCT, project_exempt_terms=("Elevate Partners",)))
+        self.assertEqual(sorted(x.severity for x in f), ["BLOCK", "INFO"])
+        info = next(x for x in f if x.severity == "INFO")
+        self.assertIn("exempt", info.message)
+        self.assertEqual(self.sevs("I should elevate your brand.", project_exempt_terms=("Elevate Partners",)),
+                         ["BLOCK"])
+
+    def test_a_profile_term_works_the_same(self):
+        self.assertEqual(sorted(self.sevs(self.BODY, exempt_terms=("Elevate Partners",))), ["BLOCK", "INFO"])
+
+    def test_without_the_term_both_block(self):
+        self.assertEqual(self.sevs(self.BODY), ["BLOCK", "BLOCK"])
+
+    def test_whole_phrase_in_any_case_and_nothing_wider(self):
+        terms = {"project_exempt_terms": ("Elevate Partners",)}
+        self.assertEqual(self.sevs("ELEVATE PARTNERS called.", **terms), ["INFO"])
+        self.assertEqual(self.sevs("elevate partners called.", **terms), ["INFO"])
+        self.assertEqual(self.sevs("Elevate\npartners called.", **terms), ["INFO"])  # a wrapped line still matches
+        for body in ("Elevate Partnership called.", "Elevate called.", "Elevated Partners called.",
+                     "Partners elevate things."):
+            with self.subTest(body=body):
+                self.assertEqual(self.sevs(body, **terms), ["BLOCK"])
+
+    def test_the_rulesets_terms_still_apply_alongside(self):
+        f = self.sevs("Dynamic Search Ads ran, and Elevate Partners ran them.", project_exempt_terms=("Elevate Partners",))
+        self.assertEqual(f, ["INFO", "INFO"])
+
+
 class FollowUpMinors(unittest.TestCase):
     def test_ness_inflection(self):
         self.assertEqual([x.severity for x in run("2", "The robustness held.")], ["BLOCK"])
