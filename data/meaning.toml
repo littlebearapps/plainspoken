@@ -43,6 +43,11 @@ free = ["free", "complimentary", "no charge", "no cost"]
 # Counted only in a sentence that names a price or fee.
 inclusions = ["include", "included", "includes", "covers", "covered", "comes with"]
 reasons = ["because"]
+# A reason word counted only where a fix joined two sentences with it (#215): the after-text has it at the seam of
+# two before-text sentences that didn't, and the whole text has more of it. "so" alone is too common to count.
+join_reasons = ["so"]
+# "so" followed by one of these is a degree or a fixed phrase, not a join ("so far", "so much", "so that").
+join_reason_not_before = ["far", "much", "many", "long", "that", "too", "often", "few", "little"]
 
 # Multi-word markers, matched before single words: what each phrase is counted as.
 [phrases]
