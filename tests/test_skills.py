@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from plainspoken.checks_structural import NO_JOIN
 from scripts.dev.lint_frontmatter import parse_frontmatter
 from tests._skills import LOAD_LINE, PROFILE_CALL, assert_first_step
 
@@ -383,6 +384,8 @@ class JoinRemedy(unittest.TestCase):  # #73: a 7d join padded a sentence or adde
                       "keeping their own words, or splits one. It never pads or restates to reach a length", check)
         self.assertIn('no "so" or "because"', check)
         self.assertIn("keep the WARN (`--keep`, then step 7)", check)
+        self.assertIn('A 7d line ending "no reason needed" skips step 7', check)  # #73 option B: the lint's words
+        self.assertTrue(NO_JOIN.endswith("no reason needed"))
         self.assertIn("a 7d line the rhythm rule can't clear", check)  # step 1: kept, not lengthened
         self.assertIn("a 7 or 7d WARN the rhythm rule can't clear goes to step 7 instead, never lengthened", check)
         self.assertIn('A rhythm finding (7, 7d) is fixed only by joining two neighbouring sentences with "and", "but", '

@@ -21,7 +21,8 @@ Core rules (these hold for the whole run):
 - A rhythm fix (7, 7d) joins two neighbouring sentences with "and", "but", a comma or a semicolon, keeping their own
   words, or splits one. It never pads or restates to reach a length: no extra word to cross the line (an added "can"
   or "working"), no fact the text already gives said again, no "so" or "because". When no such join or split clears
-  the line, keep the WARN (`--keep`, then step 7): an unresolved 7d is better than a padded sentence.
+  the line, keep the WARN (`--keep`, then step 7): an unresolved 7d is better than a padded sentence. A 7d line
+  ending "no reason needed" skips step 7, as merge keeps it with no reason.
 - At most two fix passes, and fix passes come before justify: justify only what you keep after the last fix pass.
   Before the judges start, step 1 fixes lint findings the same way in at most two lint-only passes; no judge has
   read that text, so they aren't fix passes. Once the judges start, every edit to FILE is a fix pass (after justify

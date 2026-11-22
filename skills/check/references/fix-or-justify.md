@@ -24,6 +24,7 @@ Use this when `merge` reads UNRESOLVED and you will keep a failing WARN. `RUN` a
      pass (cut, join, split or restate) can't move it honestly. For a 7d WARN kept under the rhythm rule, show the
      working: the neighbouring sentences and the word count their join gives, or what joining or splitting them in
      their own words would lose. JR checks it, and saying only that they're short or would need padding is rejected.
+     A 7d whose lines all end "no reason needed" isn't in the template: merge keeps it with no reason.
 
    `reason` is one specific sentence on one line about what the text is doing, true of every evidence item for that
    rule, not "reads fine". Never use `voice` for a phrase on a ban or WARN list. Justify only what you'd defend to
