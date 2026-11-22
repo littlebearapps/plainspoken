@@ -134,6 +134,15 @@ class Doc:
                 out.append(name)
         return out
 
+    def unread_frontmatter_keys(self) -> list[str]:
+        """Top-level frontmatter keys holding prose (a string of 3 or more words) that the lint doesn't read and the
+        project doesn't list in `[document] ignored_frontmatter_keys`, in file order (#208). A notice only: it never
+        makes a finding."""
+        known = {*self.profile.visible_frontmatter_keys, self.profile.faq_frontmatter_key,
+                 *self.profile.ignored_frontmatter_keys}
+        return [k for k, v in self.frontmatter.items()
+                if isinstance(k, str) and k not in known and isinstance(v, str) and len(v.split()) >= 3]
+
     def is_allowed(self, rule: str, phrase: str, line: int) -> bool:
         return any(a.rule == rule and a.line == line and a.phrase.lower() == phrase.lower() for a in self.allows)
 

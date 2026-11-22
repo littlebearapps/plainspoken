@@ -42,7 +42,7 @@ CHAT_NAMES = {"claude-ai": "claude.ai", "chatgpt": "ChatGPT"}
 _VERSION = re.compile(r"Python (\d+)\.(\d+)(?:\.(\d+))?")
 # System locale names (encoding and @modifier stripped) that suggest a variant; anything else suggests nothing.
 _SYSTEM_LOCALES = {"en_AU": "en-AU", "en_GB": "en-GB", "en_US": "en-US"}
-INFO_ROWS = ("locale",)  # rows that inform and never warn: setup leaves them to doctor
+INFO_ROWS = ("locale", "frontmatter")  # rows that inform and never warn: setup leaves them to doctor
 _WIDTH = len(NOT_CHECKED) + 2
 
 
@@ -211,6 +211,12 @@ def _locale(root: Path, env: Mapping[str, str], plugin_profile: str | None, plug
                  f"to use it, {where}")
 
 
+def _document(root: Path, env: Mapping[str, str], plugin_profile: str | None) -> Check:
+    """What the lint reads from the frontmatter, and where each setting came from (#208). Informs, never warns."""
+    prof = config.resolve_profile(None, root, env, "" if plugin_profile is None else plugin_profile)
+    return Check("frontmatter", OK, config.document_lines(prof)[0].removeprefix("frontmatter read: "))
+
+
 def _tool_call(root: Path, env: Mapping[str, str]) -> Check:
     """The tool-call check's mode and where it came from. Off is the default and says so."""
     try:
@@ -239,6 +245,7 @@ def _shell(host: str, root: Path, env: Mapping[str, str], plugin_profile: str | 
                      ("project config", lambda: _project_config(root)),
                      ("user-wide config", lambda: _user_config(host, env)),
                      ("locale", lambda: _locale(root, env, plugin_profile, plugin_locale)),
+                     ("frontmatter", lambda: _document(root, env, plugin_profile)),
                      ("tool-call check", lambda: _tool_call(root, env)),
                      ("chat-reply check", lambda: _chat_reply(root, env))):
         out += _safe(name, fn)

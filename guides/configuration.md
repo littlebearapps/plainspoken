@@ -156,6 +156,25 @@ What each does: [Optional pieces](#optional-pieces). `/plainspoken:setup` writes
 The same section works in the user-wide file. Who wins:
 [Which English the skills write in](#which-english-the-skills-write-in).
 
+### `[document]`: what the lint reads from the frontmatter
+
+    [document]
+    visible_frontmatter_keys = ["title", "description", "tldr"]  # string fields the page shows, linted as text
+    faq_frontmatter_key = "faqs"              # { question, answer } items the page renders as its FAQ; "" for none
+    resource_list_headings = ["^Tools & Resources$"]  # H2s whose `- **Label** — text` bullets are the house format
+    ignored_frontmatter_keys = ["slug_note"]  # prose fields the page never shows: no "not read" line for them
+
+Which fields a site renders is a fact about the site, not the writer's voice, so these belong here. Each key you set
+wins over the voice profile's `[document]` key of the same name, and the profile's stays as the fallback, so a
+project that sets them nowhere works as before. `profile`, `doctor` (the `frontmatter` row) and the lint's JSON
+(`document_from`) say where each value came from: the project config, the profile, or the default. Changing the
+first three makes the saved lint and judge files stale, as a profile edit does.
+
+A frontmatter field holding a string of three or more words that the lint doesn't read gets a `not read:` line under
+the `check` summary (`unread_frontmatter_keys` in the JSON). It's a notice only: it's never a finding and never
+changes a status. List the key in `visible_frontmatter_keys` to check it, or in `ignored_frontmatter_keys` to drop
+the line.
+
 ### `[claims]`, `[reader_value]` and `[integrity]`
 
     [claims]
