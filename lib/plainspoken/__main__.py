@@ -854,7 +854,7 @@ def _delivery_status(args: argparse.Namespace, root: Path) -> int:
     if args.json:
         print(json.dumps(st, indent=2, ensure_ascii=False))
     else:
-        print("\n".join([f"delivery: {st['status']}", *(f"  {r}" for r in st["reasons"])]))
+        print("\n".join([f"delivery: {st['status']}" + _retrofit_note(st), *(f"  {r}" for r in st["reasons"])]))
     return 0 if st["status"] == "PASS" else 1
 
 
@@ -1071,7 +1071,14 @@ def _delivery_line(article: Path, contract: Path, reports_dir: Path, root: Path)
         got = reader_value.delivery_status(article, contract, record, root)
     except _INPUT_ERRORS as e:
         return f"delivery: INCOMPLETE ({_first_line(e)})"
-    return f"delivery: {got['status']}" + (f" ({'; '.join(got['reasons'])})" if got["reasons"] else "")
+    return (f"delivery: {got['status']}" + _retrofit_note(got)
+            + (f" ({'; '.join(got['reasons'])})" if got["reasons"] else ""))
+
+
+def _retrofit_note(st: dict) -> str:
+    """` · retrofit contract (brief: …)` when the contract was written after publication (#204), else empty."""
+    retro = st.get("retrofit")
+    return f" · retrofit contract (brief: {retro['brief_source']})" if retro else ""
 
 
 def _meaning_diff(args: argparse.Namespace, root: Path) -> int:
