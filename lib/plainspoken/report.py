@@ -12,7 +12,7 @@ from plainspoken import _util, carry, justify, metrics
 from plainspoken.checks_lexical import CHECKS as LEXICAL
 from plainspoken.checks_structural import CHECKS as STRUCTURAL
 from plainspoken.doc import CONTENT_TYPES, parse
-from plainspoken.profile import Profile
+from plainspoken.profile import DOCUMENT_KEYS, Profile
 from plainspoken.registry import load_config
 
 GROUPS = ("J1", "J2", "J3", "J4")
@@ -128,6 +128,9 @@ def lint_text(text: str, profile: Profile, content_type: str = "article", cfg=No
         "ruleset_version": cfg.version,
         "content_type": content_type,
         "fields_read": doc.fields_read(),  # #110: what was in scope (additive; older lint files lack it)
+        "unread_frontmatter_keys": doc.unread_frontmatter_keys(),  # #208: a notice, never a finding (additive)
+        # #208: where each [document] setting came from: "project config", "profile" or "default" (additive)
+        "document_from": {k: profile.document_from.get(k, "default") for k in DOCUMENT_KEYS},
         "faq_copies": [span.label for span in doc.faq_copies],  # #208: read once, in the body (additive)
         "article_sha256": sha or hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -152,7 +155,9 @@ def lint_status(lint: dict) -> str:
     return "BLOCK" if any(f["severity"] == "BLOCK" for f in lint["findings"]) else "CLEAN"
 
 
-def summarise(lint: dict) -> str:
+def summarise(lint: dict, notices: bool = False) -> str:
+    """The lint's lines for a person. `notices` adds the informational ones (`check` prints them; the lint-watch hook,
+    whose text reaches the session on every edit, doesn't)."""
     by: dict[str, list[dict]] = {}
     for f in lint["findings"]:
         by.setdefault(f["severity"], []).append(f)
@@ -173,6 +178,10 @@ def summarise(lint: dict) -> str:
         copies = len(lint.get("faq_copies") or [])
         once = f" ({copies} FAQ item{'s' * (copies != 1)} the body FAQ repeats, read there)" if copies else ""
         lines.append(f"  read: {', '.join(lint['fields_read'])}{once}")
+    if notices and lint.get("unread_frontmatter_keys"):  # #208: informational, never a finding
+        lines.append(f"  not read: {', '.join(lint['unread_frontmatter_keys'])} (frontmatter prose; to check it, add "
+                     "it to [document] visible_frontmatter_keys in .plainspoken/config.toml, or to "
+                     "ignored_frontmatter_keys to drop this line)")
     for sev in ("BLOCK", "WARN", "CANDIDATE"):
         hits = by.get(sev, [])
         for f in hits[:15]:

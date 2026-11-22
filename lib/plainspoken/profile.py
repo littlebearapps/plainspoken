@@ -32,6 +32,8 @@ PRONOUNS = ("I", "we", "either")
 BLENDS = ("answer-first", "narrative")
 _VOICE_SECTIONS = ("identity", "voice", "rhythm", "reader", "blends", "formatting", "avoid")
 _LEXICON_HABITS = ("starters", "fillers", "closers")
+# The [document] keys a project config can set too (#208: which fields a site renders is site data, not voice).
+DOCUMENT_KEYS = ("visible_frontmatter_keys", "faq_frontmatter_key", "resource_list_headings")
 
 # section -> {key: expected type}; "str_list" and "regex_list" are lists of strings
 _SCHEMA: dict[str, dict[str, str]] = {
@@ -123,6 +125,10 @@ class Profile:
     registers: tuple[Register, ...] = ()
     anchors: tuple[Anchor, ...] = ()
     voice: dict = field(default_factory=dict)  # the validated voice tables, as loaded (skills read them via the CLI)
+    # #208: where each moved [document] key came from ("profile"; the project config sets it in config.py), and the
+    # project's frontmatter keys left unread on purpose. Unlisted keys are the defaults.
+    document_from: dict = field(default_factory=dict)
+    ignored_frontmatter_keys: tuple[str, ...] = ()
 
 
 def locales() -> set[str]:
@@ -319,6 +325,7 @@ def load(ref: str | Path, search: tuple[Path, ...] = ()) -> Profile:
                              lines=tuple(a["lines"]) if "lines" in a else None, source=a.get("source", ""),
                              base=str(path.parent), private=a.get("private", False)) for a in raw.get("anchors", [])),
         voice=voice,
+        document_from={k: "profile" for k in DOCUMENT_KEYS if k in doc},
     )
 
 

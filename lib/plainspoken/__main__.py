@@ -197,7 +197,7 @@ def _check_stdin(args: argparse.Namespace, root: Path) -> int:
         except _INPUT_ERRORS as e:
             return _input_error(Path("<stdin>"), e)
     lint["article"] = "<stdin>"
-    print(json.dumps(lint, indent=2, ensure_ascii=False) if args.json else report.summarise(lint))
+    print(json.dumps(lint, indent=2, ensure_ascii=False) if args.json else report.summarise(lint, notices=True))
     return 1 if report.lint_status(lint) == "BLOCK" else 0
 
 
@@ -223,6 +223,7 @@ def _profile_summary(p: Profile, cfg, plugin_default: bool = False, locale: conf
         f" · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
         f" · deprecated rules: {', '.join(deprecated) or 'none'}",
         f"calibration notes: {p.calibration_notes or 'none'}",
+        *config.document_lines(p),
         *voice.summary_lines(p),
     ])
 
@@ -433,7 +434,7 @@ def _main(argv: list[str] | None) -> int:
             return _input_error(target, e, "write")
         if not keyed and not args.no_record:
             capture.for_check(lint, args.path, prof, cfg, root, reports=paths["checked"].parent)
-        print(payload if args.json else report.summarise(lint))
+        print(payload if args.json else report.summarise(lint, notices=True))
         return 1 if report.lint_status(lint) == "BLOCK" else 0
     if args.cmd == "profile":
         if args.type is not None and not args.voice:

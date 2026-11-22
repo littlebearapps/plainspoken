@@ -118,7 +118,8 @@ source = "newsletter, May"
 # en_dash_max = 0     # default -1, no limit; once set, every en dash counts, ranges like 9am–6pm included
 
 # [document]
-# checker: how documents are read. These are the defaults.
+# checker: how documents are read. These are the defaults. The first three are site data: set them under [document]
+# in the project's .plainspoken/config.toml, which wins; set here, they're the fallback for a project that doesn't.
 # visible_frontmatter_keys = ["title", "description"]
 # faq_frontmatter_key = ""
 # resource_list_headings = []
