@@ -1,6 +1,6 @@
 ---
 name: cold-reader
-description: Reads one file cold, as the reader it's given, and reports in JSON where it got lost. Never rewrites.
+description: Read-only cold reader, for plain-language and copy-audit.
 tools: Read
 model: sonnet
 effort: low

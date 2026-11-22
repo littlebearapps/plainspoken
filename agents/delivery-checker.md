@@ -1,6 +1,6 @@
 ---
 name: delivery-checker
-description: Read-only delivery reviewer for reader-value. JSON verdicts.
+description: Read-only reviewer, for the reader-value skill only.
 tools: Read, Grep, Glob
 model: opus
 omitClaudeMd: true

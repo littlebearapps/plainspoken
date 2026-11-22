@@ -16,7 +16,9 @@ Codex; the skill still decides *what* to do.
   American English, set `[locale] variant` in a config file (`RUN setup --host codex --locale <variant>`).
 - `allowed-tools`, `argument-hint` and `disable-model-invocation` in the frontmatter are Claude Code settings. Codex
   ignores them. The nine manual-only skills (`adapt`, `claims`, `copy-audit`, `doctor`, `kaizen`, `reader-value`,
-  `register-check`, `setup`, `voice`) still start only when the user asks.
+  `register-check`, `setup`, `voice`) still start only when the user asks. `read-only` may start on its own: it
+  runs the checks of five of them (`claims`, `copy-audit`, `reader-value` deliver, `register-check`, `voice`
+  check) and writes nothing.
 - Another skill named as `/plainspoken:<name>` is `$plainspoken:<name>` here. If it doesn't load, read
   `<root>/skills/<name>/SKILL.md` and follow it.
 - Run every engine call from the project root, as the skills say. Report files are keyed to it.

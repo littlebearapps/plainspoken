@@ -1,6 +1,6 @@
 ---
 name: claims-checker
-description: Read-only claims checker for the claims skill. Returns JSON findings with verbatim evidence.
+description: Read-only checker, for the claims skill only.
 tools: Read, Grep, Glob
 model: opus
 omitClaudeMd: true

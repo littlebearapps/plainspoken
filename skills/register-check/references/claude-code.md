@@ -2,6 +2,8 @@
 
 - The skill is manual-only (`disable-model-invocation: true`): run it as `/plainspoken:register-check`. It never
   triggers on its own.
+- An agent can start its check without the person: `/plainspoken:read-only register-check <file>` runs the
+  same steps with no write pre-approved (`skills/read-only/`).
 - It can run the CLI and write only `.plainspoken/drafts/*`. Pasted text is saved there first so the checker has a
   file to read. If that write is refused, check the text as given and report the lint step as skipped.
 - `${user_config.profile}` may stay as the literal text when the plugin loads with `--plugin-dir`. The CLI treats the

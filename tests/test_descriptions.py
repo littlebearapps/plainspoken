@@ -22,10 +22,12 @@ CAPS = {
     "skills/kaizen/SKILL.md": 250,
     "skills/setup/SKILL.md": 250,
     "skills/doctor/SKILL.md": 250,
-    "agents/tells-judge.md": 160,
-    "agents/cold-reader.md": 140,
-    "agents/claims-checker.md": 140,
-    "agents/delivery-checker.md": 80,  # the always-on budget had ~35 tokens left when it was added
+    "skills/read-only/SKILL.md": 90,  # #245: one listing for five checks; the agent rows below were cut to fit it
+    # The four reviewing agents are only ever started by name, from a skill, so their listing says which (#245).
+    "agents/tells-judge.md": 60,
+    "agents/cold-reader.md": 60,
+    "agents/claims-checker.md": 60,
+    "agents/delivery-checker.md": 60,
     "agents/mining-drafter.md": 30,  # ~10 tokens were left; it's only ever started by name, from kaizen mine
 }
 

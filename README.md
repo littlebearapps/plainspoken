@@ -69,7 +69,7 @@ Updates, pinning a release, the Hermes install scan and uninstalling are in [gui
 
 ## What you get
 
-Thirteen skills. Four start on their own when a request fits; the other nine run only when you call them, so their
+Fourteen skills. Five start on their own when a request fits; the other nine run only when you call them, so their
 descriptions stay out of your context.
 
 | Skill | What it does | Starts |
@@ -78,6 +78,7 @@ descriptions stay out of your context.
 | `humanize` | Rewrites AI patterns out of a draft in your voice, without adding facts | on its own |
 | `write` | Drafts from your notes or brief in your voice, then runs the check | on its own |
 | `plain-language` | Rewrites or checks text so someone outside the field gets it on one read | on its own |
+| `read-only` | Runs the checks of `register-check`, `voice`, `copy-audit`, `claims` and `reader-value` and reports; changes nothing | on its own |
 | `voice` | Builds a voice profile from your own writing samples, applies it or checks against it | when called |
 | `copy-audit` | Audits buyer-facing copy line by line against the evidence | when called |
 | `register-check` | Flags tone, pressure and consent problems in a message before you send it (flags only) | when called |
@@ -87,6 +88,10 @@ descriptions stay out of your context.
 | `kaizen` | Turns your verdicts on findings into proposed rule changes you approve or reject | when called |
 | `setup` | Turns the optional pieces on or off, or prints the paste-in text for chat apps | when called |
 | `doctor` | Checks what this app can run and lists what to fix; changes nothing | when called |
+
+Five of the manual skills check a draft as well as write. `read-only` runs only their checks, so an agent can start
+one on a draft and report without you; building a profile, outlining a contract, building a claim ledger or
+rewriting still waits for you to call the skill.
 
 Four agents do the reviewing, each in a fresh context, read-only:
 - `tells-judge`: the check's judges, one per group of tells, returning JSON verdicts with the exact text as evidence.

@@ -3,6 +3,8 @@
 - The skill is manual-only (`disable-model-invocation: true`). Run it as `/plainspoken:reader-value outline <file>`
   before drafting and `/plainspoken:reader-value deliver <draft>` before the piece ships. It never triggers on its
   own.
+- An agent can start deliver mode without the person: `/plainspoken:read-only reader-value <draft>` runs it
+  with no write pre-approved (`skills/read-only/`). Outline mode stays manual.
 - The reviewer is the `plainspoken:delivery-checker` subagent. Start it with the Agent tool, one agent per run, and
   give it only the prompt SKILL.md deliver step 3 names. It's read-only (Read, Grep, Glob) and runs without the
   project's CLAUDE.md. Save only the JSON object of its reply (first `{` to last `}`) with the Write tool at the

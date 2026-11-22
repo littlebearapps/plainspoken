@@ -87,9 +87,9 @@ where it is when you update, and [install](install.md) explains how to move it.
 
 ## A skill doesn't start on its own
 
-Only four skills start on their own (check, humanize, write and plain-language), so the one you expected may be
-one of the nine that run only when you call them, or a rule in your project's settings may deny it. Look for a
-`Skill(plainspoken:<name>)` deny rule in `.claude/settings.json`.
+Only five skills start on their own (check, humanize, write, plain-language and read-only), so the one you
+expected may be one of the nine that run only when you call them, or a rule in your project's settings may deny
+it. Look for a `Skill(plainspoken:<name>)` deny rule in `.claude/settings.json`.
 
 Type its slash command, for example `/plainspoken:check post.md`, which works even for a denied skill. To let a
 denied skill start on its own again, remove its deny rule.
