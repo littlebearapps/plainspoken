@@ -3,7 +3,8 @@
 - `load_settings`: `data/kaizen.toml`, validated against the ruleset: the `[triggers]` thresholds and the
   `[[knobs]]` (each a rule, an optional facet and value (or list of values), optional `where` conditions on other
   facets, a direction and one edit: `set_threshold` with a `step` or `value`, or `list_add` from the term facet).
-  A knob's facet, value and `where` say which findings its edit clears (#212).
+  A knob's facet, value and `where` say which findings its edit clears (#212). A facet makes a knob narrow; `where`
+  only limits what a knob fits, so a broad knob with one stays broad (ranked after the narrow ones).
 - `_pick`: the first knob of a rule and direction that fits the evidence and changes something; `_pick_kept`, the
   same for the `kept` trigger, by the docs whose every kept span the knob covers.
 - `_concrete`: edit intents as `rulesedit` edits, with `old` read from the ruleset (`_view` builds what it reads from
@@ -25,6 +26,37 @@ _TRIGGER_TYPES = {"fp_min_fires": int, "fp_rate": float, "kept_min_docs": int, "
 _KNOB_KEYS = {"rule", "facet", "value", "where", "direction", "edit"}
 # The facet values a knob condition may name: the ledger's own, so a typo fails at load.
 _FACET_VALUES = {"section": ledger.FACET_SECTIONS, "form": ledger.FACET_FORMS, "metric": ledger.FACET_METRICS}
+# (rule, facet, value) where a rule no longer fires. Calibrate spends the spans logged there before the change, so
+# they turn no knob: a 12d kept in a FAQ section proposes nothing (#208: 12d leaves FAQ sections out).
+EXEMPT = {("12d", "section", "faq")}
+
+
+# --- evidence ------------------------------------------------------------------------------------------------------
+
+def _facet_value(value: object) -> str:
+    return ("true" if value else "false") if isinstance(value, bool) else str(value)
+
+
+def _span_facets(events: list[dict], pred) -> dict[str, dict]:
+    """{rule: {span key: {facet: {values}}}} over the events `pred` accepts: every value any of a span's events
+    carries (a doc justified twice with findings in different sections holds both)."""
+    out: dict[str, dict] = {}
+    for e in events:
+        if e.get("rule") and pred(e):
+            bucket = out.setdefault(str(e["rule"]), {}).setdefault((e.get("doc_id"), e.get("span_hash")), {})
+            for k, v in (e.get("facets") or {}).items():
+                bucket.setdefault(str(k), set()).add(_facet_value(v))
+    return out
+
+
+def _counts(spans: Mapping) -> dict[str, dict[str, int]]:
+    out: dict[str, dict[str, int]] = {}
+    for facets in spans.values():
+        for k, values in facets.items():
+            for v in values:
+                out.setdefault(k, {})
+                out[k][v] = out[k].get(v, 0) + 1
+    return out
 
 
 def _number(v) -> bool:
@@ -43,8 +75,8 @@ def _knob(where: str, k: object, cfg) -> dict:
         raise ValueError(f"{where}: unknown facet {facet!r}")
     if (facet is None or facet == "term") == ("value" in k):
         raise ValueError(f"{where}: a facet knob needs a value (a term knob doesn't), and a broad knob has neither")
-    if "where" in k and (facet is None or facet == "term"):
-        raise ValueError(f"{where}: only a facet knob with a value takes where")
+    if "where" in k and facet == "term":
+        raise ValueError(f"{where}: a term knob takes no where")
     when = {} if facet is None or facet == "term" else {facet: _values(where, facet, k["value"])}
     extra = k.get("where", {})
     if not isinstance(extra, dict) or not all(isinstance(f, str) for f in extra):
@@ -97,7 +129,7 @@ def _values(where: str, facet: str, v: object) -> tuple[str, ...]:
 
 def _when(k: Mapping) -> dict[str, tuple[str, ...]]:
     """The knob's conditions, {facet: allowed values}: what `_knob` built, or (a knob made in code) its facet and
-    value. A term knob and a broad knob have none."""
+    value. A term knob has none, and a broad knob only its `where`."""
     if "when" in k:
         return dict(k["when"])
     if k.get("facet") is None or k["facet"] == "term":
@@ -224,18 +256,14 @@ def _changes(intent: dict, view: Mapping) -> bool:
 
 def _pick(rule: str, direction: str, n_spans: int, facets: Mapping, cal: dict, view: Mapping):
     """(knob, intent) for the first knob of `rule` + `direction` that fits the evidence and changes something:
-    facet knobs (in file order) when at least half the evidence spans carry an allowed value of each of the knob's
-    facets, then the broad knob."""
+    facet knobs (in file order), then the broad knob. A knob fits when at least half the evidence spans carry an
+    allowed value of each of its conditions (its facet and `where`; a term knob: any term)."""
     knobs = [k for k in cal["knobs"] if k["rule"] == rule and k["direction"] == direction]
     for k in sorted(knobs, key=lambda k: k["facet"] is None):
-        if k["facet"] == "term":
-            share = sum(facets.get("term", {}).values())
-            if not n_spans or not share or share * 2 < n_spans:
-                continue
-        elif k["facet"] is not None:
-            shares = [sum(facets.get(f, {}).get(v, 0) for v in values) for f, values in _when(k).items()]
-            if not n_spans or not all(share and share * 2 >= n_spans for share in shares):
-                continue
+        shares = ([sum(facets.get("term", {}).values())] if k["facet"] == "term" else
+                  [sum(facets.get(f, {}).get(v, 0) for v in values) for f, values in _when(k).items()])
+        if shares and not (n_spans and all(share and share * 2 >= n_spans for share in shares)):
+            continue
         intent = _intent(k, facets.get("term", {}))
         if _changes(intent, view):
             return k, intent

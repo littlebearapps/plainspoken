@@ -156,6 +156,19 @@ What each does: [Optional pieces](#optional-pieces). `/plainspoken:setup` writes
 The same section works in the user-wide file. Who wins:
 [Which English the skills write in](#which-english-the-skills-write-in).
 
+### `[lexicon]`: names that hold a banned word
+
+```toml
+[lexicon]
+exempt_terms = ["Elevate Partners"]   # names you have to print, matched as whole phrases in any case
+```
+
+A page that must name a business or product with a banned word in it (`Elevate Partners`) lists the name here once,
+for every profile in the project. Rule 2 reports the word inside that name as INFO; the same word anywhere else still
+blocks. The list joins the ruleset's own exempt terms and the voice profile's `[lexicon] exempt_terms`, and
+`doctor` prints the merged set. Changing it changes `profile_sha256`, so earlier reports go stale. It can't go in
+the user-wide file.
+
 ### `[claims]`, `[reader_value]` and `[integrity]`
 
     [claims]

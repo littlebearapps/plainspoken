@@ -11,6 +11,8 @@
 name = "my-voice"          # checker: names the profile in reports. Lowercase letters, digits, - and _.
 # locale = "en-AU"         # drafting, register-check: only if you always spell one way. The project's [locale] wins.
 flags = []                 # checker: "narrative" relaxes the sentence-rhythm rules for story writing.
+version = "1.0"            # people: your own numbering. Bump it, and the date below, every time you edit this file.
+updated = 2026-11-22       # people: the date of the last edit, no quotes. profile and reports print both.
 
 [identity]
 pronoun = "I"   # drafting, voice check, register-check: "I", "we" or "either".
@@ -83,6 +85,9 @@ fillers = ["mind you"]
 closers = ["See you at the working bee."]
 # extra_bans: checker. Words or names you never want in print, matched as whole words.
 extra_bans = []
+# exempt_terms: checker. Names you must print that hold a banned word ("Elevate Partners"), matched as whole
+# phrases in any case. Only the word inside the name is let off; the same word elsewhere still blocks.
+exempt_terms = []
 
 [[registers]]
 # register-check: a way of writing for one setting (email to members, notice board, social). Its pronoun and

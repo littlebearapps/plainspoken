@@ -251,6 +251,153 @@ class LocaleRow(Base):  # #121: the resolved locale and where it came from; the 
         self.assertRegex(r.stdout, r"\n  (ok|not checked)\s+locale: en-GB \(plugin option\)")
 
 
+class ProfileKeysRows(Base):  # #251: the keys this plugin version reads that the profile doesn't set, info only
+    def rows(self, plugin_profile=None) -> list[doctor.Check]:
+        Fakes(self)
+        return [c for c in doctor.run_checks("claude-code", self.root, self.env, plugin_profile=plugin_profile)
+                if c.name.startswith("profile keys")]
+
+    def use(self, text: str) -> Path:
+        folder = self.root / ".plainspoken" / "profiles"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "mine.toml").write_text(text, encoding="utf-8")
+        self.write_project_config('[engine]\nprofile = "mine"\n')
+        return folder / "mine.toml"
+
+    def test_a_minimal_profile_lists_the_unset_keys_by_section(self):
+        path = self.use((REPO / "templates" / "voice-profile.toml").read_text(encoding="utf-8")
+                        .replace('name = "my-voice"', 'name = "mine"'))
+        rows = self.rows()
+        self.assertTrue(all(r.status == "ok" for r in rows), rows)
+        self.assertEqual(rows[0].name, "profile keys")
+        self.assertIn(f"mine ({path}; version 1.0, updated 2026-11-22)", rows[0].detail)
+        found = {r.name: r.detail for r in rows[1:]}
+        self.assertEqual(found["profile keys [profile]"], "locale")
+        self.assertEqual(found["profile keys [document]"],
+                         "visible_frontmatter_keys, faq_frontmatter_key, resource_list_headings, long_sentence_headings")
+        self.assertEqual(found["profile keys [blends]"], "page, email")
+        self.assertNotIn("profile keys [thresholds]", found)  # any ruleset name, so nothing to list
+        self.assertNotIn("knows", " ".join(found.values()))  # nothing reads it yet
+        n = sum(len(d.split(", ")) for d in found.values())
+        self.assertIn(f": {n} keys not set, listed below", rows[0].detail)
+
+    def test_a_bare_profile_lists_the_empty_arrays(self):
+        self.use('[profile]\nname = "mine"\n')
+        found = {r.name: r.detail for r in self.rows()}
+        self.assertEqual(found["profile keys [profile]"], "locale, flags, version, updated")
+        self.assertEqual(found["profile keys [[anchors]]"], "no entries")
+        self.assertIn("version not set, updated not set", found["profile keys"])
+
+    def test_a_profile_that_sets_them_all_lists_nothing(self):
+        self.use(FULL_PROFILE).with_name("notes.md").write_text("Notes.\n", encoding="utf-8")
+        rows = self.rows()
+        self.assertEqual(len(rows), 1, [r.detail for r in rows])
+        self.assertIn("sets every key this plugin version reads", rows[0].detail)
+
+    def test_the_plugins_own_profile_gets_one_row(self):
+        rows = self.rows(plugin_profile="default")
+        self.assertEqual(len(rows), 1)
+        self.assertIn("the plugin's own profile", rows[0].detail)
+
+    def test_never_warn_and_setup_never_shows_it(self):
+        self.use('[profile]\nname = "mine"\nversion = 3\n')  # a bad profile: not checked, never WARN
+        rows = self.rows()
+        self.assertEqual((rows[0].status, rows[0].name), ("not checked", "profile keys"))
+        self.assertIn("ProfileError", rows[0].detail)
+        self.assertEqual(doctor.setup_lines("claude-code", rows), [])
+
+
+class ExemptTermsRow(Base):  # #243: the merged set rule 2 lets a banned word through inside
+    def test_lists_the_merged_set_with_where_each_came_from(self):
+        from plainspoken.registry import load_config
+        Fakes(self)
+        folder = self.root / ".plainspoken" / "profiles"
+        folder.mkdir(parents=True)
+        (folder / "mine.toml").write_text('[profile]\nname = "mine"\n[lexicon]\nexempt_terms = ["Acme Robust"]\n',
+                                          encoding="utf-8")
+        self.write_project_config('[engine]\nprofile = "mine"\n[lexicon]\nexempt_terms = ["Elevate Partners"]\n')
+        row = {c.name: c for c in doctor.run_checks("claude-code", self.root, self.env)}["exempt terms"]
+        ruleset = load_config().lists["ban_exempt_terms"]
+        self.assertEqual(row.status, "ok")
+        self.assertTrue(row.detail.startswith(f"{len(ruleset) + 2} ({len(ruleset)} from the ruleset, 1 from the "
+                                              "profile mine, 1 from the project config): "), row.detail)
+        for term in (*ruleset, "Acme Robust", "Elevate Partners"):
+            self.assertIn(term, row.detail)
+        self.assertEqual(doctor.setup_lines("claude-code", [row]), [])
+
+
+FULL_PROFILE = """[profile]
+name = "mine"
+locale = "en-AU"
+flags = []
+version = "2"
+updated = 2026-11-22
+[thresholds]
+[lexicon]
+extra_bans = []
+exempt_terms = ["Elevate Partners"]
+starters = ["Right,"]
+fillers = ["mind you"]
+closers = ["Cheers."]
+[document]
+visible_frontmatter_keys = ["title"]
+faq_frontmatter_key = "faqs"
+resource_list_headings = []
+long_sentence_headings = []
+[rules]
+disabled = []
+[judges]
+calibration_notes = "notes.md"
+[identity]
+pronoun = "I"
+writer = "w"
+[voice]
+principles = ["p"]
+opinion_pattern = "o"
+humour = "h"
+emoji_max = 0
+exclamation_max = 0
+tone = {formal_casual = 0.5}
+tone_notes = {formal_casual = "n"}
+private_tone_notes = ["formal_casual"]
+[rhythm]
+sentence_mean = 14.0
+sentence_sd = 7.0
+burstiness = 0.5
+long_share = 0.1
+short_share = 0.3
+notes = "n"
+notes_private = false
+[reader]
+persona = "a reader"
+comprehension_floor = 7
+glossary = "glossary.md"
+[blends]
+article = "answer-first"
+page = "answer-first"
+email = "narrative"
+social = "narrative"
+[formatting]
+article = "a"
+page = "p"
+email = "e"
+social = "s"
+[avoid]
+topics = []
+moves = []
+[[registers]]
+name = "email"
+pronoun = "I"
+formality = "casual"
+[[anchors]]
+id = "a"
+tags = ["opening"]
+text = "t"
+source = "s"
+private = false
+"""
+
+
 STATIC = {
     "claude-code": {"Bash permission"},
     "codex": {"hooks trusted", "sandbox writes", "judges"},

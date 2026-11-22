@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import json
 import os
 import shutil
@@ -417,3 +418,75 @@ class Summary(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
         self.assertEqual(len(r.stderr.strip().splitlines()), 1)
         self.assertTrue(r.stderr.startswith("plainspoken: "))
+
+
+class Version(unittest.TestCase):  # #251: [profile] version and updated, for people; the hash still binds
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        (self.tmp / ".git").mkdir()
+
+    def write(self, extra: str) -> Path:
+        p = self.tmp / "p.toml"
+        p.write_text('[profile]\nname = "p"\n' + extra, encoding="utf-8")
+        return p
+
+    def test_both_keys_load(self):
+        p = P.load(self.write('version = "1.2"\nupdated = 2026-11-22\n'))
+        self.assertEqual((p.version, p.updated), ("1.2", datetime.date(2026, 11, 22)))
+
+    def test_a_profile_without_them_loads_as_before(self):
+        p = P.load(self.write(""))
+        self.assertEqual((p.version, p.updated), (None, None))
+
+    def test_wrong_types_fail_closed_naming_the_key(self):
+        for extra, key in (("version = 1.2\n", "[profile] version"), ("version = 2\n", "[profile] version"),
+                           ('version = " "\n', "[profile] version"),
+                           ('updated = "2026-11-22"\n', "[profile] updated"),
+                           ("updated = 2026-11-22T09:00:00\n", "[profile] updated"),
+                           ("updated = 20261122\n", "[profile] updated")):
+            with self.subTest(extra=extra):
+                with self.assertRaises(P.ProfileError) as cm:
+                    P.load(self.write(extra))
+                self.assertIn(key, str(cm.exception))
+                self.assertIn("p.toml", str(cm.exception))
+
+    def test_the_template_sets_both(self):
+        shutil.copy(REPO / "templates" / "voice-profile.toml", self.tmp / "mine.toml")
+        p = P.load(self.tmp / "mine.toml")
+        self.assertIsNotNone(p.version)
+        self.assertIsNotNone(p.updated)
+
+    def test_profile_prints_them_and_not_set_when_unset(self):
+        r = cli("profile", "--profile", str(self.write('version = "1.2"\nupdated = 2026-11-22\n')))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.splitlines()[1], "version: 1.2 · updated: 2026-11-22")
+        r = cli("profile", "--profile", str(self.write("")))
+        self.assertEqual(r.stdout.splitlines()[1], "version: not set · updated: not set")
+
+    def test_profile_voice_prints_them_only_when_set(self):
+        r = cli("profile", "--voice", "--profile", str(self.write('version = "3"\n')))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("version: 3 · updated: not set", r.stdout.splitlines())
+        r = cli("profile", "--voice", "--profile", str(self.write("")))
+        self.assertNotIn("version:", r.stdout)
+
+    def test_json_lint_and_report_carry_them_and_the_hash_still_binds(self):
+        prof = self.write('version = "1.2"\nupdated = 2026-11-22\n')
+        art = self.tmp / "post.md"
+        art.write_text("The bed is dug. I planted the beans on Sunday and watered them twice.\n", encoding="utf-8")
+        stamps = json.loads(cli("profile", "--json", "--profile", str(prof), cwd=self.tmp).stdout)
+        self.assertEqual((stamps["profile_version"], stamps["profile_updated"]), ("1.2", "2026-11-22"))
+        lint = json.loads(cli("check", str(art), "--profile", str(prof), "--json", cwd=self.tmp).stdout)
+        self.assertEqual((lint["profile_version"], lint["profile_updated"]), ("1.2", "2026-11-22"))
+        saved = json.loads(Path(json.loads(cli("paths", str(art), cwd=self.tmp).stdout)["lint"])
+                           .read_text(encoding="utf-8"))
+        self.assertEqual(saved["profile_version"], "1.2")
+        self.assertEqual(saved["profile_sha256"], stamps["profile_sha256"])
+        # bumping the version is an edit, so the hash moves too: a report never outlives the change
+        prof.write_text('[profile]\nname = "p"\nversion = "1.3"\nupdated = 2026-11-22\n', encoding="utf-8")
+        bumped = json.loads(cli("profile", "--json", "--profile", str(prof), cwd=self.tmp).stdout)
+        self.assertNotEqual(bumped["profile_sha256"], stamps["profile_sha256"])
+        unset = self.write("")
+        lint = json.loads(cli("check", str(art), "--profile", str(unset), "--json", "--no-save", cwd=self.tmp).stdout)
+        self.assertEqual((lint["profile_version"], lint["profile_updated"]), (None, None))

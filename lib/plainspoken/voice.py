@@ -81,6 +81,12 @@ def anchors_lenient(p: Profile, tag: str | None, limit: int, include_private: bo
     return found, skipped
 
 
+def version_line(p: Profile) -> str:
+    """The profile's own version and last-updated date (#251), for people: profile_sha256 is what binds a report."""
+    updated = p.updated.isoformat() if p.updated else "not set"
+    return f"version: {p.version or 'not set'} · updated: {updated}"
+
+
 def summary_lines(p: Profile) -> list[str]:
     """The two voice lines `profile` adds to its summary."""
     tags = Counter(t for a in p.anchors for t in a.tags)
@@ -118,6 +124,7 @@ def voice_lines(p: Profile, content_type: str | None = None, locale: str | None 
     kinds = [content_type] if content_type else list(v.get("blends", {}) | v.get("formatting", {}))
     out = [
         f"voice profile: {p.name}",
+        *([version_line(p)] if p.version or p.updated else []),
         *([f"locale: {locale}"] if locale else []),
         f"writer: {ident.get('writer') or 'not set'} (pronoun {p.pronoun})",
         f"reader: {p.reader_persona or 'not set'} (Year {p.comprehension_floor} floor) · glossary: {glossary_path}",

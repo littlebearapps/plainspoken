@@ -10,6 +10,7 @@ The voice sections ([identity], [voice], [rhythm], [reader], [blends], [formatti
 """
 from __future__ import annotations
 
+import datetime
 import hashlib
 import math
 import re
@@ -34,9 +35,9 @@ _LEXICON_HABITS = ("starters", "fillers", "closers")
 
 # section -> {key: expected type}; "str_list" and "regex_list" are lists of strings
 _SCHEMA: dict[str, dict[str, str]] = {
-    "profile": {"name": "str", "locale": "str", "flags": "str_list"},
+    "profile": {"name": "str", "locale": "str", "flags": "str_list", "version": "version", "updated": "date"},
     "thresholds": {},  # any key; values must be numbers or booleans (names checked against the ruleset)
-    "lexicon": {"extra_bans": "str_list"},
+    "lexicon": {"extra_bans": "str_list", "exempt_terms": "term_list"},
     "document": {
         "visible_frontmatter_keys": "str_list",
         "faq_frontmatter_key": "str",
@@ -64,6 +65,10 @@ _ARRAYS: dict[str, dict[str, str]] = {
                 "source": "str", "private": "bool"},
 }
 _REQUIRED = {"registers": ("name",), "anchors": ("id", "tags")}
+# Keys `unset_keys` never lists: [thresholds] takes any ruleset name, `name` and the array ids are required, an
+# anchor's text, path and lines are alternatives, and nothing reads `knows` or a register's `notes` yet.
+_NOT_SUGGESTED = {("profile", "name"), ("reader", "knows"), ("registers", "notes"), ("anchors", "text"),
+                  ("anchors", "path"), ("anchors", "lines")}
 
 
 class ProfileError(ValueError):
@@ -96,8 +101,14 @@ class Profile:
     name: str
     locale: str | None = None  # None: the profile doesn't set one, so config.resolve_locale looks further
     flags: frozenset[str] = frozenset()
+    version: str | None = None  # the owner's own numbering, for people; profile_sha256 stays the binding (#251)
+    updated: datetime.date | None = None
     thresholds: dict = field(default_factory=dict)
     extra_bans: tuple[str, ...] = ()
+    # Names and fixed terms that hold a banned word (#243): a rule 2 hit inside one is INFO, like the ruleset's
+    # ban_exempt_terms. `project_exempt_terms` come from the project's [lexicon] exempt_terms (config.py adds them).
+    exempt_terms: tuple[str, ...] = ()
+    project_exempt_terms: tuple[str, ...] = ()
     visible_frontmatter_keys: tuple[str, ...] = ("title", "description")
     faq_frontmatter_key: str = ""
     resource_list_headings: tuple[re.Pattern, ...] = ()
@@ -138,8 +149,16 @@ def _check_type(path: Path, section: str, key: str, value, kind: str, where: str
     where = where or f"{path}: [{section}] {key}"
     if kind == "bool" and not isinstance(value, bool):
         raise ProfileError(f"{where}: expected true or false")
-    if kind in ("str", "pronoun", "blend") and not isinstance(value, str):
+    if kind in ("str", "pronoun", "blend", "version") and not isinstance(value, str):
         raise ProfileError(f"{where}: expected a string, got {type(value).__name__}")
+    if kind == "version" and not value.strip():
+        raise ProfileError(f"{where}: expected a version, such as \"1.2\", got an empty string")
+    if kind == "date" and (not isinstance(value, datetime.date) or isinstance(value, datetime.datetime)):
+        got = "a date with a time" if isinstance(value, datetime.datetime) else type(value).__name__
+        raise ProfileError(f"{where}: expected a date written without quotes, such as 2026-11-22, got {got}")
+    if kind == "term_list" and not (isinstance(value, list)
+                                    and all(isinstance(x, str) and x.strip() for x in value)):
+        raise ProfileError(f"{where}: expected a list of names or phrases, none of them empty")
     if kind in ("str_list", "regex_list"):
         if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
             raise ProfileError(f"{where}: expected a list of strings")
@@ -279,8 +298,11 @@ def load(ref: str | Path, search: tuple[Path, ...] = ()) -> Profile:
         name=prof["name"],
         locale=prof.get("locale"),
         flags=frozenset(prof.get("flags", [])),
+        version=prof.get("version"),
+        updated=prof.get("updated"),
         thresholds=dict(raw.get("thresholds", {})),
         extra_bans=tuple(lex.get("extra_bans", [])),
+        exempt_terms=tuple(lex.get("exempt_terms", [])),
         visible_frontmatter_keys=tuple(doc.get("visible_frontmatter_keys", ["title", "description"])),
         faq_frontmatter_key=doc.get("faq_frontmatter_key", ""),
         resource_list_headings=tuple(re.compile(x, re.I) for x in doc.get("resource_list_headings", [])),
@@ -298,6 +320,24 @@ def load(ref: str | Path, search: tuple[Path, ...] = ()) -> Profile:
                              base=str(path.parent), private=a.get("private", False)) for a in raw.get("anchors", [])),
         voice=voice,
     )
+
+
+def unset_keys(p: Profile) -> list[tuple[str, list[str]]]:
+    """The keys this plugin version reads that the profile file doesn't set, by section in schema order, for
+    `doctor` (#251). Information only: a key left out keeps its default. An array of tables counts a key as set
+    when any entry sets it; an array with no entries is listed by itself, as `[[anchors]]`."""
+    raw = tomllib.loads(Path(p.source).read_text(encoding="utf-8"))
+    out: list[tuple[str, list[str]]] = []
+    for section, keys in (*_SCHEMA.items(), *_ARRAYS.items()):
+        if section in _ARRAYS and not raw.get(section):
+            out.append((f"[[{section}]]", []))
+            continue
+        present = set().union(*raw[section]) if section in _ARRAYS else set(raw.get(section, {}))
+        missing = [k for k in keys if k not in present and (section, k) not in _NOT_SUGGESTED
+                   and not (section in _REQUIRED and k in _REQUIRED[section])]
+        if missing:
+            out.append((f"[[{section}]]" if section in _ARRAYS else f"[{section}]", missing))
+    return out
 
 
 @lru_cache(maxsize=1)

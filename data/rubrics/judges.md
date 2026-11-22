@@ -17,7 +17,7 @@ Judge rubric for plainspoken's tells-judge. Each judge gets one group (J1–J4) 
   reject each one, then read the whole article for misses the lint's phrase lists and patterns can't
   see. A rule with no candidates still gets a verdict. Lint BLOCK and WARN findings aren't sent to you
   and stand on their own; don't re-decide them.
-- **What counts as article text.** The body, plus the frontmatter keys listed in `visible_frontmatter_keys`, plus the `question`/`answer` items under `faq_frontmatter_key` when it is set. Fenced code, inline code, HTML comments, URLs, image paths and link targets are not prose.
+- **What counts as article text.** The body, plus the frontmatter keys listed in `visible_frontmatter_keys`, plus the `question`/`answer` items under `faq_frontmatter_key` when it is set. An item listed in `faq_frontmatter_copies` (such as `faqs[0].answer`) repeats the body's FAQ: judge that text once, in the body. Fenced code, inline code, HTML comments, URLs, image paths and link targets are not prose.
 - **Quotations are never a fail.** Words inside a verbatim third-party quotation (a straight
   double-quoted span of 4+ words, or a blockquote ending with an attribution `— Name` / `- Name`) are
   never evidence, whatever they contain.

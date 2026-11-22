@@ -12,6 +12,13 @@ Output is ASCII (`->`, `|`), so a console that can't print UTF-8 still shows it.
 The `locale` row is information, never a fault: it shows the spelling locale and where it came from, and when the
 system locale (LC_ALL, then LC_MESSAGES, then LANG) names a different English variant, how to switch. It never
 changes the locale, is never WARN, and setup doesn't print it.
+
+The `profile keys` rows are information too (#251): the profile `profile` resolves, its version and last-updated
+date, then one row per section listing the keys this plugin version reads that the file doesn't set. A key left out
+keeps its default, so none of this is a fault, and the plugin's own profiles get the first row only.
+
+The `exempt terms` row is information as well (#243): every name rule 2 lets a banned word through inside, the
+ruleset's, the profile's and the project's together, with how many came from each.
 """
 from __future__ import annotations
 
@@ -25,6 +32,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from plainspoken import _util, config, hosts
+from plainspoken import profile as _profile
 
 __all__ = ["Check", "HERMES_FLAGS", "INFO_ROWS", "STATUSES", "format", "heading", "plugin_root", "run_checks",
            "setup_lines", "summary", "system_locale", "write_lines"]
@@ -42,7 +50,7 @@ CHAT_NAMES = {"claude-ai": "claude.ai", "chatgpt": "ChatGPT"}
 _VERSION = re.compile(r"Python (\d+)\.(\d+)(?:\.(\d+))?")
 # System locale names (encoding and @modifier stripped) that suggest a variant; anything else suggests nothing.
 _SYSTEM_LOCALES = {"en_AU": "en-AU", "en_GB": "en-GB", "en_US": "en-US"}
-INFO_ROWS = ("locale",)  # rows that inform and never warn: setup leaves them to doctor
+INFO_ROWS = ("locale", "profile keys", "exempt terms")  # rows that inform and never warn: setup leaves them to doctor
 _WIDTH = len(NOT_CHECKED) + 2
 
 
@@ -211,6 +219,35 @@ def _locale(root: Path, env: Mapping[str, str], plugin_profile: str | None, plug
                  f"to use it, {where}")
 
 
+def _profile_keys(root: Path, env: Mapping[str, str], plugin_profile: str | None) -> list[Check]:
+    """The profile's version and the keys it could set but doesn't (#251). Never WARN: a key left out is a default."""
+    prof = config.resolve_profile(None, root, env, "" if plugin_profile is None else plugin_profile)
+    stamp = f"version {prof.version or 'not set'}, updated {prof.updated.isoformat() if prof.updated else 'not set'}"
+    head = f"{prof.name} ({prof.source}; {stamp})"
+    if Path(prof.source).resolve().parent == _profile.PROFILES_DIR.resolve():
+        return [Check("profile keys", OK, f"{head} is the plugin's own profile, so there's nothing in it to update",
+                      "copy templates/voice-profile.toml to .plainspoken/profiles/ to make your own")]
+    unset = _profile.unset_keys(prof)
+    if not unset:
+        return [Check("profile keys", OK, f"{head} sets every key this plugin version reads")]
+    n = sum(len(keys) or 1 for _, keys in unset)
+    rows = [Check("profile keys", OK, f"{head}: {n} key{'' if n == 1 else 's'} not set, listed below "
+                                      "(information only; each keeps its default)")]
+    rows += [Check(f"profile keys {section}", OK, ", ".join(keys) if keys else "no entries") for section, keys in unset]
+    return rows
+
+
+def _exempt_terms(root: Path, env: Mapping[str, str], plugin_profile: str | None) -> Check:
+    """The merged set of rule 2's exempt terms and where each part came from (#243). Never WARN."""
+    from plainspoken.registry import load_config  # local: doctor otherwise never loads the ruleset
+    prof = config.resolve_profile(None, root, env, "" if plugin_profile is None else plugin_profile)
+    parts = (("ruleset", load_config().lists["ban_exempt_terms"]), (f"profile {prof.name}", prof.exempt_terms),
+             ("project config", prof.project_exempt_terms))
+    merged = list(dict.fromkeys(t for _, terms in parts for t in terms))
+    counts = ", ".join(f"{len(terms)} from the {where}" for where, terms in parts)
+    return Check("exempt terms", OK, f"{len(merged)} ({counts}): " + "; ".join(merged))
+
+
 def _tool_call(root: Path, env: Mapping[str, str]) -> Check:
     """The tool-call check's mode and where it came from. Off is the default and says so."""
     try:
@@ -239,6 +276,8 @@ def _shell(host: str, root: Path, env: Mapping[str, str], plugin_profile: str | 
                      ("project config", lambda: _project_config(root)),
                      ("user-wide config", lambda: _user_config(host, env)),
                      ("locale", lambda: _locale(root, env, plugin_profile, plugin_locale)),
+                     ("profile keys", lambda: _profile_keys(root, env, plugin_profile)),
+                     ("exempt terms", lambda: _exempt_terms(root, env, plugin_profile)),
                      ("tool-call check", lambda: _tool_call(root, env)),
                      ("chat-reply check", lambda: _chat_reply(root, env))):
         out += _safe(name, fn)

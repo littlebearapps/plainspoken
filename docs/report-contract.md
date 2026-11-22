@@ -11,7 +11,9 @@ Each file, what writes it, and what it's bound to:
   Its `fields_read` lists what was linted, in order: `body`, then each of the profile's
   `visible_frontmatter_keys` the file has as a string, then the profile's `faq_frontmatter_key` once if any FAQ
   question or answer was read (the summary prints it as `read: …`). It's additive: a lint file without it, from
-  an older version, still reads and merges.
+  an older version, still reads and merges. `faq_copies` (also additive) lists the FAQ items, as `faqs[0].answer`,
+  whose text the body's FAQ section repeats: they're read once, in the body, and `judge-input` passes them to the
+  judges as `faq_frontmatter_copies`.
 - `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn` (or `--all` for all four);
   bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint) and input_digest (a hash
   of the whole `judge-input` line; `judge-record` rebuilds that line for the current draft and refuses a reply
@@ -86,8 +88,9 @@ Hash formats differ by file type. The lint, judge, justify and report files carr
 field in a file of the same type, never across the two families.
 
 `merge` treats a file as stale, and the report as INCOMPLETE, when its bound hashes or stamps don't match the article,
-profile and ruleset now in use. `profile_sha256` covers the profile file and its calibration-notes file, so editing
-either one invalidates the lint and every judge file. `judge-record` refuses a reply when there's no current lint.
+profile and ruleset now in use. `profile_sha256` covers the profile file and its calibration-notes file, plus the
+project config's `[lexicon] exempt_terms` when it sets any, so editing any of them invalidates the lint and every
+judge file. `judge-record` refuses a reply when there's no current lint.
 A judge record proves the reply fitted the current draft, lint and input. It doesn't prove which process wrote it
 (`judge-record --from` accepts any valid file), and a fresh context isn't a sandbox.
 `claims status` reads `<key>.claims-check.json` only when its bound hashes match the article and ledger on disk now,
@@ -195,13 +198,17 @@ a label: find the report by its key, and check `article_sha256` against the file
 **Check the report is current.** `python3 lib/run.py profile --json [<article>]` prints the stamps a report is bound
 to:
 
-    {"name": …, "path": …, "profile_sha256": …, "ruleset_version": …, "root": …}
+    {"name": …, "path": …, "profile_sha256": …, "ruleset_version": …, "root": …, "profile_version": …,
+     "profile_updated": …}
 
 With an article it reports that file's profile (its `[engine] profiles` match first, as `check` and `merge` resolve
 it); without one, the project's profile. Pass the same `--profile` / `--plugin-profile` (or `PLAINSPOKEN_PROFILE`)
 that `check` and `merge` got. `root` is the project root the command used. A report is current only when its
 `article_sha256` is the sha256 of the article's bytes now and its `profile_sha256` and `ruleset_version` equal the
-ones `profile --json` prints; otherwise rerun `check` and `merge` before trusting `status`.
+ones `profile --json` prints; otherwise rerun `check` and `merge` before trusting `status`. `profile_version` and
+`profile_updated` are the profile's own `[profile] version` and `updated` (null when unset). The lint and report
+files carry them too, for people; they bind nothing, and a report whose `profile_sha256` matches is current whatever
+they say.
 
 ## Host adapter notes (claims ledgers)
 

@@ -46,8 +46,8 @@ from pathlib import Path
 from plainspoken import (adapters, config, kaizen, ledger, profile as _profile, proposals, registry, report,
                          rulesedit)
 # The settings (data/kaizen.toml) and the knobs live in calibrate_knobs; these names stay calibrate's public face.
-from plainspoken.calibrate_knobs import (DEFAULT, DIRECTIONS, _cal, _concrete, _pick, _pick_kept, _view,  # noqa: F401
-                                         load_settings)
+from plainspoken.calibrate_knobs import (DEFAULT, DIRECTIONS, EXEMPT, _cal, _concrete, _counts, _pick,  # noqa: F401
+                                         _pick_kept, _span_facets, _view, load_settings)
 
 TRIGGERS = ("stuck", "fp", "missed", "kept", "dormant")
 GOLDEN = "not run (calibrate checks no labelled cases; the golden set measures the judges, not lint settings)"
@@ -60,10 +60,6 @@ def _first_line(e: BaseException) -> str:
 
 
 # --- evidence -----------------------------------------------------------------------------------------------------
-
-def _facet_value(value: object) -> str:
-    return ("true" if value else "false") if isinstance(value, bool) else str(value)
-
 
 def candidate_key(c: Mapping) -> str:
     """Identifies a candidate across runs: its rule, trigger, action and edit intents (not the values it reads)."""
@@ -79,28 +75,6 @@ proposal_id = proposals.proposal_id
 def _natural(rule: str) -> tuple:
     digits, rest = _NATURAL.match(rule).groups()
     return (int(digits) if digits else 10 ** 6, rest)
-
-
-def _span_facets(events: list[dict], pred) -> dict[str, dict]:
-    """{rule: {span key: {facet: {values}}}} over the events `pred` accepts: every value any of a span's events
-    carries (a doc justified twice with findings in different sections holds both)."""
-    out: dict[str, dict] = {}
-    for e in events:
-        if e.get("rule") and pred(e):
-            bucket = out.setdefault(str(e["rule"]), {}).setdefault((e.get("doc_id"), e.get("span_hash")), {})
-            for k, v in (e.get("facets") or {}).items():
-                bucket.setdefault(str(k), set()).add(_facet_value(v))
-    return out
-
-
-def _counts(spans: Mapping) -> dict[str, dict[str, int]]:
-    out: dict[str, dict[str, int]] = {}
-    for facets in spans.values():
-        for k, values in facets.items():
-            for v in values:
-                out.setdefault(k, {})
-                out[k][v] = out[k].get(v, 0) + 1
-    return out
 
 
 def _excerpts(events: list[dict], rule: str, pred) -> list[str]:
@@ -259,7 +233,7 @@ def _unspent(events: list[dict], metrics: Mapping[str, Mapping], cfg, now: datet
     in use, hasn't reached it) spends nothing yet: if its change is never released, the evidence still counts. A
     review proposal is never applied, so it doesn't reset anything. Bookkeeping events stay, and so do `last_fired`
     and `days_since_fired`: the dormant trigger measures silence, and a rule that fired before the change wasn't
-    silent."""
+    silent. A span in a place `EXEMPT` says its rule no longer fires is spent too (#208)."""
     use = proposals.in_use() if use is None else use
     last: dict[tuple[str, str | None], datetime] = {}
     for e in events:
@@ -272,18 +246,23 @@ def _unspent(events: list[dict], metrics: Mapping[str, Mapping], cfg, now: datet
             if key not in last or when > last[key]:
                 last[key] = when
 
+    exempt = {(rule, key) for rule, facet, value in EXEMPT
+              for key, facets in _span_facets(events, bool).get(rule, {}).items() if facets.get(facet) == {value}}
+
     def spent(e: Mapping) -> bool:
         if e.get("event") in _BOOKKEEPING or not e.get("rule"):
             return False
+        if (str(e["rule"]), (e.get("doc_id"), e.get("span_hash"))) in exempt:
+            return True
         cuts = [last[k] for k in ((str(e["rule"]), None), (str(e["rule"]), e.get("profile"))) if k in last]
         return bool(cuts) and datetime.fromisoformat(e["ts"]) <= max(cuts)
 
-    if not last:
+    if not last and not exempt:
         return events, dict(metrics)
     kept = [e for e in events if not spent(e)]
     fresh = kaizen.rule_metrics(kept, cfg, now)
     out = dict(metrics)
-    for rule in {r for r, _ in last}:
+    for rule in {r for r, _ in last} | {r for r, _ in exempt}:
         if rule in fresh:
             old = metrics.get(rule, {})
             out[rule] = {**fresh[rule], "last_fired": old.get("last_fired"),

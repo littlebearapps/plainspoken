@@ -242,18 +242,9 @@ class Kept(TmpCase):
                           facets={"section": section}))
         return out
 
-    def test_kept_12d_in_faqs_turns_the_faq_knob(self):
-        if not any(k["rule"] == "12d" and k["facet"] == "section" and k["value"] == "faq"
-                   for k in self.settings["knobs"]):
-            self.skipTest("no 12d FAQ knob in data/kaizen.toml (#208)")
-        cands = self.cands(self.kept_12d(["faq", "faq", "faq", "other"]))  # 3 docs need the FAQ knob, 1 doesn't
-        self.assertEqual([(c["rule"], c["action"], c["narrow"], c["docs"]) for c in cands],
-                         [("12d", "loosen", True, 3)])
-        self.assertEqual(cands[0]["evidence"]["covered_docs"], 3)
-        p = calibrate.materialise(cands[0], None, CFG, None, [], NOW)
-        self.assertEqual(p["edits"], [{"kind": "set_threshold", "table": "default", "key": "paragraph_uniform_faq_run",
-                                       "old": 4, "new": 5}])
-        self.assertEqual(p["targets"], ["ruleset", "profile"])
+    def test_kept_12d_in_faqs_proposes_nothing(self):  # #208: 12d no longer fires in FAQ sections
+        self.assertEqual(self.cands(self.kept_12d(["faq", "faq", "faq"])), [])
+        self.assertEqual(self.cands(self.kept_12d(["faq", "faq", "other"])), [])  # one doc left: under kept_min_docs
 
     def test_kept_12d_elsewhere_turns_the_prose_knob(self):
         cands = self.cands(self.kept_12d(["faq", "other", "question", "intro"]))
@@ -310,19 +301,13 @@ class KeptFacets(TmpCase):
         cands = self.cands(self.kept("7d", [{"form": "short-run", "section": s}
                                             for s in ("other", "question", "intro")]))
         self.assertEqual(self.keys(cands), ["staccato_short_run"])
+        self.assertFalse(cands[0]["narrow"])  # `where` scopes the broad knob, it doesn't make it narrow
 
-    def test_12d_kept_in_faqs_never_turns_the_prose_knob(self):
-        events = self.kept("12d", [{"section": "faq"}] * 4)
-        faq = any(k["edit"].get("key") == "paragraph_uniform_faq_run" for k in self.settings["knobs"])
-        self.assertEqual(self.keys(self.cands(events)), ["paragraph_uniform_faq_run" if faq else "review"])
-        self.without("paragraph_uniform_faq_run")  # #208 retires the FAQ knob: then it's a review
-        self.assertEqual(self.keys(self.cands(events)), ["review"])
+    def test_12d_justified_in_faqs_proposes_nothing(self):  # #208: spent, as 12d no longer fires there
+        self.assertEqual(self.cands(self.kept("12d", [{"section": "faq"}] * 4)), [])
 
-    def test_the_3_nov_12d_case(self):  # FAQ blocks plus one action-plan block
-        self.without("paragraph_uniform_faq_run")
-        (c,) = self.cands(self.kept("12d", [{"section": "faq"}] * 3 + [{"section": "other"}]))
-        self.assertEqual((c["action"], c["edits"]), ("review", []))
-        self.assertIn("no setting fits", c["reason"])
+    def test_the_3_nov_12d_case(self):  # FAQ blocks plus one action-plan block: one doc left, under kept_min_docs
+        self.assertEqual(self.cands(self.kept("12d", [{"section": "faq"}] * 3 + [{"section": "other"}])), [])
 
     def test_evidence_with_no_facet_asks_for_a_review(self):  # an old ledger: justify had no facets before #212
         for rule in ("7d", "12d"):
@@ -335,7 +320,7 @@ class KeptFacets(TmpCase):
         self.assertEqual(self.keys([c]), ["filler_warn"])
         self.assertEqual(c["evidence"]["kept_records"], 3)  # one per justified doc, not a count of findings
 
-    def test_a_doc_justified_twice_needs_both_covered(self):  # its facets are the union of its accepts
+    def test_a_doc_justified_twice_needs_both_covered(self):  # union of its accepts: not spent (#208), not covered
         events = self.kept("12d", [{"section": "other"}] * 3)
         events.append(ev("jr", "jr", "jr_accept", "12d", "WARN", 1, "*", facets={"section": "faq", "kind": "format"},
                          when=NOW - timedelta(days=1)))
@@ -368,7 +353,8 @@ class KnobConditions(TmpCase):
     def test_bad_conditions_fail_at_load(self):
         edit = 'direction = "loosen"\nedit = { kind = "set_threshold", key = "paragraph_uniform_run", step = 1 }\n'
         for knob in ('facet = "section"\nvalue = "faqs"\n', 'facet = "section"\nvalue = []\n',
-                     'where = { section = "faq" }\n', 'facet = "section"\nvalue = "faq"\nwhere = { term = "x" }\n'):
+                     'facet = "term"\nwhere = { section = "other" }\n',
+                     'facet = "section"\nvalue = "faq"\nwhere = { term = "x" }\n'):
             with self.subTest(knob=knob), self.assertRaises(ValueError):
                 calibrate.load_settings(self.write(f'[[knobs]]\nrule = "12d"\n{knob}{edit}'))
 
