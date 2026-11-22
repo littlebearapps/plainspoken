@@ -610,6 +610,22 @@ class Published(Base):  # the article is edited after a PASS
         self.assertEqual(just[0]["facets"], {"kind": "voice"})
         self.assertNotIn("reason", just[0])
 
+    def test_justified_rule_survives_with_the_covered_facets(self):  # #212, as merge logs them
+        self.check()
+        sha = report.sha256(self.art)
+        lint = json.loads((self.dir / f"{self.key}.lint.json").read_text(encoding="utf-8"))
+        found = [f for f in lint["findings"] if f["rule"] == "7d"]
+        (self.dir / f"{self.key}.report.json").write_text(json.dumps({
+            "article": str(self.art), "article_sha256": sha, "profile": "default",
+            "profile_sha256": default_profile().sha256, "ruleset_version": CFG.version, "status": "PASS",
+            "justified": [{"rule": "7d", "kind": "voice", "reason": "my own diary reads like this",
+                           "review": "accept"}],
+            "rules": {"7d": {"source": "lint", "severity": "WARN", "findings": found}}}), encoding="utf-8")
+        self.kaizen("published", "post.md")
+        (just,) = [e for e in self.events("survived_publish") if e["span_hash"] == ledger.span_hash("7d", "*")]
+        fired_7d = next(e for e in self.events("survived_publish") if e["rule"] == "7d" and e is not just)
+        self.assertEqual(just["facets"], {**{k: fired_7d["facets"][k] for k in ("form", "section")}, "kind": "voice"})
+
     QUOTE = "Pick a sunny bed. Water it well."
 
     def judge_report(self, quote, sha, rule="18"):

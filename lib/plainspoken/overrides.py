@@ -381,7 +381,8 @@ def published(article: Path, root: Path, *, reports_dir: Path | None = None,
     """Lint the current file and record `survived_publish` (event `publish`, actor `publish`) for each BLOCK or WARN
     span in the check's saved lint that the current lint still has (matched as `capture.fixed_events` matches, so a
     span is either fixed or survived), each judge-only WARN whose judged span the published file still holds
-    (`_judge_kept`), plus each justified rule in the current report (rule + `*`, WARN, facet `kind`). It needs the
+    (`_judge_kept`), plus each justified rule in the current report (rule + `*`, WARN, facet `kind` and the covered
+    findings' `form` and `section`, `capture.covered_facets`). It needs the
     check snapshot, the same ruleset and the check's profile. Returns the events appended."""
     article, root = Path(article), Path(root)
     snap, _ = _snapshot(article, root, reports_dir)
@@ -407,12 +408,14 @@ def published(article: Path, root: Path, *, reports_dir: Path | None = None,
     events += _judge_kept(merged, cfg, current, saved, data=article.read_bytes(), snap_doc=snap_doc, did=did,
                           article=article, prof=prof)
     if merged is not None and merged.get("article_sha256") == current["article_sha256"]:
+        entries = merged.get("rules") if isinstance(merged.get("rules"), dict) else {}
         for item in merged.get("justified") or ():
             if (isinstance(item, dict) and isinstance(item.get("rule"), str) and item["rule"]
                     and item.get("kind") in justify.KINDS):
+                covered = capture.covered_facets(item["rule"], entries.get(item["rule"]), snap_doc)  # #212
                 events.append(ledger.make_event(
                     event="publish", actor="publish", outcome="survived_publish", rule=item["rule"], severity="WARN",
                     ruleset_version=str(current["ruleset_version"]), profile=str(current["profile"]), doc_id=did,
                     doc_sha=current["article_sha256"], span_hash=ledger.span_hash(item["rule"], capture.NO_SPAN),
-                    facets={"kind": item["kind"]}))
+                    facets={**covered, "kind": item["kind"]}))
     return _append(ledger.distinct(events), settings)

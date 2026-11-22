@@ -872,6 +872,9 @@ class MergeCli(unittest.TestCase):
         self.assertEqual((jr["outcome"], jr["actor"], jr["rule"], jr["severity"]), ("jr_accept", "jr", "7d", "WARN"))
         self.assertEqual(j["span_hash"], ledger.span_hash("7d", "*"))
         self.assertEqual(jr["span_hash"], j["span_hash"])
+        # #212: both record the form and section of the finding the justification covers (ARTICLE's one 7d)
+        self.assertEqual(j["facets"], {"form": "short-run", "section": "question"})
+        self.assertEqual(jr["facets"], {"form": "short-run", "section": "question", "kind": "voice"})
         for e in (j, jr):
             self.assertNotIn("reason", e)
             self.assertNotIn("excerpt", e)
@@ -1052,6 +1055,53 @@ class MergeEvents(unittest.TestCase):
         m["justified"] = [{"rule": "7d", "kind": "nonsense", "review": "accept"}, "x"]
         (e,) = capture.merge_events(m, None, CFG, Path("."))
         self.assertEqual((e["rule"], e["span_hash"]), ("18", ledger.span_hash("18", "*")))
+
+
+class CoveredFacets(unittest.TestCase):  # #212: which findings a justification covers
+    TEXT = ("# Notes\n\nIntro line one here. Intro line two here. Intro line three here.\n\n## Beds\n\nText.\n\n"
+            "## FAQ\n\n### Why?\n\nShort answer.\n")
+
+    def setUp(self):
+        self.doc = parse(self.TEXT, path="post.md", profile=default_profile())
+
+    def merged(self, rid, findings, **entry):
+        return {"article": "post.md", "profile": "default", "ruleset_version": CFG.version,
+                "article_sha256": "a" * 64, "profile_sha256": "b" * 64,
+                "justified": [{"rule": rid, "kind": "format", "reason": "a reason that is long enough",
+                               "review": "accept", "review_reason": "fine"}],
+                "rules": {rid: {"source": "lint", "verdict": "fail", "severity": "WARN", "findings": findings,
+                                **entry}}}
+
+    def facets(self, m):
+        return {e["event"]: e["facets"] for e in capture.merge_events(m, self.doc, CFG, Path("."))}
+
+    def test_one_form_and_section_are_recorded(self):
+        run = _finding("7d", 3, "Intro line three here.", "5 consecutive sentences under 8 words — join two")
+        self.assertEqual(self.facets(self.merged("7d", [run])),
+                         {"justify": {"form": "short-run", "section": "intro"},
+                          "jr": {"form": "short-run", "section": "intro", "kind": "format"}})
+
+    def test_a_faq_run_is_recorded_as_faq(self):
+        self.assertEqual(self.facets(self.merged("12d", [_finding("12d", 13, "Short answer.", "4+ consecutive")]))
+                         ["justify"], {"section": "faq"})
+
+    def test_mixed_or_unknown_values_are_left_out(self):
+        mixed = [_finding("7d", 3, "Intro line three here.", "5 consecutive sentences"),
+                 _finding("7d", 5, "Beds", "No sentence over 25 words in this section")]
+        self.assertEqual(self.facets(self.merged("7d", mixed))["justify"], {})  # two forms, two sections
+        self.assertEqual(self.facets(self.merged("7d", []))["jr"], {"kind": "format"})  # nothing to say
+        no_doc = capture.merge_events(self.merged("12d", [_finding("12d", 13, "x", "4+")]), None, CFG, Path("."))
+        self.assertEqual([e["facets"] for e in no_doc], [{}, {"kind": "format"}])
+
+    def test_a_block_is_not_covered(self):  # only what JR sees (justify.evidence)
+        block = _finding("7d", 5, "Beds", "No sentence over 25 words in this section", "BLOCK")
+        run = _finding("7d", 3, "Intro line three here.", "5 consecutive sentences")
+        self.assertEqual(self.facets(self.merged("7d", [block, run]))["justify"],
+                         {"form": "short-run", "section": "intro"})
+
+    def test_judge_evidence_gives_the_section(self):
+        m = self.merged("21", [], source="judge:J4", evidence=[{"line": 13, "quote": "Short answer."}])
+        self.assertEqual(self.facets(m)["justify"], {"section": "faq"})
 
 
 class FrictionDetail(unittest.TestCase):

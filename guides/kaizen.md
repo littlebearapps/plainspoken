@@ -76,15 +76,18 @@ fires. The report also shows unreadable ledger lines (skipped, never fatal) and 
 2. **False positives**: 20 or more fires with an effective false-positive rate over 10%. The proposal loosens a
    threshold, or demotes or shadows the rule when there's no threshold to turn.
 3. **Missed**: the same rule or pattern recorded as missed in 2 or more documents. The proposal asks for a review.
-4. **Kept**: a WARN rule justified, or kept to publication, in 3 or more documents. The proposal loosens it. A rule
-   only the judges check counts as kept to publication when the published text still holds the span the judge
-   quoted.
+4. **Kept**: a WARN rule justified, or kept to publication, in 3 or more documents. The proposal loosens a setting
+   that would have cleared what was kept in 3 or more of them, and cites only those. When no setting does, or the
+   ledger doesn't say which form or section the kept findings were (one logged by an older plainspoken), it asks
+   for a review. A rule only the judges check counts as kept to publication when the published text still holds the
+   span the judge quoted.
 5. **Dormant**: a rule that hasn't fired in 90 days, on a ledger at least that old. The proposal starts retiring it.
 
 **Narrow knobs first.** Where the evidence points at one corner of a rule, the proposal changes that corner rather
 than the whole rule: a threshold for FAQ sections only when at least half the evidence spans sit in FAQs, or the words
 themselves added to a list when the evidence is about particular words. The broad threshold is the fallback. The knobs
-are listed in `data/kaizen.toml`.
+are listed in `data/kaizen.toml`, each with the findings its threshold clears: 7d's run length, for example, is turned
+only for short runs outside FAQs.
 
 A rejected proposal isn't made again for the same rule and action for 60 days.
 

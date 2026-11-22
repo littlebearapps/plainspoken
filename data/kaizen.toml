@@ -13,7 +13,10 @@ cooldown_days = 60       # a rejected proposal (same rule + action) isn't propos
 max_proposals = 3
 
 # Narrow knobs first: a facet knob is used when at least half the evidence spans carry that facet value
-# (for term knobs: every term seen in the evidence).
+# (for term knobs: every term seen in the evidence). A knob's facet, value and `where` say which findings its edit
+# clears; for `kept` evidence it's used only when it covers every span kept in at least kept_min_docs docs, and
+# evidence with no form or section never fits a knob that names one (#212). `where` limits a broad knob too,
+# without making it narrow.
 [[knobs]]
 rule = "4b"
 facet = "term"
@@ -34,8 +37,10 @@ value = "no-long"
 direction = "loosen"
 edit = { kind = "set_threshold", key = "staccato_long_sentence", step = -3 }
 
+# staccato_short_run sets the run outside FAQs only, so it clears neither the no-long form nor a FAQ run.
 [[knobs]]
 rule = "7d"
+where = { form = "short-run", section = ["intro", "question", "other"] }
 direction = "loosen"
 edit = { kind = "set_threshold", key = "staccato_short_run", step = 1 }
 
@@ -79,8 +84,10 @@ rule = "7"
 direction = "loosen"
 edit = { kind = "set_threshold", key = "uniform_sentence_run", step = 1 }
 
+# paragraph_uniform_run sets the run outside FAQs only: a run kept in a FAQ never turns it.
 [[knobs]]
 rule = "12d"
+where = { section = ["intro", "question", "other"] }
 direction = "loosen"
 edit = { kind = "set_threshold", key = "paragraph_uniform_run", step = 1 }
 
