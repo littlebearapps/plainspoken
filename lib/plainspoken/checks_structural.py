@@ -22,6 +22,9 @@ _FAQ = re.compile(r"\b(?:faqs?|frequently asked)\b", re.I)  # v4: FAQ sections g
 # pads a sentence to reach a length, restates a fact or adds a reason ("so", "because"). With no honest join, keep it.
 _JOIN = 'neighbours with "and" or "but" in their own words, or keep it; never pad one'
 _SPLIT = "join two neighbours or split one, in their own words, or keep it; never pad one"
+# #73 option B: the no-long remedy when no such join reaches the line. Merge keeps a 7d whose every WARN line ends
+# with it and asks no JR reason (`justify.needs_reason`), which leaves nothing to invent a reason join for.
+NO_JOIN = 'neighbours with "and" or "but" gets there: keep it, no reason needed'
 
 
 def _prose_sentences(paragraphs, kinds=("prose",)) -> list[Sentence]:
@@ -163,6 +166,19 @@ def _short_lead_in(doc: Doc, sents: list[Sentence], line: int, level: int, long_
     return 0 < level and line > 0 and bool(after) and after[0] > level and sum(len(s.words) for s in sents) <= long_
 
 
+def _joinable(sents: list[Sentence], long_: int) -> bool:
+    """Whether a plain join can clear the no-long test (#73). Joining two neighbours with "and" gives their words plus
+    one, the longest plain join, so it can when some neighbouring pair (across a paragraph break too) gets over
+    `long_` that way."""
+    return any(len(a.words) + len(b.words) + 1 > long_ for a, b in zip(sents, sents[1:]))
+
+
+def _no_long_message(joinable: bool, long_: int) -> str:
+    if joinable:
+        return f"No sentence over {long_} words in this section — join two {_JOIN}"
+    return f"No sentence over {long_} words in this section — no join of two {NO_JOIN}"
+
+
 def staccato(doc: Doc, cfg: Config) -> list[Finding]:
     """Blog: WARN if a section has no sentence over the long threshold, OR has a run of short sentences.
 
@@ -180,6 +196,8 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
 
     The no-long test also needs something the writer can honestly join: quoted sentences can't be changed (#214), and
     a short lead-in before subsections can't reach the threshold (#201). `_own_sentences` and `_short_lead_in` say so.
+    When no join of two neighbours reaches the threshold either, the finding says to keep it with no reason (#73),
+    and a run of short sentences in that section takes the finding instead, as a join clears a run.
     """
     t = cfg.thresholds_for(doc)
     long_, short_len, run_len = t["staccato_long_sentence"], t["staccato_short_len"], t["staccato_short_run"]
@@ -207,16 +225,19 @@ def staccato(doc: Doc, cfg: Config) -> list[Finding]:
         no_long = (max(len(s.words) for s in sents) <= long_ and len(_own_sentences(doc, sents)) >= 3
                    and not _short_lead_in(doc, sents, line, level, long_))
         run_end = _short_run(sents, short_len, run_len)
-        if narrative and any(p.search(heading) for p in doc.profile.long_sentence_headings) and no_long and not short_piece:
-            out.append(Finding("7d", "WARN", at, where,
-                               f"No sentence over {long_} words in this section — join two {_JOIN}"))
+        # #73: a no-long line no plain join can clear is kept with no reason, unless a run of short sentences, which a
+        # join does clear, gives the section its finding instead.
+        joinable = _joinable(sents, long_)
+        no_long_line = no_long and (joinable or not run_end)
+        if (narrative and any(p.search(heading) for p in doc.profile.long_sentence_headings) and no_long_line
+                and not short_piece):
+            out.append(Finding("7d", "WARN", at, where, _no_long_message(joinable, long_)))
         elif narrative:
             if no_long and run_end:
                 out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
                                    f"{run_len} consecutive sentences under {short_len} words, none over {long_} — join two {_JOIN}"))
-        elif no_long and not run_only:
-            out.append(Finding("7d", "WARN", at, where,
-                               f"No sentence over {long_} words in this section — join two {_JOIN}"))
+        elif no_long_line and not run_only:
+            out.append(Finding("7d", "WARN", at, where, _no_long_message(joinable, long_)))
         elif run_end:
             out.append(Finding("7d", "WARN", run_end.line, run_end.text[:160],
                                f"{run_len} consecutive sentences under {short_len} words — join two {_JOIN}"))

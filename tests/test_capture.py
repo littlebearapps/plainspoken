@@ -108,7 +108,8 @@ class Facets(unittest.TestCase):
         lint = report.run_lint(self._write(ARTICLE), default_profile(), cfg=CFG)
         f = next(f for f in lint["findings"] if f["rule"] == "7d")
         facets = capture.facets(f, self.doc(ARTICLE), CFG)
-        self.assertEqual((facets["section"], facets["form"]), ("question", "no-long"))
+        # #73: no join clears the section's no-long test, so its run of five short sentences takes the finding
+        self.assertEqual((facets["section"], facets["form"]), ("question", "short-run"))
 
     def test_7d_short_run_and_intro(self):
         doc = self.doc(ARTICLE)

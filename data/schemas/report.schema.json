@@ -39,11 +39,11 @@
     "generated": {"type": "string", "format": "date-time", "description": "UTC, to the second."},
     "status": {
       "enum": ["PASS", "FAIL", "UNRESOLVED", "INCOMPLETE"],
-      "description": "INCOMPLETE: a file missing, stale or malformed, or a rule without a verdict (see problems and coverage.missing). FAIL: a BLOCK rule failed. UNRESOLVED: a WARN rule failed with no accepted justification. PASS: none of those."
+      "description": "INCOMPLETE: a file missing, stale or malformed, or a rule without a verdict (see problems and coverage.missing). FAIL: a BLOCK rule failed. UNRESOLVED: a WARN rule failed with no accepted justification (a 7d whose every line says no plain join can clear it needs none). PASS: none of those."
     },
     "blocks": {"$ref": "#/$defs/ruleIds", "description": "Rules that failed at BLOCK, sorted."},
     "warns": {"$ref": "#/$defs/ruleIds", "description": "Rules that failed at WARN, justified or not, sorted."},
-    "unresolved": {"$ref": "#/$defs/ruleIds", "description": "The warns no accepted justification resolves."},
+    "unresolved": {"$ref": "#/$defs/ruleIds", "description": "The warns that need a reason (all but a 7d no plain join can clear) and have no accepted one."},
     "justified": {"type": "array", "items": {"$ref": "#/$defs/justified"}},
     "unused_justifications": {"$ref": "#/$defs/ruleIds", "description": "Justified rules that didn't fail at WARN."},
     "problems": {"type": "array", "items": {"type": "string"}, "description": "Why the report is INCOMPLETE, one line each."},

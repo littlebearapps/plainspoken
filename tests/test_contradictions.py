@@ -54,8 +54,9 @@ def message_strings(source: str) -> list[str]:
 
 def asks_for_a_long_sentence(message: str) -> bool:
     """The staccato finding ("No sentence over 25 words in this section — join two neighbours with "and" or "but" …")
-    names the check and asks for a longer sentence: the opposite of a cap, like a docs "How it's checked" section."""
-    return "in this section — join two " in message
+    names the check and asks for a longer sentence: the opposite of a cap, like a docs "How it's checked" section. Its
+    #73 form ("… in this section — no join of two neighbours … gets there: keep it") names the check and keeps it."""
+    return "in this section — join two " in message or "in this section — no join of two " in message
 
 
 def code_messages() -> list[tuple[str, str]]:

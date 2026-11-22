@@ -8,8 +8,22 @@ import hashlib
 import json
 from pathlib import Path
 
+from plainspoken.checks_structural import NO_JOIN
+
 KINDS = ("voice", "quote", "load_bearing", "false_positive", "format", "metric")
 MIN_REASON = 15
+_STACCATO = ("7d", "NR-2")
+
+
+def _no_join(f: dict) -> bool:
+    return f.get("severity") == "WARN" and str(f.get("message", "")).endswith(NO_JOIN)
+
+
+def needs_reason(rid: str, entry: dict) -> bool:
+    """Whether a failing WARN rule needs an accepted reason. #73 option B: a 7d (or NR-2) whose every WARN line is the
+    no-long form no plain join can clear is kept with none, so nothing pushes a writer to invent a reason join."""
+    warns = [f for f in entry.get("findings", []) if isinstance(f, dict) and f.get("severity") == "WARN"]
+    return rid not in _STACCATO or not warns or not all(_no_join(f) for f in warns)
 
 
 def file_sha(path: Path) -> str:
@@ -139,8 +153,9 @@ def template(report: dict, existing: dict | None = None) -> dict:
         value = kept.get(rid, {}).get(key, "")
         return value if isinstance(value, str) else ""
 
+    rules = report.get("rules", {})
     return {"article_sha256": sha, "items": [{"rule": rid, "kind": field(rid, "kind"), "reason": field(rid, "reason")}
-                                             for rid in report.get("warns", [])]}
+                                             for rid in report.get("warns", []) if needs_reason(rid, rules.get(rid, {}))]}
 
 
 def review_input(report: dict, data: dict, justify_sha: str) -> dict:
@@ -152,7 +167,8 @@ def review_input(report: dict, data: dict, justify_sha: str) -> dict:
         if rid not in report.get("warns", []):
             continue
         entry = report.get("rules", {}).get(rid, {})
-        evidence = entry.get("evidence") or [f for f in entry.get("findings", []) if f.get("severity") == "WARN"]
+        evidence = entry.get("evidence") or [f for f in entry.get("findings", [])
+                                             if f.get("severity") == "WARN" and not _no_join(f)]  # #73: kept as is
         items.append({"rule": rid, "kind": it["kind"], "reason": it["reason"], "evidence": evidence})
     return {"group": "JR", "article": report["article"], "article_sha256": report["article_sha256"],
             "justify_sha256": justify_sha, "items": items}

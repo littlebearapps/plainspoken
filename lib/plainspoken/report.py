@@ -222,7 +222,8 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     """Combine `<key>.lint.json` + `<key>.J{1..4}.judge.json` into `<key>.report.json`.
     Fails closed: anything missing, stale (hash ≠ the article's current hash, or a lint or judge file made with
     another profile or another ruleset version) or malformed → INCOMPLETE.
-    A failing WARN rule without an accepted justification → UNRESOLVED (never PASS)."""
+    A failing WARN rule without an accepted justification → UNRESOLVED (never PASS), except a 7d whose every line
+    says no plain join can clear it (#73): that's kept with no reason, and `merge_lines` says so."""
     cfg = load_config()
     judge_block_rules = {r.id for r in cfg.rules.values() if r.judge_may_block}
     d = reports_dir
@@ -298,11 +299,12 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     missing = sorted(rid for rid in expected if rules_out.get(rid, {}).get("verdict") in (None, "pending-judge"))
     blocks = sorted(rid for rid, e in rules_out.items() if e["verdict"] == "fail" and e["severity"] == "BLOCK")
     warns = sorted(rid for rid, e in rules_out.items() if e["verdict"] == "fail" and e["severity"] == "WARN")
-    # fix or justify (2026-09-29): a WARN fail needs an accepted reason
-    res = justify.resolve(d, key, sha, warns, stamps={"profile_sha256": profile.sha256, "ruleset_version": cfg.version})
+    # fix or justify (2026-09-29): a WARN fail needs an accepted reason, except a 7d no plain join can clear (#73)
+    needs = [rid for rid in warns if justify.needs_reason(rid, rules_out[rid])]
+    res = justify.resolve(d, key, sha, needs, stamps={"profile_sha256": profile.sha256, "ruleset_version": cfg.version})
     problems += res["problems"]
     rejected = {j["rule"] for j in res["justified"] if j["review"] == "reject"}
-    unresolved = [rid for rid in warns if not _resolved(rid, res["accepted"], rejected, cfg.aliases)]
+    unresolved = [rid for rid in needs if not _resolved(rid, res["accepted"], rejected, cfg.aliases)]
     if missing or problems:
         status = "INCOMPLETE"
     elif blocks:
@@ -334,6 +336,9 @@ def merge_lines(merged: dict) -> list[str]:
     lines = [f"{merged['status']} · coverage {cov['covered']}/{cov['expected']}"
              f" · BLOCK {', '.join(merged['blocks']) or '-'} · WARN {', '.join(merged['warns']) or '-'}"
              f" · unresolved {', '.join(merged['unresolved']) or '-'}"]
+    kept = [rid for rid in merged["warns"] if not justify.needs_reason(rid, merged.get("rules", {}).get(rid, {}))]
+    if kept:  # #73: a WARN that passes with no reason says why
+        lines.append(f"  kept, no reason needed: {', '.join(kept)} (no join of two neighbours clears the line)")
     if cov["missing"]:
         lines.append(f"  missing verdicts: {', '.join(cov['missing'])}")
     return lines + [f"  problem: {p}" for p in merged["problems"]]
