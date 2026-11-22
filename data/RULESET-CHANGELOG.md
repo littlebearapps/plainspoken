@@ -19,6 +19,15 @@ Ruleset versions are separate from the plugin version. Every report records the 
 - **Measured effect (lint only, no model calls):** the verdict-diff corpus doesn't move (279 texts, no status or
   finding count changed). Of 77 no-long 7d lines in 130 real long texts, 1 becomes "no reason needed"; in the 12
   saved first drafts of rounds 10 and 11, 11 of 51 do, though only 1 of those drafts has no other 7d line.
+- **An allow marker can keep a rule 1 dash (#242):** `<!-- anti-ai-allow: 1 "—" <reason> -->`, on the line itself
+  or alone on the line before, takes the em dashes on that one line out of rule 1's count, and the line shows as an
+  INFO finding with the marker's reason. The phrase must be the em dash itself and the reason can't be empty: a
+  marker with no reason keeps nothing, and the BLOCK says so. A dash on any other line, even in the same paragraph,
+  still counts, and a marker for another rule changes nothing. A profile ban (PB) on the dash already took a PB
+  marker; that doesn't change, and each rule needs its own marker (one inline and one on the line before covers
+  both). En dashes take no marker yet. **Why:** a dash kept on purpose, such as one in a page title that has to
+  match a search, could only be dismissed after every check. **Measured effect (lint only):** the verdict-diff
+  corpus doesn't move (279 texts, no status or finding count changed); none of its texts has a rule 1 marker.
 - **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.5.0 read as stale
   and ask for a re-check. The file's bytes change, so a pending kaizen proposal rebases.
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
