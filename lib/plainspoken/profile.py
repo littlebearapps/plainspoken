@@ -37,7 +37,7 @@ _LEXICON_HABITS = ("starters", "fillers", "closers")
 _SCHEMA: dict[str, dict[str, str]] = {
     "profile": {"name": "str", "locale": "str", "flags": "str_list", "version": "version", "updated": "date"},
     "thresholds": {},  # any key; values must be numbers or booleans (names checked against the ruleset)
-    "lexicon": {"extra_bans": "str_list"},
+    "lexicon": {"extra_bans": "str_list", "exempt_terms": "term_list"},
     "document": {
         "visible_frontmatter_keys": "str_list",
         "faq_frontmatter_key": "str",
@@ -103,6 +103,10 @@ class Profile:
     updated: datetime.date | None = None
     thresholds: dict = field(default_factory=dict)
     extra_bans: tuple[str, ...] = ()
+    # Names and fixed terms that hold a banned word (#243): a rule 2 hit inside one is INFO, like the ruleset's
+    # ban_exempt_terms. `project_exempt_terms` come from the project's [lexicon] exempt_terms (config.py adds them).
+    exempt_terms: tuple[str, ...] = ()
+    project_exempt_terms: tuple[str, ...] = ()
     visible_frontmatter_keys: tuple[str, ...] = ("title", "description")
     faq_frontmatter_key: str = ""
     resource_list_headings: tuple[re.Pattern, ...] = ()
@@ -148,6 +152,9 @@ def _check_type(path: Path, section: str, key: str, value, kind: str, where: str
     if kind == "date" and (not isinstance(value, datetime.date) or isinstance(value, datetime.datetime)):
         got = "a date with a time" if isinstance(value, datetime.datetime) else type(value).__name__
         raise ProfileError(f"{where}: expected a date written without quotes, such as 2026-11-22, got {got}")
+    if kind == "term_list" and not (isinstance(value, list)
+                                    and all(isinstance(x, str) and x.strip() for x in value)):
+        raise ProfileError(f"{where}: expected a list of names or phrases, none of them empty")
     if kind in ("str_list", "regex_list"):
         if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
             raise ProfileError(f"{where}: expected a list of strings")
@@ -291,6 +298,7 @@ def load(ref: str | Path, search: tuple[Path, ...] = ()) -> Profile:
         updated=prof.get("updated"),
         thresholds=dict(raw.get("thresholds", {})),
         extra_bans=tuple(lex.get("extra_bans", [])),
+        exempt_terms=tuple(lex.get("exempt_terms", [])),
         visible_frontmatter_keys=tuple(doc.get("visible_frontmatter_keys", ["title", "description"])),
         faq_frontmatter_key=doc.get("faq_frontmatter_key", ""),
         resource_list_headings=tuple(re.compile(x, re.I) for x in doc.get("resource_list_headings", [])),

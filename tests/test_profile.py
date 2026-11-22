@@ -122,3 +122,69 @@ class FailsClosed(unittest.TestCase):
 
     def test_profile_error_is_value_error(self):
         self.assertTrue(issubclass(P.ProfileError, ValueError))
+
+
+class ExemptTerms(unittest.TestCase):  # #243: [lexicon] exempt_terms in a profile and in the project config
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        (self.tmp / ".git").mkdir()
+
+    def test_the_key_loads(self):
+        p = P.load(write(self.tmp, '[profile]\nname = "p"\n[lexicon]\nexempt_terms = ["Elevate Partners"]\n'))
+        self.assertEqual((p.exempt_terms, p.project_exempt_terms), (("Elevate Partners",), ()))
+        self.assertEqual(P.load(write(self.tmp, '[profile]\nname = "p"\n')).exempt_terms, ())
+
+    def test_a_bad_type_is_refused_naming_the_key(self):
+        for value in ('"Elevate Partners"', "[1]", '[""]', '["  "]'):
+            with self.subTest(value=value):
+                with self.assertRaises(P.ProfileError) as cm:
+                    P.load(write(self.tmp, f'[profile]\nname = "p"\n[lexicon]\nexempt_terms = {value}\n'))
+                self.assertIn("[lexicon] exempt_terms", str(cm.exception))
+
+    def test_project_terms_join_the_profile_and_its_hash(self):
+        from plainspoken import config
+        path = write(self.tmp, '[profile]\nname = "p"\n[lexicon]\nexempt_terms = ["Acme Robust"]\n')
+        before = config.resolve_profile(str(path), self.tmp, {})
+        self.assertEqual(before.sha256, P.load(path).sha256)  # no project terms: the hash is the file's
+        (self.tmp / ".plainspoken").mkdir()
+        cfg = self.tmp / ".plainspoken" / "config.toml"
+        cfg.write_text('[lexicon]\nexempt_terms = ["Elevate Partners"]\n', encoding="utf-8")
+        after = config.resolve_profile(str(path), self.tmp, {})
+        self.assertEqual((after.exempt_terms, after.project_exempt_terms), (("Acme Robust",), ("Elevate Partners",)))
+        self.assertNotEqual(after.sha256, before.sha256)  # an edit to the project's terms makes reports stale
+        cfg.write_text('[lexicon]\nexempt_terms = ["Elevate Partners", "Seamless Co"]\n', encoding="utf-8")
+        self.assertNotEqual(config.resolve_profile(str(path), self.tmp, {}).sha256, after.sha256)
+
+    def test_the_project_section_fails_closed(self):
+        from plainspoken import config
+        (self.tmp / ".plainspoken").mkdir()
+        cfg = self.tmp / ".plainspoken" / "config.toml"
+        for body, needle in (('[lexicon]\nexempt_terms = "Elevate"\n', "[lexicon] exempt_terms"),
+                             ('[lexicon]\nexempt_terms = [""]\n', "[lexicon] exempt_terms"),
+                             ('[lexicon]\nextra_bans = ["x"]\n', "unknown key [lexicon] extra_bans")):
+            with self.subTest(body=body):
+                cfg.write_text(body, encoding="utf-8")
+                with self.assertRaises(config.ConfigError) as cm:
+                    config.resolve_profile("default", self.tmp, {})
+                self.assertIn(needle, str(cm.exception))
+
+    def test_a_check_through_the_cli_uses_both(self):
+        import json
+        import subprocess
+        import sys
+        (self.tmp / ".plainspoken").mkdir()
+        (self.tmp / ".plainspoken" / "config.toml").write_text('[lexicon]\nexempt_terms = ["Elevate Partners"]\n',
+                                                              encoding="utf-8")
+        art = self.tmp / "post.md"
+        art.write_text("I met Elevate Partners. They said I should elevate your brand.\n", encoding="utf-8")
+        run = Path(__file__).resolve().parents[1] / "lib" / "run.py"
+        env = {"PATH": "/usr/bin:/bin", "HOME": str(self.tmp)}
+        out = subprocess.run([sys.executable, str(run), "check", str(art), "--profile", "default", "--json",
+                              "--no-record"], capture_output=True, text=True, cwd=self.tmp, env=env)
+        lint = json.loads(out.stdout)
+        self.assertEqual(sorted(f["severity"] for f in lint["findings"] if f["rule"] == "2"), ["BLOCK", "INFO"])
+        stamp = json.loads(subprocess.run([sys.executable, str(run), "profile", "--json", "--profile", "default"],
+                                          capture_output=True, text=True, cwd=self.tmp, env=env).stdout)
+        self.assertEqual(stamp["profile_sha256"], lint["profile_sha256"])  # the stamps agree, so merge can bind
+        self.assertNotEqual(lint["profile_sha256"], P.default().sha256)

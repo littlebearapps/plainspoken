@@ -74,8 +74,9 @@ Hash formats differ by file type. The lint, judge, justify and report files carr
 field in a file of the same type, never across the two families.
 
 `merge` treats a file as stale, and the report as INCOMPLETE, when its bound hashes or stamps don't match the article,
-profile and ruleset now in use. `profile_sha256` covers the profile file and its calibration-notes file, so editing
-either one invalidates the lint and every judge file. `judge-record` refuses a reply when there's no current lint.
+profile and ruleset now in use. `profile_sha256` covers the profile file and its calibration-notes file, plus the
+project config's `[lexicon] exempt_terms` when it sets any, so editing any of them invalidates the lint and every
+judge file. `judge-record` refuses a reply when there's no current lint.
 A judge record proves the reply fitted the current draft, lint and input. It doesn't prove which process wrote it
 (`judge-record --from` accepts any valid file), and a fresh context isn't a sandbox.
 `claims status` reads `<key>.claims-check.json` only when its bound hashes match the article and ledger on disk now,

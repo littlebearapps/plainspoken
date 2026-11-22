@@ -216,7 +216,8 @@ def _profile_summary(p: Profile, cfg, plugin_default: bool = False, locale: conf
         voice.version_line(p),
         f"locale {_locale_text(p, locale)} · flags: {', '.join(sorted(p.flags)) or 'none'} · ruleset {cfg.version}",
         f"threshold overrides: {over}",
-        f"extra bans: {len(p.extra_bans)} · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
+        f"extra bans: {len(p.extra_bans)} · exempt terms: {len(p.exempt_terms) + len(p.project_exempt_terms)}"
+        f" · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
         f" · deprecated rules: {', '.join(deprecated) or 'none'}",
         f"calibration notes: {p.calibration_notes or 'none'}",
         *voice.summary_lines(p),

@@ -307,6 +307,25 @@ class ProfileKeysRows(Base):  # #251: the keys this plugin version reads that th
         self.assertEqual(doctor.setup_lines("claude-code", rows), [])
 
 
+class ExemptTermsRow(Base):  # #243: the merged set rule 2 lets a banned word through inside
+    def test_lists_the_merged_set_with_where_each_came_from(self):
+        from plainspoken.registry import load_config
+        Fakes(self)
+        folder = self.root / ".plainspoken" / "profiles"
+        folder.mkdir(parents=True)
+        (folder / "mine.toml").write_text('[profile]\nname = "mine"\n[lexicon]\nexempt_terms = ["Acme Robust"]\n',
+                                          encoding="utf-8")
+        self.write_project_config('[engine]\nprofile = "mine"\n[lexicon]\nexempt_terms = ["Elevate Partners"]\n')
+        row = {c.name: c for c in doctor.run_checks("claude-code", self.root, self.env)}["exempt terms"]
+        ruleset = load_config().lists["ban_exempt_terms"]
+        self.assertEqual(row.status, "ok")
+        self.assertTrue(row.detail.startswith(f"{len(ruleset) + 2} ({len(ruleset)} from the ruleset, 1 from the "
+                                              "profile mine, 1 from the project config): "), row.detail)
+        for term in (*ruleset, "Acme Robust", "Elevate Partners"):
+            self.assertIn(term, row.detail)
+        self.assertEqual(doctor.setup_lines("claude-code", [row]), [])
+
+
 FULL_PROFILE = """[profile]
 name = "mine"
 locale = "en-AU"
@@ -316,6 +335,7 @@ updated = 2026-11-22
 [thresholds]
 [lexicon]
 extra_bans = []
+exempt_terms = ["Elevate Partners"]
 starters = ["Right,"]
 fillers = ["mind you"]
 closers = ["Cheers."]

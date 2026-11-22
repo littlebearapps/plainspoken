@@ -271,9 +271,12 @@ _MENTION_AFTER = re.compile(r"[.,;:!?]?[\"”]")
 
 
 def ban_list(doc: Doc, cfg: Config) -> list[Finding]:
-    """A hit inside a `ban_exempt_terms` entry (product name, fixed technical term, literal trade) is INFO.
+    """A hit inside an exempt term (product name, fixed technical term, literal trade) is INFO: the ruleset's
+    `ban_exempt_terms`, plus the profile's and the project's `[lexicon] exempt_terms` (#243). Each matches as a whole
+    phrase, any case, and covers only the banned word inside it, never the same word elsewhere.
     A literal banned word quoted on its own is a CANDIDATE: J3 decides mention (pass) vs scare quote (fail)."""
-    exempt = [_pattern(t, False) for t in cfg.lists["ban_exempt_terms"]]
+    terms = [*cfg.lists["ban_exempt_terms"], *doc.profile.exempt_terms, *doc.profile.project_exempt_terms]
+    exempt = [_pattern(t, False) for t in dict.fromkeys(terms)]
 
     def adjust(phrase: str, text: str, m: re.Match, severity: str, message: str) -> tuple[str, str]:
         for pat in exempt:
