@@ -629,10 +629,7 @@ def _main(argv: list[str] | None) -> int:
                   else f"(no anchors in profile {prof.name})")
             return 0
         for a, text in found:
-            if a.private and not args.show_private:
-                print("--- private anchor\n[private anchor]\n")
-            else:
-                print(f"--- anchor {a.id} ({', '.join(a.tags)}) from {a.source or a.path or 'the profile'}\n{text}\n")
+            print(f"--- anchor {a.id} ({', '.join(a.tags)}) from {a.source or a.path or 'the profile'}\n{text}\n")
         return 0
     if args.cmd == "register-checklist":
         try:

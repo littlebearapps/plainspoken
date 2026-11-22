@@ -89,5 +89,7 @@ doesn't print reaches no drafting skill.
 - `anchors`: `[[anchors]]` entries, passages in the author's own voice. Each has an `id`, `tags` (section types), a
   `source`, and either `text` or `path` with `lines`. A `path` must sit inside the project. Who reads it: drafting
   and the voice check.
-- `private`: optional `true` under an `[[anchors]]` entry. The `anchors` command then hides the passage and its
-  source without reading its file unless `--show-private` is given. It does not encrypt the saved profile.
+- `private`: optional `true` under an `[[anchors]]` entry. By default, `anchors` omits it before applying
+  `--limit` without reading its file; `--show-private` includes it and reveals the passage and source.
+  Drafting skills do not use `--show-private`, so private anchor passages and tone/rhythm note contents are
+  withheld from drafting prompts and cannot inform new drafts. These settings do not encrypt the saved profile.

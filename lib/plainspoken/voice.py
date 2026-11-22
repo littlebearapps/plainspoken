@@ -60,20 +60,22 @@ def anchor_text(a: Anchor) -> str:
 
 
 def anchors_for(p: Profile, tag: str | None, limit: int, include_private: bool = False) -> list[tuple[Anchor, str]]:
-    """The first `limit` anchors with `tag` (all anchors when it's None), in profile order. Raises on an unreadable one."""
-    picked = [a for a in p.anchors if tag is None or tag in a.tags][:max(limit, 0)]
-    return [(a, anchor_text(a) if include_private or not a.private else "[private anchor]") for a in picked]
+    """The first `limit` visible anchors for `tag`, in profile order. Raises on an unreadable one."""
+    picked = [a for a in p.anchors
+              if (tag is None or tag in a.tags) and (include_private or not a.private)][:max(limit, 0)]
+    return [(a, anchor_text(a)) for a in picked]
 
 
 def anchors_lenient(p: Profile, tag: str | None, limit: int, include_private: bool = False) -> tuple[list[tuple[Anchor, str]], list[str]]:
     """Like anchors_for, but an unreadable anchor is skipped (with a message) and the next one fills its place."""
     found: list[tuple[Anchor, str]] = []
     skipped: list[str] = []
-    for a in (a for a in p.anchors if tag is None or tag in a.tags):
+    for a in (a for a in p.anchors
+              if (tag is None or tag in a.tags) and (include_private or not a.private)):
         if len(found) >= max(limit, 0):
             break
         try:
-            found.append((a, anchor_text(a) if include_private or not a.private else "[private anchor]"))
+            found.append((a, anchor_text(a)))
         except VoiceError as e:
             skipped.append(str(e))
     return found, skipped

@@ -176,23 +176,55 @@ class PrivateVoiceOutput(unittest.TestCase):
             '[[anchors]]\nid = "private-text"\ntags = ["opening"]\n'
             'source = "Client Acme note"\ntext = "Contact Lily at Acme"\nprivate = true\n'
             '[[anchors]]\nid = "private-file"\ntags = ["opening"]\n'
-            'path = "does-not-exist.md"\nprivate = true\n',
+            'path = "does-not-exist.md"\nprivate = true\n'
+            '[[anchors]]\nid = "public-one"\ntags = ["opening"]\n'
+            'text = "Visible passage one."\n'
+            '[[anchors]]\nid = "public-two"\ntags = ["opening"]\n'
+            'text = "Visible passage two."\n'
+            '[[anchors]]\nid = "public-missing"\ntags = ["opening"]\n'
+            'path = "unavailable-public.md"\n'
+            '[[anchors]]\nid = "public-three"\ntags = ["opening"]\n'
+            'text = "Visible passage three."\n',
             encoding="utf-8",
         )
 
-    def test_private_anchors_mask_text_and_source_without_reading_file(self):
-        r = cli("anchors", "--tag", "opening", "--profile", str(self.profile))
+    def test_private_anchors_do_not_consume_limit_or_read_private_file(self):
+        r = cli("anchors", "--tag", "opening", "--limit", "2", "--profile", str(self.profile))
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.count("[private anchor]"), 2)
-        self.assertNotIn("Acme", r.stdout)
-        self.assertNotIn("Lily", r.stdout)
-        self.assertNotIn("does-not-exist", r.stdout)
+        self.assertEqual(r.stdout.count("--- anchor "), 2)
+        self.assertIn("--- anchor public-one (opening)", r.stdout)
+        self.assertIn("--- anchor public-two (opening)", r.stdout)
+        self.assertNotIn("--- anchor public-three", r.stdout)
+        for private in ("Acme", "Lily", "private-text", "private-file", "does-not-exist", "[private anchor]"):
+            self.assertNotIn(private, r.stdout)
+
+    def test_skip_missing_backfills_limit_with_public_anchors(self):
+        r = cli("anchors", "--tag", "opening", "--limit", "3", "--skip-missing",
+                "--profile", str(self.profile))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.count("--- anchor "), 3)
+        for public in ("public-one", "public-two", "public-three"):
+            self.assertIn(f"--- anchor {public} (opening)", r.stdout)
+        self.assertIn("(skipped anchor 'public-missing':", r.stdout)
+        for private in ("Acme", "Lily", "private-text", "private-file", "does-not-exist", "[private anchor]"):
+            self.assertNotIn(private, r.stdout)
+
+    def test_strict_and_lenient_api_filter_before_applying_limit(self):
+        p = P.load(self.profile)
+        strict = voice.anchors_for(p, "opening", 2)
+        lenient, skipped = voice.anchors_lenient(p, "opening", 3)
+        self.assertEqual([a.id for a, _ in strict], ["public-one", "public-two"])
+        self.assertEqual([a.id for a, _ in lenient], ["public-one", "public-two", "public-three"])
+        self.assertEqual(len(skipped), 1)
+        self.assertIn("public-missing", skipped[0])
+        self.assertNotIn("private-file", skipped[0])
 
     def test_explicit_flag_reveals_private_inline_anchor(self):
         r = cli("anchors", "--tag", "opening", "--limit", "1", "--show-private",
                 "--profile", str(self.profile))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("Contact Lily at Acme", r.stdout)
+        self.assertNotIn("--- anchor public-one", r.stdout)
 
     def test_private_notes_are_masked_unless_explicitly_requested(self):
         base = cli("profile", "--voice", "--profile", str(self.profile))
