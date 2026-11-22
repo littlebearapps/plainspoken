@@ -49,6 +49,12 @@ class Rubric(unittest.TestCase):
         for needle in ("calibration_notes", "visible_frontmatter_keys", "faq_frontmatter_key", "data/rules.toml"):
             self.assertIn(needle, self.text)
 
+    def test_7c_asks_for_every_failing_instance(self):
+        # #200: J2 quoted 6 of 8 seeded 7c tells in round 1 and found the other 2 only in round 2.
+        entry = " ".join(self.text.split("### 7c ", 1)[1].split("### ", 1)[0].split())
+        self.assertIn("**Evidence:** quote every instance in the article that fails, each as its own evidence item, "
+                      "not only the first or the clearest few.", entry)
+
     def test_severity_rule_matches_agent_and_rule_18_is_profile_neutral(self):
         self.assertIn("severity given for the rule in your input's `severities`", self.text)
         self.assertNotIn("Tools & Resources", self.text)
