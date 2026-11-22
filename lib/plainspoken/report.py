@@ -78,6 +78,7 @@ def report_paths(article: Path, reports_dir: Path, cwd: Path) -> dict[str, Path]
     out["before"] = Path(reports_dir) / f"{key}.before.md"  # meaning-diff's baseline: the bytes before the first edit
     out["first-draft"] = Path(reports_dir) / f"{key}.first-draft.md"  # meaning-diff: write's first draft, before any edit
     out["meaning"] = Path(reports_dir) / f"{key}.meaning.json"  # meaning-diff's result, bound to both texts
+    out["rounds"] = Path(reports_dir) / f"{key}.rounds.json"  # #200: merge's last two judged drafts, no text
     return out
 
 
@@ -303,6 +304,12 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
     problems += res["problems"]
     rejected = {j["rule"] for j in res["justified"] if j["review"] == "reject"}
     unresolved = [rid for rid in warns if not _resolved(rid, res["accepted"], rejected, cfg.aliases)]
+    from plainspoken import rounds  # local: rounds → sentdiff → capture imports this module
+    try:  # a marker only: when it can't run, nothing is marked and the merge goes on
+        rounds.mark(rules_out, article.read_text(encoding="utf-8"), sha, paths["rounds"],
+                    complete=not (missing or problems))
+    except (OSError, ValueError):
+        pass
     if missing or problems:
         status = "INCOMPLETE"
     elif blocks:
@@ -334,6 +341,10 @@ def merge_lines(merged: dict) -> list[str]:
     lines = [f"{merged['status']} · coverage {cov['covered']}/{cov['expected']}"
              f" · BLOCK {', '.join(merged['blocks']) or '-'} · WARN {', '.join(merged['warns']) or '-'}"
              f" · unresolved {', '.join(merged['unresolved']) or '-'}"]
+    pre = sorted(rid for rid, e in merged["rules"].items() if e.get("pre_existing"))
+    if pre:
+        lines.append(f"  pre-existing: {', '.join(pre)} (a judge's first find on text unchanged since the judges "
+                     "last read it)")
     if cov["missing"]:
         lines.append(f"  missing verdicts: {', '.join(cov['missing'])}")
     return lines + [f"  problem: {p}" for p in merged["problems"]]

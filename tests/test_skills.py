@@ -163,6 +163,15 @@ class CheckSkill(unittest.TestCase):
         self.assertIn("`check:` lines exactly as printed", step)
         self.assertIn("run steps 1 to 5 again without editing", step)
         self.assertIn("how many fix passes ran", step)
+        self.assertIn("how many of them were free", step)  # #200
+
+    def test_a_pass_for_pre_existing_finds_is_free(self):  # #200: late finds on old text don't spend the cap
+        head = " ".join(self.text[: self.text.index("## Steps")].split())
+        self.assertIn("A fix pass doesn't count toward the two when every rule on merge's BLOCK and unresolved lists "
+                      "is also on its `pre-existing:` line", head)
+        self.assertIn("At most two free passes in a run", head)
+        step6 = " ".join(self.text[self.text.index("6. **Fix pass**"):self.text.index("7. **Justify")].split())
+        self.assertIn("at most two in the whole run, not counting a free one", step6)
 
 if __name__ == "__main__":
     unittest.main()

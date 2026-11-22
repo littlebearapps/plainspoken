@@ -27,6 +27,8 @@ Core rules (these hold for the whole run):
   read that text, so they aren't fix passes. Once the judges start, every edit to FILE is a fix pass (after justify
   or JR too), and step 1 follows it. INCOMPLETE means an input is missing or stale: rerun what merge names, without editing the article; that rerun is
   not a fix pass. Still INCOMPLETE after one rerun → stop and report merge's problem lines.
+- A fix pass doesn't count toward the two when every rule on merge's BLOCK and unresolved lists is also on its
+  `pre-existing:` line: a judge first found those on text no fix had changed. At most two free passes in a run.
 - Exit codes: `check` 0 = no BLOCK, 1 = BLOCKs found (carry on), 2 = bad input (stop and report the message).
   `merge` 0 = PASS, 1 = read the status line (INCOMPLETE, FAIL or UNRESOLVED). For `merge`, `justify` and
   `judge-record`, exit 2 means stop and report the engine's message (only `judge-input` has its own exit-2 step).
@@ -103,8 +105,8 @@ edit FILE, and its bytes stay unchanged.
 5. **Merge.** `RUN merge FILE --plugin-profile '${user_config.profile}'` (step 4 runs it once all four are
    recorded). PASS → step 8. INCOMPLETE → rerun exactly what its `problem:` and `missing verdicts:` lines name, then
    merge again (once). FAIL → step 6. UNRESOLVED → step 6 for WARNs you'll fix, step 7 for WARNs you'll keep.
-6. **Fix pass** (at most two in the whole run). Use `/plainspoken:humanize` on FILE with the list of failing rules
-   and their evidence from `RUN paths FILE` → the `report` file. If it can't be started (the project may deny it),
+6. **Fix pass** (at most two in the whole run, not counting a free one). Use `/plainspoken:humanize` on FILE with
+   the list of failing rules and their evidence from `RUN paths FILE` → the `report` file. If it can't be started (the project may deny it),
    follow `${CLAUDE_PLUGIN_ROOT}/skills/humanize/SKILL.md` yourself. Fix every BLOCK and every failing WARN under
    the fix rules above; a 7 or 7d WARN the rhythm rule can't clear goes to step 7 instead, never lengthened. Then
    go back to step 1 (the hash changed, so all four judges rerun). When both passes are spent and merge still says
@@ -118,7 +120,7 @@ edit FILE, and its bytes stay unchanged.
    an `M` item: those are meaning changes for the person to check, so never call one of them a failure.
    `INCOMPLETE (stale …)` means FILE changed after the last merge: that edit was a fix pass, so run steps 1 to 5
    again without editing, then report. Then say how
-   many fix passes ran, BLOCKs, justified WARNs (accepted / rejected), anything unresolved, and the report file's path. A WARN kept without an accepted justification is
+   many fix passes ran (and how many of them were free), BLOCKs, justified WARNs (accepted / rejected), anything unresolved, and the report file's path. A WARN kept without an accepted justification is
    UNRESOLVED, never passed. If the run stopped early, say which step and quote the engine's message.
    Merge has already captured the verdicts in the kaizen ledger, so don't record them again.
 

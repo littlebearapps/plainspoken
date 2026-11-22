@@ -490,6 +490,7 @@ def start(path: Path, root: Path, reports_dir: Path) -> int | None:
     p["before"].parent.mkdir(parents=True, exist_ok=True)
     report.write_atomic(p["before"], data)
     p["meaning"].unlink(missing_ok=True)
+    p["rounds"].unlink(missing_ok=True)  # #200: merge's judged rounds belong to the earlier run
     return claimed
 
 
