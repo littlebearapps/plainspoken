@@ -36,9 +36,9 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, doctor, evalcli,
-                         extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
-                         reader_value, register, reply, report, setup, toolcall, voice)
+from plainspoken import (_util, adapters, calibrate, capture, carry, checker, claims, claims_tools, config, doctor,
+                         evalcli, extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning,
+                         proposals, reader_value, register, reply, report, setup, toolcall, voice)
 from plainspoken import meaning
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
@@ -259,6 +259,7 @@ def _main(argv: list[str] | None) -> int:
     pr.add_argument("--plugin-profile")
     pr.add_argument("--plugin-locale", help="the Claude Code locale option (skills pass ${user_config.locale})")
     pr.add_argument("--voice", action="store_true", help="print the voice sections the skills draft and check from")
+    pr.add_argument("--show-private", action="store_true", help="with --voice: reveal notes marked private")
     pr.add_argument("--type", help="with --voice: only this content type's blend and formatting "
                                    f"({', '.join(CONTENT_KINDS)})")
     pr.add_argument("--json", action="store_true", help="print the stamps a report is bound to: name, path, "
@@ -274,6 +275,7 @@ def _main(argv: list[str] | None) -> int:
     an.add_argument("--limit", type=int, default=3)
     an.add_argument("--skip-missing", action="store_true",
                     help="skip an anchor whose file can't be read (one line each) instead of exiting 2")
+    an.add_argument("--show-private", action="store_true", help="reveal anchors marked private")
     an.add_argument("--profile")
     an.add_argument("--plugin-profile")
     rc = sub.add_parser("register-checklist", help="print the register-check items for one message kind")
@@ -462,7 +464,8 @@ def _main(argv: list[str] | None) -> int:
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2
         if args.voice:
-            print("\n".join(voice.voice_lines(prof, args.type, f"{locale.variant} ({locale.label})")))
+            print("\n".join(voice.voice_lines(prof, args.type, f"{locale.variant} ({locale.label})",
+                                             include_private=args.show_private)))
             return 0
         try:
             gate = "{} ({})".format(*config.gate_strictness(root, os.environ))
@@ -642,9 +645,11 @@ def _main(argv: list[str] | None) -> int:
         try:
             prof = _profile(args, root)
             if args.skip_missing:
-                found, skipped = voice.anchors_lenient(prof, args.tag, args.limit)
+                found, skipped = voice.anchors_lenient(prof, args.tag, args.limit,
+                                                       include_private=args.show_private)
             else:
-                found = voice.anchors_for(prof, args.tag, args.limit)
+                found = voice.anchors_for(prof, args.tag, args.limit,
+                                          include_private=args.show_private)
         except _INPUT_ERRORS as e:  # VoiceError and ProfileError are ValueErrors
             print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
             return 2
@@ -853,7 +858,7 @@ def _delivery_status(args: argparse.Namespace, root: Path) -> int:
     if args.json:
         print(json.dumps(st, indent=2, ensure_ascii=False))
     else:
-        print("\n".join([f"delivery: {st['status']}", *(f"  {r}" for r in st["reasons"])]))
+        print("\n".join([f"delivery: {st['status']}" + _retrofit_note(st), *(f"  {r}" for r in st["reasons"])]))
     return 0 if st["status"] == "PASS" else 1
 
 
@@ -1070,7 +1075,14 @@ def _delivery_line(article: Path, contract: Path, reports_dir: Path, root: Path)
         got = reader_value.delivery_status(article, contract, record, root)
     except _INPUT_ERRORS as e:
         return f"delivery: INCOMPLETE ({_first_line(e)})"
-    return f"delivery: {got['status']}" + (f" ({'; '.join(got['reasons'])})" if got["reasons"] else "")
+    return (f"delivery: {got['status']}" + _retrofit_note(got)
+            + (f" ({'; '.join(got['reasons'])})" if got["reasons"] else ""))
+
+
+def _retrofit_note(st: dict) -> str:
+    """` · retrofit contract (brief: …)` when the contract was written after publication (#204), else empty."""
+    retro = st.get("retrofit")
+    return f" · retrofit contract (brief: {retro['brief_source']})" if retro else ""
 
 
 def _meaning_diff(args: argparse.Namespace, root: Path) -> int:
@@ -1256,11 +1268,17 @@ def _justify(path: Path, want_template: bool, reports: Path | None, calibration_
         print(f"plainspoken: no current report for {path.name} — run `merge` first", file=sys.stderr)
         return 2
     jpath = report.report_paths(path, d, root)["justify"]
+    record = carry.load(report.report_paths(path, d, root)["carry"], rep)  # #188: the report carries the stamps
     if want_template:
         if (rep.get("coverage") or {}).get("missing"):
             print("plainspoken: report is INCOMPLETE — fix its inputs and merge first", file=sys.stderr)
             return 2
-        text = json.dumps(justify.template(rep, justify.read_json(jpath)), indent=2, ensure_ascii=False)
+        skeleton = justify.template(rep, justify.read_json(jpath), record)
+        moved = justify.carried(rep, skeleton, record)
+        if moved:
+            print(f"plainspoken: carried: {', '.join(moved)} (JR accepted that reason on an earlier draft and its "
+                  "evidence hasn't changed; leave it as it is and JR won't review it again)", file=sys.stderr)
+        text = json.dumps(skeleton, indent=2, ensure_ascii=False)
         if not write:
             print(text)
             return 0
@@ -1280,14 +1298,19 @@ def _justify(path: Path, want_template: bool, reports: Path | None, calibration_
     if errors:
         print("invalid justifications:\n  " + "\n  ".join(errors), file=sys.stderr)
         return 1
-    payload = justify.review_input(rep, data, justify.file_sha(jpath))
+    payload = justify.review_input(rep, data, justify.file_sha(jpath), record)
     payload["article"] = str(Path(path).resolve())
     payload["rubric"] = str(judges.RUBRIC)
     payload["calibration_notes"] = calibration_notes
+    moved = justify.carried(rep, data, record)
     if not payload["items"]:
-        print(f"plainspoken: nothing to review: no justification in {jpath.name} covers a failing WARN rule",
-              file=sys.stderr)
+        why = (f"every justification that covers a failing WARN rule carries an earlier JR accept "
+               f"({', '.join(moved)}): run merge") if moved else (
+               f"no justification in {jpath.name} covers a failing WARN rule")
+        print(f"plainspoken: nothing to review: {why}", file=sys.stderr)
         return 1
+    if moved:
+        print(f"plainspoken: carried: {', '.join(moved)} (an earlier JR accept, so JR doesn't see it)", file=sys.stderr)
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
 

@@ -104,6 +104,15 @@
     "cta_excluded_confirmed": {
       "const": true,
       "description": "Assertion that the promised outcome and value calculation exclude every sales CTA."
+    },
+    "retrofit": {
+      "type": "boolean",
+      "description": "true when the contract was written after the piece was published (a back-catalogue review), not before drafting. Needs brief_source."
+    },
+    "brief_source": {
+      "type": "string",
+      "minLength": 5,
+      "description": "Where a retrofit contract's intent came from: the original brief, the planning notes, or what the piece set out to do before it was written. Only with retrofit = true."
     }
   },
   "allOf": [

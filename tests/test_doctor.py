@@ -359,6 +359,7 @@ emoji_max = 0
 exclamation_max = 0
 tone = {formal_casual = 0.5}
 tone_notes = {formal_casual = "n"}
+private_tone_notes = ["formal_casual"]
 [rhythm]
 sentence_mean = 14.0
 sentence_sd = 7.0
@@ -366,6 +367,7 @@ burstiness = 0.5
 long_share = 0.1
 short_share = 0.3
 notes = "n"
+notes_private = false
 [reader]
 persona = "a reader"
 comprehension_floor = 7
@@ -392,6 +394,7 @@ id = "a"
 tags = ["opening"]
 text = "t"
 source = "s"
+private = false
 """
 
 

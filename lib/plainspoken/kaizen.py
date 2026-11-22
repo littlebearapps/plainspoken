@@ -31,8 +31,8 @@ FIRE_SEVERITIES = ("BLOCK", "WARN")
 PATTERN_RULE = "?"  # overrides.PATTERN_RULE (not imported: overrides pulls in the whole engine)
 PATTERN_PROPOSAL = "pattern:"  # the rule id prefix of a missed-pattern review proposal (calibrate)
 JUDGE_AGENTS = ("plainspoken:tells-judge",)  # the agent whose handbacks are judge (and JR) replies
-COUNTS = ("fires", "docs", "fixed", "justified", "jr_accept", "jr_reject", "dismissed", "upheld", "missed",
-          "survived")
+COUNTS = ("fires", "shadow", "docs", "fixed", "justified", "jr_accept", "jr_reject", "dismissed", "upheld",
+          "missed", "survived")
 RATES = ("fix_rate", "justify_rate", "jr_accept_rate", "dismiss_rate", "effective_fp", "agreement")
 # outcome -> metric, for the plain span counts (`justified:<kind>` is matched by prefix).
 _OUTCOME_METRIC = {"fixed": "fixed", "jr_accept": "jr_accept", "jr_reject": "jr_reject", "dismissed": "dismissed",
@@ -73,9 +73,9 @@ def _facet_counts(spans: Mapping[SpanKey, set[tuple[str, str]]]) -> dict[str, di
 
 
 def _empty() -> dict:
-    return {"fired": {}, "fixed": set(), "justified": set(), "jr_accept": set(), "jr_reject": set(),
-            "dismissed": {}, "upheld": set(), "missed": set(), "survived": set(), "kept": {}, "kept_docs": set(),
-            "fp_kind": {}, "agree": {}, "last_fired": None, "events": 0}
+    return {"fired": {}, "shadow": set(), "fixed": set(), "justified": set(), "jr_accept": set(),
+            "jr_reject": set(), "dismissed": {}, "upheld": set(), "missed": set(), "survived": set(), "kept": {},
+            "kept_docs": set(), "fp_kind": {}, "agree": {}, "last_fired": None, "events": 0}
 
 
 def _add_facets(bucket: dict, key: SpanKey, facets: Mapping) -> None:
@@ -107,6 +107,7 @@ def _finish(acc: dict, now: datetime) -> dict:
     agree_true = sum(1 for _, _, value in acc["agree"].values() if value)
     out = {
         "fires": fires,
+        "shadow": len(acc["shadow"]),
         "docs": len({k[0] for k in acc["fired"]}),
         **{m: len(acc[m]) for m in ("fixed", "justified", "jr_accept", "jr_reject", "dismissed", "upheld", "missed",
                                     "survived")},
@@ -131,8 +132,9 @@ def _finish(acc: dict, now: datetime) -> dict:
 
 def rule_metrics(events: Iterable[dict], cfg, now: datetime) -> dict[str, dict]:
     """Per-rule metrics, keyed by rule id (ruleset order, then other ids sorted). Each entry has:
-    - counts of distinct span keys: `fires` (`fired` at BLOCK or WARN, any actor), `fixed`, `justified`
-      (`justified:<kind>`), `jr_accept`, `jr_reject`, `dismissed`, `upheld`, `missed`, `survived`
+    - counts of distinct span keys: `fires` (`fired` at BLOCK or WARN, any actor), `shadow` (`fired` at INFO
+      from a `status = "shadow"` rule: how often it would have fired; never in `fires` or a rate), `fixed`,
+      `justified` (`justified:<kind>`), `jr_accept`, `jr_reject`, `dismissed`, `upheld`, `missed`, `survived`
       (`survived_publish`); `docs` and `missed_docs`, the distinct `doc_id`s among the fired and missed spans;
     - `kept_docs`: distinct docs with a `jr_accept`, or a `survived_publish` on a WARN span;
     - rates, None when the denominator is 0: `fix_rate`, `justify_rate` and `dismiss_rate` over `fires`;
@@ -148,6 +150,7 @@ def rule_metrics(events: Iterable[dict], cfg, now: datetime) -> dict[str, dict]:
     Events with no rule, pattern-only `missed` events (rule `?`) and the `pattern:<name>` events of a missed-pattern
     review proposal are left out: they belong to the missed patterns (`pattern_metrics`)."""
     accs: dict[str, dict] = {rid: _empty() for rid in cfg.rules}
+    shadow = {rid for rid, r in cfg.rules.items() if r.status == "shadow"}
     for e in ledger.distinct(events):
         rule = e.get("rule")
         if rule is None or rule == PATTERN_RULE or str(rule).startswith(PATTERN_PROPOSAL):
@@ -161,6 +164,8 @@ def rule_metrics(events: Iterable[dict], cfg, now: datetime) -> dict[str, dict]:
                 acc["last_fired"] = ts
             if e.get("severity") in FIRE_SEVERITIES:
                 _add_facets(acc["fired"], key, facets)
+            elif e.get("severity") == "INFO" and str(rule) in shadow:  # not a live rule's quoted or allowed hit
+                acc["shadow"].add(key)
         if (str(e.get("actor", "")).startswith("judge:") and outcome in ("fired", "passed")
                 and isinstance(facets.get("agree"), bool)):  # live (event judge) or backfilled verdicts
             ts, eid = str(e.get("ts", "")), str(e.get("id", ""))
@@ -223,16 +228,18 @@ def friction_summary(rows: Iterable[dict], events: Iterable[dict]) -> dict:
 # --- report --------------------------------------------------------------------------------------------------------
 
 # (header, metric, width, kind)
-_COLUMNS = (("rule", None, 6, "id"), ("fires", "fires", 5, "n"), ("docs", "docs", 4, "n"),
-            ("fixed", "fixed", 5, "n"), ("just", "justified", 4, "n"), ("jr+", "jr_accept", 4, "n"),
-            ("jr-", "jr_reject", 4, "n"), ("dism", "dismissed", 4, "n"), ("uphd", "upheld", 4, "n"),
-            ("miss", "missed", 4, "n"), ("surv", "survived", 4, "n"), ("kept", "kept_docs", 4, "n"),
+_COLUMNS = (("rule", None, 6, "id"), ("fires", "fires", 5, "n"), ("shad", "shadow", 4, "n"),
+            ("docs", "docs", 4, "n"), ("fixed", "fixed", 5, "n"), ("just", "justified", 4, "n"),
+            ("jr+", "jr_accept", 4, "n"), ("jr-", "jr_reject", 4, "n"), ("dism", "dismissed", 4, "n"),
+            ("uphd", "upheld", 4, "n"), ("miss", "missed", 4, "n"), ("surv", "survived", 4, "n"),
+            ("kept", "kept_docs", 4, "n"),
             ("fix%", "fix_rate", 4, "%"), ("just%", "justify_rate", 5, "%"), ("jr+%", "jr_accept_rate", 4, "%"),
             ("dism%", "dismiss_rate", 5, "%"), ("fp%", "effective_fp", 4, "%"), ("agr%", "agreement", 4, "%"),
             ("last fired", "last_fired", 10, "date"))
-_LEGEND = ("just = justified · jr+/jr- = JR accepted/rejected · dism = dismissed · uphd = upheld · surv = survived "
-           "publication · kept = docs kept (JR-accepted or a WARN that reached publication) · fp% = effective false "
-           "positives · agr% = judge agrees with lint · - = no denominator · spans are counted once per document")
+_LEGEND = ("shad = shadow fires (INFO, never in fires or a rate) · just = justified · jr+/jr- = JR "
+           "accepted/rejected · dism = dismissed · uphd = upheld · surv = survived publication · kept = docs kept "
+           "(JR-accepted or a WARN that reached publication) · fp% = effective false positives · agr% = judge "
+           "agrees with lint · - = no denominator · spans are counted once per document")
 
 
 def _cell(m: Mapping, rid: str, metric: str | None, width: int, kind: str) -> str:
