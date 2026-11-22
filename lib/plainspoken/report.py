@@ -95,6 +95,13 @@ def lint_doc(doc, profile: Profile, content_type: str, cfg) -> tuple[list[str], 
                         else f for f in findings]
 
 
+def version_stamps(profile: Profile) -> dict[str, str | None]:
+    """`profile_version` and `profile_updated` (#251): the profile's own numbering and date, or None when it sets
+    none. They're for people and bind nothing; `profile_sha256` does that."""
+    return {"profile_version": profile.version,
+            "profile_updated": profile.updated.isoformat() if profile.updated else None}
+
+
 def run_lint(path: Path, profile: Profile, content_type: str = "article", cfg=None) -> dict:
     """Lint one article. `cfg` is the ruleset to use (the caller's, so capture sees the same lists); None loads the
     default ruleset as before."""
@@ -117,12 +124,14 @@ def lint_text(text: str, profile: Profile, content_type: str = "article", cfg=No
         "article": label,
         "profile": profile.name,
         "profile_sha256": profile.sha256,
+        **version_stamps(profile),
         "ruleset_version": cfg.version,
         "content_type": content_type,
         "fields_read": doc.fields_read(),  # #110: what was in scope (additive; older lint files lack it)
         "unread_frontmatter_keys": doc.unread_frontmatter_keys(),  # #208: a notice, never a finding (additive)
         # #208: where each [document] setting came from: "project config", "profile" or "default" (additive)
         "document_from": {k: profile.document_from.get(k, "default") for k in DOCUMENT_KEYS},
+        "faq_copies": [span.label for span in doc.faq_copies],  # #208: read once, in the body (additive)
         "article_sha256": sha or hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "lint_rules": lint_rules,
@@ -166,7 +175,9 @@ def summarise(lint: dict, notices: bool = False) -> str:
     lines = [f"anti-AI lint · {Path(lint['article']).name} · {lint['profile']} · {ctype} · {counts}"
              " · lint only, judges not run"]
     if lint.get("fields_read"):  # an older lint.json has no fields_read
-        lines.append(f"  read: {', '.join(lint['fields_read'])}")
+        copies = len(lint.get("faq_copies") or [])
+        once = f" ({copies} FAQ item{'s' * (copies != 1)} the body FAQ repeats, read there)" if copies else ""
+        lines.append(f"  read: {', '.join(lint['fields_read'])}{once}")
     if notices and lint.get("unread_frontmatter_keys"):  # #208: informational, never a finding
         lines.append(f"  not read: {', '.join(lint['unread_frontmatter_keys'])} (frontmatter prose; to check it, add "
                      "it to [document] visible_frontmatter_keys in .plainspoken/config.toml, or to "
@@ -350,8 +361,8 @@ def merge(article: Path, reports_dir: Path, profile: Profile, cwd: Path | None =
         status = "PASS"
     merged = {
         "article": str(article),
-        "profile": profile.name, "profile_sha256": profile.sha256, "ruleset_version": cfg.version,
-        "content_type": ctype, "article_sha256": sha,
+        "profile": profile.name, "profile_sha256": profile.sha256, **version_stamps(profile),
+        "ruleset_version": cfg.version, "content_type": ctype, "article_sha256": sha,
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "status": status,
         "blocks": blocks, "warns": warns,
         "unresolved": unresolved, "justified": res["justified"], "unused_justifications": res["unused"],

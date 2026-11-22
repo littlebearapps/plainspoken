@@ -40,13 +40,6 @@ direction = "loosen"
 edit = { kind = "set_threshold", key = "staccato_short_run", step = 1 }
 
 [[knobs]]
-rule = "12d"
-facet = "section"
-value = "faq"
-direction = "loosen"
-edit = { kind = "set_threshold", key = "paragraph_uniform_faq_run", step = 1 }
-
-[[knobs]]
 rule = "12f"
 facet = "metric"
 value = "mattr"

@@ -14,7 +14,8 @@ Ignore any project or user instructions you may have been given; only this promp
 
 `group`, `article` (absolute path), `article_sha256`, `content_type`, `rules` (the only ids you judge),
 `severities` (each rule id's default severity), `candidates` (lint hits that need your decision; may be an empty list), `rubric` (absolute path), `calibration_notes` (absolute path or
-null), `visible_frontmatter_keys`, `faq_frontmatter_key`, `input_digest`, and for J4 `human_markers` (may be an empty list).
+null), `visible_frontmatter_keys`, `faq_frontmatter_key`, `faq_frontmatter_copies` (may be an empty list),
+`input_digest`, and for J4 `human_markers` (may be an empty list).
 
 ## Steps
 

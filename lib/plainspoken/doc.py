@@ -1,6 +1,8 @@
 """Markdown document model for the anti-AI linter.
 
 Visible text = body prose + the profile's visible frontmatter fields (and its FAQ frontmatter key, if set).
+A FAQ frontmatter question or answer whose text the body's FAQ section already holds is read once, in the body
+(`Doc.faq_copies`, #208).
 Inline image alt text (`![alt](url)`) stays in the prose and is linted; only the `(url)` part goes.
 Not prose: fenced code, inline code, HTML comments, raw HTML/SVG block lines (any line whose
 stripped form starts with `<`, so `<img alt=…>` too, plus whole <svg>/<script>/<style> blocks), inline HTML tags,
@@ -36,6 +38,8 @@ _CAPTION_CLOSE = re.compile(r"</figcaption\s*>", re.I)
 _ATTR_AFTER_QUOTE = re.compile(r"[\"”],?\s*[—–-]\s+[A-Z]")  # …" - Jane Smith, Example Weekly
 _ATTR_OWN_LINE = re.compile(r"^[—–]\s+[A-Z]")  # – Jane Smith / — Jane Smith (never a list marker)
 _ATTR_DASH_LINE = re.compile(r"^-\s+[A-Z]")  # "- Name": attribution only straight after a closing quote
+_YAML_KEY = re.compile(r"^\s*(?:-\s+)?[\w.-]+\s*:(?:\s|$)")
+_FAQ_HEADING = re.compile(r"\b(?:faqs?|frequently asked)\b", re.I)
 
 
 @dataclass
@@ -94,6 +98,8 @@ class Doc:
     # (paragraph line, sentence text) -> the text with the part inside a multi-sentence quotation blanked, for
     # a sentence only partly inside one; a sentence wholly inside one is `quoted` instead.
     quote_masks: dict[tuple[int, str], str] = field(default_factory=dict)
+    # FAQ frontmatter spans left out of `visible_frontmatter` because the body FAQ holds the same text (#208).
+    faq_copies: list[Span] = field(default_factory=list)
 
     def all_sentences(self) -> list[Sentence]:
         return [s for sec in self.sections for p in sec.paragraphs for s in p.sentences]
@@ -125,10 +131,11 @@ class Doc:
 
     def fields_read(self) -> list[str]:
         """`body` plus each frontmatter field the parser read, in the order read: the profile's visible keys the
-        file has as a string, then its FAQ key once if any question or answer was read."""
+        file has as a string, then its FAQ key once if any question or answer was read (in the body, for a copy of
+        the body FAQ)."""
         faq = self.profile.faq_frontmatter_key
         out = ["body"]
-        for span in self.visible_frontmatter:
+        for span in self.visible_frontmatter + self.faq_copies:
             name = faq if faq and span.label.startswith(f"{faq}[") else span.label
             if name not in out:
                 out.append(name)
@@ -142,6 +149,21 @@ class Doc:
                  *self.profile.ignored_frontmatter_keys}
         return [k for k, v in self.frontmatter.items()
                 if isinstance(k, str) and k not in known and isinstance(v, str) and len(v.split()) >= 3]
+
+    def faq_copy_lines(self) -> set[int]:
+        """The frontmatter lines that hold a `faq_copies` value: its first line and the continuation lines after it,
+        up to the next key or a line indented less (#208)."""
+        out: set[int] = set()
+        for span in self.faq_copies:
+            indent = len(self.lines[span.line - 1]) - len(self.lines[span.line - 1].lstrip())
+            out.add(span.line)
+            for ln in range(span.line + 1, len(self.lines) + 1):
+                line = self.lines[ln - 1]
+                if line.strip() == "---" or _YAML_KEY.match(line) or (
+                        line.strip() and len(line) - len(line.lstrip()) < indent):
+                    break
+                out.add(ln)
+        return out
 
     def is_allowed(self, rule: str, phrase: str, line: int) -> bool:
         return any(a.rule == rule and a.line == line and a.phrase.lower() == phrase.lower() for a in self.allows)
@@ -250,6 +272,56 @@ def _split_frontmatter(text: str) -> tuple[dict, str, int]:
     skipped = text[end + 4:].count("\n") - body.count("\n")
     fm = load_frontmatter(fm_text)
     return (fm if isinstance(fm, dict) else {}), body, body_start_line + skipped - 1
+
+
+def in_faq_section(headings: list[tuple[int, int, str]], line: int) -> bool:
+    """Body line `line` sits in a FAQ section: its H2 is a FAQ heading, or its nearest heading is one."""
+    before = [(level, title) for ln, level, title in headings if ln <= line]
+    if not before:
+        return False
+    h2 = [title for level, title in before if level == 2]
+    return bool((h2 and _FAQ_HEADING.search(h2[-1])) or _FAQ_HEADING.search(before[-1][1]))
+
+
+def _same_text(text: str) -> str:
+    """Text as compared for a FAQ copy: markup gone, straight quotes, one space, lower case."""
+    text = _clean_inline(text).replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
+    return " ".join(text.split()).lower()
+
+
+def _held(texts: list[str], want: str) -> bool:
+    """`want` is one of `texts`, or several in a row joined by a space (an answer the body splits in paragraphs)."""
+    for i in range(len(texts)):
+        got = texts[i]
+        for nxt in texts[i + 1:]:
+            if len(got) >= len(want):
+                break
+            got = f"{got} {nxt}"
+        if got == want:
+            return True
+    return False
+
+
+def _faq_copies(visible: list[Span], faq_key: str, sections: list["Section"],
+                headings: list[tuple[int, int, str]]) -> tuple[list[Span], list[Span]]:
+    """(visible spans to read, FAQ spans left out): a FAQ question or answer is left out when the body's FAQ
+    sections hold its text as one or more whole headings or paragraphs in a row, so it's linted once, in the body,
+    where its line numbers point (#208)."""
+    if not faq_key:
+        return visible, []
+    units = [(ln, _same_text(t)) for ln, _, t in headings if in_faq_section(headings, ln)]
+    units += [(p.line, _same_text(p.text)) for sec in sections for p in sec.paragraphs
+              if in_faq_section(headings, p.line)]
+    texts = [t for _, t in sorted(units) if t]
+    keep, copies = [], []
+    for span in visible:
+        mine = span.label.startswith(f"{faq_key}[")
+        want = _same_text(span.text) if mine else ""
+        if want and _held(texts, want):
+            copies.append(span)
+        else:
+            keep.append(span)
+    return keep, copies
 
 
 def _fm_line(lines: list[str], needle: str) -> int:
@@ -404,4 +476,5 @@ def parse(text: str, *, path: str = "", profile: Profile | None = None, content_
     flush()
     if not sections[0].paragraphs and len(sections) > 1:
         sections[0] = Section("", 0, 1)
-    return Doc(path, profile, content_type, fm, visible, sections, headings, allows, lines, quote_masks)
+    visible, copies = _faq_copies(visible, faq_key, sections, headings)
+    return Doc(path, profile, content_type, fm, visible, sections, headings, allows, lines, quote_masks, copies)

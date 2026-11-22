@@ -145,6 +145,19 @@ class ProfileScoping(unittest.TestCase):
         with self.assertRaisesRegex(P.ProfileError, r"\[rules\] disabled.*99z"):
             self.cfg.check_profile(dataclasses.replace(PRODUCT, rules_disabled=frozenset({"99z"})))
 
+    def test_a_retired_threshold_still_loads_and_is_ignored(self):  # #208: calibrate may have written it there
+        import dataclasses
+        from plainspoken.registry import retired_thresholds
+        old = dataclasses.replace(PRODUCT, thresholds={"paragraph_uniform_faq_run": 6, "em_dash_max": 4})
+        self.cfg.check_profile(old)
+        merged = self.cfg.thresholds(old)
+        self.assertNotIn("paragraph_uniform_faq_run", merged)
+        self.assertEqual(merged["em_dash_max"], 4)
+        (line,) = retired_thresholds(old)
+        self.assertIn("[thresholds] paragraph_uniform_faq_run is ignored", line)
+        self.assertIn("Delete it.", line)
+        self.assertEqual(retired_thresholds(PRODUCT), [])
+
     def test_check_profile_rejects_bool_for_number_and_number_for_bool(self):
         import dataclasses
         with self.assertRaisesRegex(P.ProfileError, r"\[thresholds\] mattr_blocking: expected bool"):

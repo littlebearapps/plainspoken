@@ -19,6 +19,9 @@ the project leaves unread on purpose.
 The spelling locale (resolve_locale) has its own order: project `[locale] variant` → the voice profile's own
 `[profile] locale` → user-wide `[locale] variant` → the plugin option (CLAUDE_PLUGIN_OPTION_LOCALE, else
 `--plugin-locale`) → en-AU. No check reads it, so it never joins a report's stamps.
+
+A project's `[lexicon] exempt_terms` (#243) join the resolved profile's own: every resolver here adds them, and
+folds them into `profile_sha256`, so editing them makes every lint and judge file stale, as a profile edit does.
 """
 from __future__ import annotations
 
@@ -48,6 +51,7 @@ _NUDGE_KEYS = {"mode"}
 _CHAT_REPLY_KEYS = {"mode", "min_words"}
 _RULE_KEYS = {"enabled"}
 _LOCALE_KEYS = {"variant"}
+_LEXICON_KEYS = {"exempt_terms"}
 _TOOL_CALL_KEYS = set(toolcall.KEYS)
 _DOCUMENT_KEYS = {*DOCUMENT_KEYS, "ignored_frontmatter_keys"}
 _KAIZEN_KEYS = {"capture", "capture_sources", "excerpts", "adapter", "ledger_dir", "proposals_dir", "corpus",
@@ -57,7 +61,8 @@ _KAIZEN_TRELLO_KEYS = {"list_id", "label_ids", "key_env", "token_env"}
 _SECTIONS = {"engine": _ENGINE_KEYS, "gate": _GATE_KEYS, "brief": _BRIEF_KEYS, "claims": _CLAIMS_KEYS,
              "reader_value": _READER_VALUE_KEYS, "integrity": _INTEGRITY_KEYS, "lint_watch": _LINT_WATCH_KEYS,
              "kaizen": _KAIZEN_KEYS, "nudge": _NUDGE_KEYS, "rule": _RULE_KEYS, "locale": _LOCALE_KEYS,
-             "tool_call": _TOOL_CALL_KEYS, "chat_reply": _CHAT_REPLY_KEYS, "document": _DOCUMENT_KEYS}
+             "tool_call": _TOOL_CALL_KEYS, "chat_reply": _CHAT_REPLY_KEYS, "document": _DOCUMENT_KEYS,
+             "lexicon": _LEXICON_KEYS}
 # The user-wide file (~/.config/plainspoken/config.toml) holds only the settings that make sense outside a project:
 # the nudge, the drafting rule, lint-watch, the spelling locale, the tool-call check and the chat-reply check (hosts
 # without install options, Codex and Hermes, set them there). A project's own config wins over it.
@@ -167,6 +172,10 @@ def _read_config(path: Path, sections: tuple[str, ...]) -> tuple[Path, dict] | N
                                   f"{toolcall.MAX_WORDS}, got {n!r}")
         elif section == "document":
             _check_document(path, body)
+        elif section == "lexicon":
+            if "exempt_terms" in body and not _string_list(body["exempt_terms"]):
+                raise ConfigError(f"{path}: [lexicon] exempt_terms must be a list of names or phrases, none of "
+                                  "them empty")
         elif section == "tool_call":
             errors = toolcall.section_errors(body)
             if errors:
@@ -719,6 +728,23 @@ def project_profile_refs(root: Path) -> list[str]:
     return list(dict.fromkeys(_profile_ref(config_path, v) for v in values))
 
 
+def project_exempt_terms(root: Path) -> list[str]:
+    """The project config's `[lexicon] exempt_terms` (#243), or [] when it sets none. A bad config raises."""
+    found = _project_config(Path(root))
+    return list(found[1].get("lexicon", {}).get("exempt_terms", [])) if found else []
+
+
+def with_project(prof: Profile, root: Path) -> Profile:
+    """`prof` with the project's exempt terms added. They change what rule 2 reports, so they join profile_sha256;
+    a project that sets none leaves the profile, and its hash, as loaded."""
+    terms = project_exempt_terms(root)
+    if not terms:
+        return prof
+    extra = json.dumps({"lexicon.exempt_terms": terms}, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    digest = hashlib.sha256(prof.sha256.encode("ascii") + b"\0project\0" + extra).hexdigest()
+    return dataclasses.replace(prof, project_exempt_terms=tuple(terms), sha256=digest)
+
+
 def profile_for_text(root: Path, env: Mapping[str, str], section: str = "tool_call",
                      plugin_option: str | None = PLUGIN_DEFAULT) -> Profile:
     """The profile for text that has no file (a tool call's arguments, a chat reply): PLAINSPOKEN_PROFILE →
@@ -726,13 +752,13 @@ def profile_for_text(root: Path, env: Mapping[str, str], section: str = "tool_ca
     option → `plugin_option` (the plugin default). `[engine] profiles` globs are paths, so they never apply."""
     search = (Path(root) / ".plainspoken" / "profiles",)
     if env.get("PLAINSPOKEN_PROFILE"):
-        return with_document(load(env["PLAINSPOKEN_PROFILE"], search=search), root)
+        return with_document(with_project(load(env["PLAINSPOKEN_PROFILE"], search=search), root), root)
     found = _project_config(Path(root))
     if found and "profile" in found[1].get(section, {}):
-        return with_document(load(_profile_ref(found[0], found[1][section]["profile"]), search=search), root)
+        return with_document(with_project(load(_profile_ref(found[0], found[1][section]["profile"]), search=search), root), root)
     user = _user_config(env)
     if user and "profile" in user[1].get(section, {}):
-        return with_document(load(_profile_ref(user[0], user[1][section]["profile"]), search=search), root)
+        return with_document(with_project(load(_profile_ref(user[0], user[1][section]["profile"]), search=search), root), root)
     return resolve_profile(None, Path(root), env, plugin_option=plugin_option)
 
 
@@ -745,9 +771,10 @@ def resolve_profile_ex(cli_value: str | None, cwd: Path, env: Mapping[str, str],
                        plugin_option: str | None = None, target: Path | None = None) -> tuple[Profile, bool]:
     """The profile, and whether it came from the plugin option's placeholder fallback. `target` is the file the
     profile is for: with one, a matching `[engine] profiles` entry comes before `[engine] profile`. The project's
-    `[document]` keys are applied (`with_document`)."""
+    `[lexicon] exempt_terms` are added to it (`with_project`) and the project's `[document]` keys applied
+    (`with_document`)."""
     prof, fallback = _resolve_profile_ex(cli_value, cwd, env, plugin_option, target)
-    return with_document(prof, cwd), fallback
+    return with_document(with_project(prof, cwd), cwd), fallback
 
 
 def _resolve_profile_ex(cli_value: str | None, cwd: Path, env: Mapping[str, str],

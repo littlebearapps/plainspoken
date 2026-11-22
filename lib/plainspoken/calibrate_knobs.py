@@ -21,6 +21,9 @@ DIRECTIONS = ("loosen", "demote")
 _TRIGGER_TYPES = {"fp_min_fires": int, "fp_rate": float, "kept_min_docs": int, "missed_min_docs": int,
                   "dormant_days": int, "cycle_days": int, "cooldown_days": int, "max_proposals": int}
 _KNOB_KEYS = {"rule", "facet", "value", "direction", "edit"}
+# (rule, facet, value) where a rule no longer fires. Calibrate spends the spans logged there before the change, so
+# they turn no knob: a 12d kept in a FAQ section proposes nothing (#208: 12d leaves FAQ sections out).
+EXEMPT = {("12d", "section", "faq")}
 
 
 def _number(v) -> bool:

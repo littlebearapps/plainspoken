@@ -42,7 +42,7 @@ from plainspoken import (_util, adapters, calibrate, capture, carry, checker, cl
 from plainspoken import meaning
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
-from plainspoken.registry import load_config
+from plainspoken.registry import RETIRED_THRESHOLDS, load_config, retired_thresholds
 
 # Bad input (a bad profile, unreadable or non-UTF-8 file, a directory, malformed frontmatter YAML) exits 2 with one
 # line: exit 1 means "lint BLOCKs, carry on" to /anti-ai-check, so a crash must never look like it.
@@ -113,6 +113,8 @@ def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
     if fallback and config.is_placeholder(option):  # #206: a real choice may be behind it, so never silent
         print(f"plainspoken: {option} wasn't expanded, so this run uses the {prof.name} profile. "
               "To use another, pass --profile <name>.", file=sys.stderr)
+    for line in retired_thresholds(prof):  # #208: still loads, and says what it ignored
+        print(f"plainspoken: {line}", file=sys.stderr)
     return prof, fallback
 
 
@@ -208,14 +210,17 @@ def _locale(args: argparse.Namespace, prof: Profile, root: Path) -> config.Local
 
 
 def _profile_summary(p: Profile, cfg, plugin_default: bool = False, locale: config.Locale | None = None) -> str:
-    over = ", ".join(f"{k}={v}" for k, v in sorted(p.thresholds.items())) or "none"
+    over = ", ".join(f"{k}={v}" + (" (retired, ignored)" if k in RETIRED_THRESHOLDS else "")
+                     for k, v in sorted(p.thresholds.items())) or "none"
     tag = " (plugin default)" if plugin_default else ""
     deprecated = sorted(r.id for r in cfg.rules.values() if r.status == "deprecated" and r.applies_to(p))
     return "\n".join([
         f"plainspoken profile: {p.name}{tag} ({p.source})",
+        voice.version_line(p),
         f"locale {_locale_text(p, locale)} · flags: {', '.join(sorted(p.flags)) or 'none'} · ruleset {cfg.version}",
         f"threshold overrides: {over}",
-        f"extra bans: {len(p.extra_bans)} · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
+        f"extra bans: {len(p.extra_bans)} · exempt terms: {len(p.exempt_terms) + len(p.project_exempt_terms)}"
+        f" · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
         f" · deprecated rules: {', '.join(deprecated) or 'none'}",
         f"calibration notes: {p.calibration_notes or 'none'}",
         *config.document_lines(p),
@@ -262,7 +267,8 @@ def _main(argv: list[str] | None) -> int:
     pr.add_argument("--type", help="with --voice: only this content type's blend and formatting "
                                    f"({', '.join(CONTENT_KINDS)})")
     pr.add_argument("--json", action="store_true", help="print the stamps a report is bound to: name, path, "
-                                                        "profile_sha256, ruleset_version, root")
+                                                        "profile_sha256, ruleset_version, root (and the "
+                                                        "profile's version and updated date, which bind nothing)")
     co = sub.add_parser("config", help="what the project config resolves to")
     cos = co.add_subparsers(dest="config_cmd", required=True)
     pf = cos.add_parser("profile-for", help="print the profile for one file (PLAINSPOKEN_PROFILE, else the first "
@@ -453,7 +459,8 @@ def _main(argv: list[str] | None) -> int:
                 print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
                 return 2
             print(json.dumps({"name": prof.name, "path": prof.source, "profile_sha256": prof.sha256,
-                              "ruleset_version": version, "root": str(root)}, indent=2))
+                              "ruleset_version": version, "root": str(root), **report.version_stamps(prof)},
+                             indent=2))
             return 0
         try:
             locale = _locale(args, prof, root)
