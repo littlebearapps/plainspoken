@@ -78,6 +78,21 @@ Ruleset versions are separate from the plugin version. Every report records the 
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by
   merging the pull request.
 
+## Judges rubric revision (2026-11-22; ruleset version unchanged)
+
+- **Rule 7c (J2) asks for every failing instance (#200):** the entry gains an **Evidence** line telling the judge to
+  quote every instance in the article that fails, each as its own evidence item, not only the first or the clearest
+  few. Nothing else in the entry changes: no new example and no new shape, so a before and after on the same text
+  tests this one line.
+- **Why:** on a new 3,000-word text with 8 seeded 7c tells, J2 failed 7c in round 1 but quoted 6 of the 8, and quoted
+  the other 2 in round 2 on sentences no fix had touched. Two runs on the same commit missed the same 2, so it isn't
+  noise. Each late find costs a round of four judges.
+- **What goes stale:** nothing. Saved judge results are bound to the ruleset version, which doesn't move, and
+  `rules.toml` is untouched, so lint reports and kaizen proposals don't move either. A judge run after this merges
+  uses the new line. No golden case was read or changed.
+- Added by hand. The before and after on the seeded text hasn't run yet. The owner approves by merging the pull
+  request.
+
 ## Comment revision (2026-11-07; ruleset version unchanged)
 
 - **How a ruleset change goes in:** comments only, so no rule, threshold or list changes and no version bump.

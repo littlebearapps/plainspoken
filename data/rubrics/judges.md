@@ -115,6 +115,8 @@ check X. Dogfooding checks Y. Users check Z."), or on any negative parallelism: 
 reader needs in that order) or broken up by a question, fragment or aside.
 **Candidates:** "not just / not only / not merely" hits. Confirm the rhetorical ones; read for
 same-shape runs, which the lint can't see.
+**Evidence:** quote every instance in the article that fails, each as its own evidence item, not only the
+first or the clearest few.
 
 ### 12 Compulsive balance / rhetorical questions
 **Fail when** a "While X, Y" construction's X adds nothing and the sentence works as Y alone; on "on one
