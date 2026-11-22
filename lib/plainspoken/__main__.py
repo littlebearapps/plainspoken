@@ -36,9 +36,9 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from plainspoken import (_util, adapters, calibrate, capture, checker, claims, claims_tools, config, doctor, evalcli,
-                         extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning, proposals,
-                         reader_value, register, reply, report, setup, toolcall, voice)
+from plainspoken import (_util, adapters, calibrate, capture, carry, checker, claims, claims_tools, config, doctor,
+                         evalcli, extraction, hosts, judges, justify, kaizen, ledger, mining, modules, overrides, pinning,
+                         proposals, reader_value, register, reply, report, setup, toolcall, voice)
 from plainspoken import meaning
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
@@ -1252,11 +1252,17 @@ def _justify(path: Path, want_template: bool, reports: Path | None, calibration_
         print(f"plainspoken: no current report for {path.name} — run `merge` first", file=sys.stderr)
         return 2
     jpath = report.report_paths(path, d, root)["justify"]
+    record = carry.load(report.report_paths(path, d, root)["carry"], rep)  # #188: the report carries the stamps
     if want_template:
         if (rep.get("coverage") or {}).get("missing"):
             print("plainspoken: report is INCOMPLETE — fix its inputs and merge first", file=sys.stderr)
             return 2
-        text = json.dumps(justify.template(rep, justify.read_json(jpath)), indent=2, ensure_ascii=False)
+        skeleton = justify.template(rep, justify.read_json(jpath), record)
+        moved = justify.carried(rep, skeleton, record)
+        if moved:
+            print(f"plainspoken: carried: {', '.join(moved)} (JR accepted that reason on an earlier draft and its "
+                  "evidence hasn't changed; leave it as it is and JR won't review it again)", file=sys.stderr)
+        text = json.dumps(skeleton, indent=2, ensure_ascii=False)
         if not write:
             print(text)
             return 0
@@ -1276,14 +1282,19 @@ def _justify(path: Path, want_template: bool, reports: Path | None, calibration_
     if errors:
         print("invalid justifications:\n  " + "\n  ".join(errors), file=sys.stderr)
         return 1
-    payload = justify.review_input(rep, data, justify.file_sha(jpath))
+    payload = justify.review_input(rep, data, justify.file_sha(jpath), record)
     payload["article"] = str(Path(path).resolve())
     payload["rubric"] = str(judges.RUBRIC)
     payload["calibration_notes"] = calibration_notes
+    moved = justify.carried(rep, data, record)
     if not payload["items"]:
-        print(f"plainspoken: nothing to review: no justification in {jpath.name} covers a failing WARN rule",
-              file=sys.stderr)
+        why = (f"every justification that covers a failing WARN rule carries an earlier JR accept "
+               f"({', '.join(moved)}): run merge") if moved else (
+               f"no justification in {jpath.name} covers a failing WARN rule")
+        print(f"plainspoken: nothing to review: {why}", file=sys.stderr)
         return 1
+    if moved:
+        print(f"plainspoken: carried: {', '.join(moved)} (an earlier JR accept, so JR doesn't see it)", file=sys.stderr)
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
 

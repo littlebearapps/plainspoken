@@ -39,7 +39,9 @@ writing. It explains the check step by step, what each result means, and what th
 3. **Merge.** The engine combines the lint with the four verdicts and proves every rule was covered. You never score
    or merge anything by hand.
 4. **Fix or justify.** Every BLOCK must be fixed. A failing WARN is fixed, or kept with a one-line reason. A fifth
-   judge, JR, reviews each reason in a fresh context and accepts or rejects it.
+   judge, JR, reviews each reason in a fresh context and accepts or rejects it. When a later fix leaves a kept rule's
+   evidence as it was (the same finding in the same section), the reason JR accepted carries and JR doesn't read it
+   again (`merge` prints `carried:`).
 5. **Up to two fix passes.** A fix pass cuts, joins or splits sentences, or restates plainly what's already there. A
    join uses "and" or "but", or merges two sentences; it never adds a clause, detail or reason. Rhythm fixes (rules
    7 and 7d) join two neighbouring sentences in their own words or split one, and never pad a sentence to reach a
