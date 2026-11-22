@@ -11,7 +11,7 @@ from collections import Counter
 from functools import lru_cache
 from typing import Callable
 
-from plainspoken.doc import Doc, _clean_inline, split_sentences
+from plainspoken.doc import _HTML_COMMENT, Doc, _clean_inline, split_sentences
 from plainspoken.findings import Finding
 from plainspoken.registry import Config
 
@@ -213,29 +213,74 @@ def _separator_lines(doc: Doc) -> set[int]:
     return {ln for ln in doc.resources_lines() if 0 < ln <= len(doc.lines) and RESOURCE_ITEM.match(doc.lines[ln - 1])}
 
 
+EM_DASH = "—"
+Hit = tuple[int, str]  # one counted em dash: (its unit's line, the unit's text)
+
+
+def _visible_line(doc: Doc, line: int) -> str:
+    """Source line `line` as the lint reads it: no HTML comment (so no allow marker), code, URL or markup."""
+    return _clean_inline(_HTML_COMMENT.sub(" ", doc.lines[line - 1]))
+
+
+def _marked_dashes(doc: Doc, hits: list[Hit], exempt: Counter) -> tuple[list[Hit], list[Finding], list[int]]:
+    """#242: take out of `hits` the em dashes an allow marker for rule 1 keeps. A marker covers the visible em dashes
+    on its own source line only (less any attribution or separator dash its unit already left out, so it errs
+    towards a BLOCK), never more than its unit counted, and only when its phrase is the dash itself and it gives a
+    reason. Returns (the hits left, one INFO per marked line with the marker's reason, the lines whose rule 1
+    marker has no reason)."""
+    left, info, unreasoned, done = list(hits), [], set(), set()
+    for a in doc.allows:
+        if a.rule != "1" or a.phrase != EM_DASH or a.line in done or not 0 < a.line <= len(doc.lines):
+            continue
+        if not a.reason.strip():
+            unreasoned.add(a.line)
+            continue
+        done.add(a.line)
+        owners = [ln for ln, _ in left if ln <= a.line and a.line in _block_lines(doc, ln)]
+        if not owners:
+            continue
+        unit = max(owners)  # the heading or paragraph the marked line belongs to
+        n = min(_visible_line(doc, a.line).count(EM_DASH) - exempt[unit], sum(1 for ln, _ in left if ln == unit))
+        if n <= 0:
+            continue
+        for _ in range(n):
+            left.remove(next(h for h in left if h[0] == unit))
+        info.append(Finding("1", "INFO", a.line, _visible_line(doc, a.line)[:160],
+                            f"{n} em dash{'' if n == 1 else 'es'} kept by an allow marker: {a.reason.strip()}"))
+    return left, info, sorted(unreasoned)
+
+
 def em_dashes(doc: Doc, cfg: Config) -> list[Finding]:
-    """Em dashes in all visible text, quotations included, except the dash that marks a quote's attribution
-    and the label separator of a resource-list item (the house format, not prose). En dashes are counted
+    """Em dashes in all visible text, quotations included, except the dash that marks a quote's attribution,
+    the label separator of a resource-list item (the house format, not prose) and the dashes an allow marker for
+    rule 1 keeps on its own line (INFO, with the marker's reason: `_marked_dashes`). En dashes are counted
     separately, against their own cap (`_en_dashes`)."""
     limit = cfg.thresholds_for(doc)["em_dash_max"]
     tails = _attribution_tails(doc)
     separators = _separator_lines(doc)
-    hits = []
+    hits: list[Hit] = []
+    exempt: Counter = Counter()  # unit line -> dashes left out as an attribution or a separator
     for line, text, quoted in text_units(doc):
-        n = text.count("—")
+        n = text.count(EM_DASH)
         if quoted and tails[(line, text)] > 0:
             tails[(line, text)] -= 1
+            exempt[line] += 1
             n -= 1
         if n and line in separators:  # the item's first unit holds the separator
             separators.discard(line)
+            exempt[line] += 1
             n -= 1
         hits += [(line, text)] * n
-    out = []
+    hits, out, unreasoned = _marked_dashes(doc, hits, exempt)
     if len(hits) > limit:
         lines = sorted({ln for ln, _ in hits})
-        out.append(Finding("1", "BLOCK", lines[0], f"lines {lines[:12]}",
-                           f"{len(hits)} em dashes (limit {limit} for profile {doc.profile.name}). "
-                           "Use a hyphen, comma or full stop."))
+        refused = ""
+        if unreasoned:
+            refused = (f" The allow marker for rule 1 on line{'s' if len(unreasoned) > 1 else ''} "
+                       f"{', '.join(map(str, unreasoned))} gives no reason, so it keeps no dash.")
+        out.insert(0, Finding("1", "BLOCK", lines[0], f"lines {lines[:12]}",
+                              f"{len(hits)} em dashes (limit {limit} for profile {doc.profile.name}). "
+                              f"Use a hyphen, comma or full stop.{refused}"))
     return out + _en_dashes(doc, cfg)
 
 

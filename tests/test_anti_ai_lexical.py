@@ -258,6 +258,81 @@ class Allows(unittest.TestCase):
         self.assertEqual([x.severity for x in run("2", body)], ["INFO"])
 
 
+class AllowRule1(unittest.TestCase):  # #242: a dash kept on purpose, marked once in the source
+    ZERO = dataclasses.replace(PRODUCT, thresholds={"em_dash_max": 0})
+    BANS = dataclasses.replace(ZERO, extra_bans=("—",))
+    MARK = '<!-- anti-ai-allow: 1 "—" the search title has to match -->'
+
+    def sev(self, body, rule="1", profile=None):
+        return [(x.severity, x.line) for x in run(rule, body, profile=profile or self.ZERO)]
+
+    def test_a_marked_dash_at_limit_zero_is_info(self):
+        f = run("1", f"Pricing — Acme {self.MARK}\n\nPlain body.", profile=self.ZERO)
+        self.assertEqual([(x.severity, x.line) for x in f], [("INFO", 4)])
+        self.assertIn("the search title has to match", f[0].message)  # the marker's reason shows
+
+    def test_marker_alone_on_the_line_before(self):
+        self.assertEqual(self.sev(f"{self.MARK}\nPricing — Acme\n\nPlain body."), [("INFO", 5)])
+
+    def test_marked_heading(self):
+        self.assertEqual(self.sev(f"## Pricing — Acme {self.MARK}\n\nPlain body."), [("INFO", 4)])
+
+    def test_a_dash_on_another_line_still_blocks(self):
+        f = self.sev(f"Pricing — Acme {self.MARK}\n\nThe body — with a dash.")
+        self.assertIn(("INFO", 4), f)
+        self.assertIn("BLOCK", [s for s, _ in f])
+
+    def test_another_line_of_the_same_paragraph_still_blocks(self):  # one line, not the paragraph
+        f = run("1", f"Pricing — Acme {self.MARK}\nand a wrapped line — here.", profile=self.ZERO)
+        self.assertEqual(sorted(x.severity for x in f), ["BLOCK", "INFO"])
+        self.assertTrue(next(x.message for x in f if x.severity == "BLOCK").startswith("1 em dash"))
+
+    def test_covers_only_the_dashes_on_its_line_against_a_limit(self):
+        one = dataclasses.replace(PRODUCT, thresholds={"em_dash_max": 1})
+        body = f"Pricing — Acme {self.MARK}\n\nOne — two — three."
+        f = run("1", body, profile=one)
+        self.assertEqual(sorted(x.severity for x in f), ["BLOCK", "INFO"])
+        self.assertIn("2 em dashes (limit 1", next(x.message for x in f if x.severity == "BLOCK"))
+
+    def test_a_marker_for_a_different_rule_changes_nothing(self):
+        body = 'Pricing — Acme <!-- anti-ai-allow: 2 "—" the search title has to match -->\n\nPlain body.'
+        self.assertEqual(self.sev(body), [("BLOCK", 4)])
+
+    def test_a_marker_naming_other_text_changes_nothing(self):  # the phrase must be the dash itself
+        body = '<!-- anti-ai-allow: 1 "Pricing — Acme" the search title has to match -->\nPricing — Acme\n\nBody.'
+        self.assertEqual(self.sev(body), [("BLOCK", 5)])
+
+    def test_a_marker_with_no_reason_is_refused(self):
+        f = run("1", 'Pricing — Acme <!-- anti-ai-allow: 1 "—" -->\n\nPlain body.', profile=self.ZERO)
+        self.assertEqual([x.severity for x in f], ["BLOCK"])
+        self.assertIn("gives no reason", f[0].message)
+
+    def test_an_attribution_dash_on_the_marked_line_covers_nothing_else(self):  # errs towards a BLOCK
+        body = (f'> "We kept the old name — it still sells," she said.\n'
+                f'> — Jo Bloggs, Example Weekly {self.MARK}\n\nBody.')
+        self.assertEqual([x.severity for x in run("1", body, profile=self.ZERO)], ["BLOCK"])
+
+    def test_marker_and_dash_counts_stay_bounded(self):  # two markers for one line cover its dashes once
+        body = f"{self.MARK}\nPricing — Acme {self.MARK}\n\nBody — here."
+        self.assertIn("BLOCK", [s for s, _ in self.sev(body)])
+
+    def test_a_marked_line_never_waives_the_rule(self):
+        self.assertEqual(self.sev(f"Plain words. {self.MARK}\n\nThe body — with a dash."), [("BLOCK", 6)])
+
+    def test_pb_marker_covers_its_line_only(self):
+        mark = '<!-- anti-ai-allow: PB "—" the search title has to match -->'
+        self.assertEqual(self.sev(f"Pricing — Acme {mark}\n\nPlain body.", "PB", self.BANS), [("INFO", 4)])
+        f = self.sev(f"Pricing — Acme {mark}\n\nThe body — again.", "PB", self.BANS)
+        self.assertEqual(sorted(f), [("BLOCK", 6), ("INFO", 4)])
+
+    def test_rule1_marker_does_not_cover_pb_and_both_can_be_marked(self):
+        self.assertEqual(self.sev(f"Pricing — Acme {self.MARK}\n\nBody.", "PB", self.BANS), [("BLOCK", 4)])
+        pb = '<!-- anti-ai-allow: PB "—" the search title has to match -->'
+        body = f"{self.MARK}\nPricing — Acme {pb}\n\nBody."  # one marker per rule: own line + inline
+        self.assertEqual(self.sev(body, "1", self.BANS), [("INFO", 5)])
+        self.assertEqual(self.sev(body, "PB", self.BANS), [("INFO", 5)])
+
+
 class Edges(unittest.TestCase):
     def test_curly_apostrophe_matches(self):
         self.assertEqual([x.severity for x in run("4a", "It’s worth noting that it broke.")], ["BLOCK"])
