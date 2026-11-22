@@ -41,6 +41,8 @@ doesn't print reaches no drafting skill.
   Who reads it: drafting and the voice check.
 - `tone_notes`: one line per scale with the sample that shows it. `profile --voice` prints each note beside its scale.
   Who reads it: drafting and the voice check.
+- `private_tone_notes`: an optional list of tone scale names whose notes should print as `[private note]` by
+  default. `profile --voice --show-private` reveals the originals when explicitly requested.
 
 ## Rhythm
 
@@ -49,6 +51,7 @@ doesn't print reaches no drafting skill.
   ignores these.
 - `notes` (under `[rhythm]`): the pattern in words. Example: "Short answers, then one long walk-through." Who reads
   it: drafting and the voice check.
+- `notes_private`: optional `true` under `[rhythm]` to mask its notes unless `--show-private` is passed.
 
 ## Reader
 
@@ -86,3 +89,7 @@ doesn't print reaches no drafting skill.
 - `anchors`: `[[anchors]]` entries, passages in the author's own voice. Each has an `id`, `tags` (section types), a
   `source`, and either `text` or `path` with `lines`. A `path` must sit inside the project. Who reads it: drafting
   and the voice check.
+- `private`: optional `true` under an `[[anchors]]` entry. By default, `anchors` omits it before applying
+  `--limit` without reading its file; `--show-private` includes it and reveals the passage and source.
+  Drafting skills do not use `--show-private`, so private anchor passages and tone/rhythm note contents are
+  withheld from drafting prompts and cannot inform new drafts. These settings do not encrypt the saved profile.
