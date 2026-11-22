@@ -140,6 +140,9 @@ and values taken out). In `<key>.report.json`, each judge rule entry carries `ju
 beside `verdict`: when a lint BLOCK forces the verdict to `fail`, `judge_verdict` still says what the judge decided,
 and that's what the ledger records. A judge entry may also carry `pre_existing: true` (see `<key>.rounds.json`
 above); `merge` prints those rules on a `pre-existing:` line. It never changes a verdict, a status or an exit code.
+A rule 7d WARN whose every line ends "no reason needed" (no join of two neighbours clears its section) stays
+in `warns` but not in `unresolved`, needs no justification, and `merge` prints it on a `kept, no reason
+needed:` line (ruleset 4.6.0, #73).
 
 The claims ledger isn't a report, but it's named with the same key: `<ledger_dir>/<key>.claims.toml` (or
 `.claims.json`; `[claims] ledger_dir`, default `.plainspoken/claims`), so two articles with the same stem in
