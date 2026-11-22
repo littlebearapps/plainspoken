@@ -26,6 +26,11 @@ _IZE = re.compile(r"(?<=[a-z])iz(e|ed|es|ing|ation|ations|er|ers)\b")
 _YSE = re.compile(r"(?<=[a-z])ys(e|ed|es|ing)\b")
 _YZE = re.compile(r"(?<=[a-z])yz(e|ed|es|ing)\b")
 _REQUIRES = {f"flag:{f}" for f in KNOWN_FLAGS} | {"lexicon:extra_bans"}
+# Thresholds the ruleset no longer has. A profile that still sets one (calibrate could write it there) keeps loading:
+# the key is ignored, and the CLI says so once on stderr (`retired_thresholds`). Any other unknown key fails closed.
+RETIRED_THRESHOLDS = {
+    "paragraph_uniform_faq_run": "ruleset 4.6.0 retired it, as rule 12d leaves FAQ sections out (#208)",
+}
 
 
 def spelling_variants(term: str) -> set[str]:
@@ -88,7 +93,7 @@ class Config:
         `[thresholds."default"]`): the public way to read them."""
         merged = dict(self._thresholds["default"])
         if profile is not None:
-            merged.update(profile.thresholds)
+            merged.update({k: v for k, v in profile.thresholds.items() if k in merged or k not in RETIRED_THRESHOLDS})
         if content_type != "article":
             for key, value in self._thresholds.get(content_type, {}).items():
                 merged[key] = stricter_cap(merged[key], value) if key.endswith("_max") and key in merged else value
@@ -104,6 +109,8 @@ class Config:
         """Profile keys the ruleset doesn't know fail closed, naming the profile file and the key."""
         known = self._thresholds["default"]
         for key, value in profile.thresholds.items():
+            if key in RETIRED_THRESHOLDS and key not in known:
+                continue
             if key not in known:
                 raise ProfileError(f"{profile.source}: [thresholds] {key}: unknown threshold")
             int_wanted = isinstance(known[key], int) and not isinstance(known[key], bool)
@@ -113,6 +120,12 @@ class Config:
         unknown = sorted(profile.rules_disabled - set(self.rules))
         if unknown:
             raise ProfileError(f"{profile.source}: [rules] disabled: unknown rule id(s) {unknown}")
+
+
+def retired_thresholds(profile: Profile) -> list[str]:
+    """One line per retired threshold the profile still sets: the key is ignored, so deleting it changes nothing."""
+    return [f"{profile.source}: [thresholds] {key} is ignored: {RETIRED_THRESHOLDS[key]}. Delete it."
+            for key in sorted(profile.thresholds) if key in RETIRED_THRESHOLDS]
 
 
 def _need(table: dict, key: str, src: Path, where: str = ""):

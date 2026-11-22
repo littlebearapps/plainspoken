@@ -128,6 +128,7 @@ def lint_text(text: str, profile: Profile, content_type: str = "article", cfg=No
         "ruleset_version": cfg.version,
         "content_type": content_type,
         "fields_read": doc.fields_read(),  # #110: what was in scope (additive; older lint files lack it)
+        "faq_copies": [span.label for span in doc.faq_copies],  # #208: read once, in the body (additive)
         "article_sha256": sha or hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "lint_rules": lint_rules,
@@ -169,7 +170,9 @@ def summarise(lint: dict) -> str:
     lines = [f"anti-AI lint · {Path(lint['article']).name} · {lint['profile']} · {ctype} · {counts}"
              " · lint only, judges not run"]
     if lint.get("fields_read"):  # an older lint.json has no fields_read
-        lines.append(f"  read: {', '.join(lint['fields_read'])}")
+        copies = len(lint.get("faq_copies") or [])
+        once = f" ({copies} FAQ item{'s' * (copies != 1)} the body FAQ repeats, read there)" if copies else ""
+        lines.append(f"  read: {', '.join(lint['fields_read'])}{once}")
     for sev in ("BLOCK", "WARN", "CANDIDATE"):
         hits = by.get(sev, [])
         for f in hits[:15]:

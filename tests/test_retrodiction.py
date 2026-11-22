@@ -451,21 +451,19 @@ class Retrodiction(unittest.TestCase):
         self.assertIn(p["id"], self.cycles[0]["applied"])
         self.assertFalse(self.final._thresholds["default"]["mattr_blocking"])
 
-    def test_b_4b_is_proposed_in_cycle_2(self):
+    def test_b_4b_is_proposed_in_cycle_1(self):
         """The kept trigger finds the decision: per-word "then" WARNs kept to publication in 2 published articles
-        and "so" in 2 (3 distinct articles), so the narrow term knob proposes exactly the two words that fired. Since
-        12d got its FAQ knob, cycle 1's third slot (`max_proposals = 3`) goes to 12d's narrow FAQ candidate, which has
-        more evidence documents, so 4b comes one cycle later."""
-        self.assertFalse(any(p["rule"] == "4b" for p in self.cycles[0]["proposals"]))
-        p = next(p for p in self.cycles[1]["proposals"] if p["rule"] == "4b")
+        and "so" in 2 (3 distinct articles), so the narrow term knob proposes exactly the two words that fired. 12d's
+        kept FAQ spans no longer count (#208), so cycle 1's third slot (`max_proposals = 3`) is 4b's again."""
+        p = next(p for p in self.cycles[0]["proposals"] if p["rule"] == "4b")
         self.assertEqual((p["trigger"], p["action"]), ("kept", "loosen"))
         self.assertEqual(p["edits"], [{"kind": "list_add", "list": "density_total_only", "values": ["so", "then"]}])
 
     def test_b_density_total_only_gains_then_and_so(self):
-        """Both v4 approvals apply: the 12f demote in cycle 1 and the 4b list_add in cycle 2. Nothing is refused."""
-        second = self.cycles[1]
-        p = next(p for p in second["proposals"] if p["rule"] == "4b")
-        self.assertIn(p["id"], second["applied"])
+        """Both v4 approvals apply in cycle 1: the 12f demote and the 4b list_add. Nothing is refused."""
+        first = self.cycles[0]
+        p = next(p for p in first["proposals"] if p["rule"] == "4b")
+        self.assertIn(p["id"], first["applied"])
         self.assertEqual([c["refused"] for c in self.cycles], [{}] * CYCLES)
         self.assertEqual(self.final.lists["density_total_only"], ["so", "then"])  # "now" never fired
 
@@ -473,24 +471,26 @@ class Retrodiction(unittest.TestCase):
         """Once the 12f demote and the 4b list_add are applied, their v3 evidence no longer counts, so
         neither rule is proposed again (before spending, cycle 2 re-raised the spent 12f dismissal as a review)."""
         self.assertNotIn("12f", [p["rule"] for c in self.cycles[1:] for p in c["proposals"]])
-        self.assertNotIn("4b", [p["rule"] for c in self.cycles[2:] for p in c["proposals"]])
+        self.assertNotIn("4b", [p["rule"] for c in self.cycles[1:] for p in c["proposals"]])
 
-    def test_12d_kept_in_faqs_turns_the_faq_knob(self):
-        """Observed, not tuned: 5 of the 9 kept 12d spans sit in FAQ sections, so the narrow FAQ knob fits.
-        The owner made no 12d change in v4, so it's rejected, and the broad 12d knob never comes up."""
-        observed = [(c["n"], p["trigger"], p["action"], p["edits"]) for c, p in self.all_proposals()
-                    if p["rule"] == "12d"]
-        self.assertEqual(observed, [(1, "kept", "loosen", [{"kind": "set_threshold", "table": "default",
-                                                           "key": "paragraph_uniform_faq_run", "old": 4, "new": 5}])])
+    def test_12d_kept_in_faqs_is_not_evidence(self):
+        """Observed, not tuned: 5 of the 9 kept 12d spans sit in FAQ sections, where 12d no longer fires (#208), so
+        they turn no knob. The other 4, in 4 articles, still reach `kept_min_docs`: cycle 2 proposes the broad 12d
+        knob, which the owner didn't turn in v4 (rejected)."""
+        observed = [(c["n"], p["trigger"], p["action"], p["edits"], p["evidence"]["kept_docs"])
+                    for c, p in self.all_proposals() if p["rule"] == "12d"]
+        self.assertEqual(observed, [(2, "kept", "loosen", [{"kind": "set_threshold", "table": "default",
+                                                           "key": "paragraph_uniform_run", "old": 4, "new": 5}], 4)])
 
     def test_later_cycles_as_observed(self):
-        """Observed, not tuned: cycle 2 brings the two kept candidates `max_proposals = 3` cut from cycle 1 (4b, a v4
-        decision, and 7's broad knob, rejected); cycle 3 has nothing left outside its cooldown."""
+        """Observed, not tuned: cycle 2 brings the two kept candidates `max_proposals = 3` cut from cycle 1 (7's and
+        12d's broad knobs, both rejected); cycle 3 has nothing left outside its cooldown."""
         observed = [[(p["rule"], p["trigger"], p["action"], p["edits"]) for p in c["proposals"]] for c in self.cycles]
         self.assertEqual(observed[1], [
-            ("4b", "kept", "loosen", [{"kind": "list_add", "list": "density_total_only", "values": ["so", "then"]}]),
             ("7", "kept", "loosen", [{"kind": "set_threshold", "table": "default", "key": "uniform_sentence_run",
-                                      "old": 5, "new": 6}])])
+                                      "old": 5, "new": 6}]),
+            ("12d", "kept", "loosen", [{"kind": "set_threshold", "table": "default", "key": "paragraph_uniform_run",
+                                        "old": 4, "new": 5}])])
         self.assertEqual(observed[2], [])
 
     def test_c_the_7d_outcome_is_what_the_data_supports(self):

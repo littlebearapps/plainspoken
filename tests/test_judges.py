@@ -29,7 +29,8 @@ class JudgeInput(unittest.TestCase):
         out = judges.judge_input(self.art, PRODUCT, self.reports, self.cwd)
         self.assertEqual([o["group"] for o in out], ["J1", "J2", "J3", "J4"])
         keys = {"group", "article", "article_sha256", "content_type", "rules", "severities", "candidates", "rubric",
-                "calibration_notes", "visible_frontmatter_keys", "faq_frontmatter_key", "input_digest"}
+                "calibration_notes", "visible_frontmatter_keys", "faq_frontmatter_key", "faq_frontmatter_copies",
+                "input_digest"}
         for o in out:
             self.assertEqual(set(o) - {"human_markers"}, keys)  # no `profile` key for the judge
             self.assertEqual(o["article_sha256"], self.lint["article_sha256"])

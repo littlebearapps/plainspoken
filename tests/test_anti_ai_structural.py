@@ -699,26 +699,21 @@ class Paragraphs(unittest.TestCase):
         varied = "\n\n".join([" ".join(["word"] * n) + "." for n in (10, 40, 90, 25)])
         self.assertEqual(run("12d", varied), [])
 
-    def test_faq_run_threshold(self):  # the FAQ-only knob
+    def test_faq_sections_are_left_out(self):  # #208: FAQ answers are uniform by design
         para = " ".join(["word"] * 40) + "."
         four = "\n\n".join([para] * 4)
-        self.assertEqual(CFG.thresholds(PRODUCT)["paragraph_uniform_faq_run"], CFG.thresholds(PRODUCT)["paragraph_uniform_run"])
-        for heading in ("## FAQ", "## Notes"):  # at the shipped value a FAQ run fires like any other
-            self.assertEqual([x.severity for x in run("12d", f"{heading}\n\n{four}")], ["WARN"], heading)
-        loose = with_thresholds(paragraph_uniform_faq_run=6)
-        self.assertEqual(run_cfg("12d", f"## FAQ\n\n{four}", loose), [])
-        self.assertEqual(run_cfg("12d", f"## FAQ\n\n### Is it free?\n\n{four}", loose), [])  # an H3 under FAQ
-        self.assertEqual([x.severity for x in run_cfg("12d", f"## Notes\n\n{four}", loose)], ["WARN"])
-        six = "\n\n".join([para] * 6)
-        (f,) = run_cfg("12d", f"## FAQ\n\n{six}", loose)
-        self.assertIn("6+ consecutive paragraphs", f.message)
+        for heading in ("## FAQ", "## Frequently asked questions", "## FAQ\n\n### Is it free?"):
+            self.assertEqual(run("12d", f"{heading}\n\n{four}"), [], heading)
+        self.assertEqual([x.severity for x in run("12d", f"## Notes\n\n{four}")], ["WARN"])
+        self.assertNotIn("paragraph_uniform_faq_run", CFG.thresholds())  # the FAQ-only knob is retired
 
-    def test_the_run_takes_the_threshold_of_the_section_it_starts_in(self):
+    def test_a_faq_section_breaks_the_run(self):
         para = " ".join(["word"] * 40) + "."
-        loose = with_thresholds(paragraph_uniform_faq_run=6)
-        body = f"## Notes\n\n{para}\n\n{para}\n\n## FAQ\n\n{para}\n\n{para}"
-        (f,) = run_cfg("12d", body, loose)  # starts in Notes, so 4 is enough
+        two = f"{para}\n\n{para}"
+        self.assertEqual(run("12d", f"## Notes\n\n{two}\n\n## FAQ\n\n{two}\n\n## More\n\n{two}"), [])
+        (f,) = run("12d", f"## Notes\n\n{two}\n\n## FAQ\n\n{two}\n\n## More\n\n{two}\n\n{two}")
         self.assertIn("4+ consecutive paragraphs", f.message)
+        self.assertGreater(f.line, 12)  # the run after the FAQ, not one across it
 
     def test_the_faq_test_is_the_section_facet(self):
         from plainspoken import capture

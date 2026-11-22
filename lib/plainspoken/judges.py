@@ -60,6 +60,8 @@ def judge_input(article: Path, profile: Profile, reports_dir: Path, cwd: Path) -
             "calibration_notes": profile.calibration_notes or None,
             "visible_frontmatter_keys": list(profile.visible_frontmatter_keys),
             "faq_frontmatter_key": profile.faq_frontmatter_key,
+            # #208: FAQ items the body FAQ repeats; judge that text once, in the body
+            "faq_frontmatter_copies": lint.get("faq_copies", []),
         }
         if g == "J4":
             item["human_markers"] = [f for f in lint["findings"] if f["rule"] in ("HM", "15")]
