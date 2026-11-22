@@ -71,7 +71,8 @@ def report_paths(article: Path, reports_dir: Path, cwd: Path) -> dict[str, Path]
     names = {"lint": "lint", "JR": "JR.judge", "justify": "justify", "report": "report", "reply": "reply",
              "claims": "claims", "claims-check": "claims-check",
              "delivery": "delivery", "delivery-reply": "delivery-reply",
-             **{g: f"{g}.judge" for g in GROUPS}}
+             **{g: f"{g}.judge" for g in GROUPS},
+             **{f"{g}-input": f"{g}.input" for g in GROUPS}}  # #205: `judge-input --write`'s one line per judge
     out = {name: Path(reports_dir) / f"{key}.{suffix}.json" for name, suffix in names.items()}
     out["checked"] = Path(reports_dir) / f"{key}.checked.md"  # the check snapshot: the article's bytes, as checked
     out["before"] = Path(reports_dir) / f"{key}.before.md"  # meaning-diff's baseline: the bytes before the first edit

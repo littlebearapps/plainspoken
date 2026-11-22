@@ -125,6 +125,18 @@ class CheckSkill(unittest.TestCase):
         step2 = " ".join(self.text[self.text.index("2. **Judge input.**"):self.text.index("3. **Judges.**")].split())
         self.assertIn("Step 1 already printed it; this is the same call.", step2)  # the numbers other files cite stay
 
+    def test_judges_are_sent_the_engine_s_input_file(self):  # #205: the orchestrator never retypes a judge's line
+        step = self.step1()
+        self.assertIn("RUN judge-input FILE --plugin-profile '${user_config.profile}' --write", step)
+        self.assertIn("four `Jn <path>` lines", step)
+        self.assertIn("Never build, edit or retype an input.", step)
+        step3 = " ".join(self.text[self.text.index("3. **Judges.**"):self.text.index("4. **Record**")].split())
+        self.assertIn('Each prompt is: "Judge this. Your input is in <path>." with that judge\'s path from step 1.',
+                      step3)
+        self.assertNotIn("followed by that line verbatim", step3)
+        agent = (REPO / "agents" / "tells-judge.md").read_text(encoding="utf-8")
+        self.assertIn("in your prompt or in the file your prompt names: read that file first", agent)
+
     def step1(self) -> str:
         return " ".join(self.text[self.text.index("1. **Lint and judge input.**"):
                                   self.text.index("2. **Judge input.**")].split())

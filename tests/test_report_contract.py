@@ -46,13 +46,14 @@ class Keys(unittest.TestCase):
         p = report.report_paths(self.cwd / "post.md", self.cwd / ".plainspoken" / "reports", self.cwd)
         self.assertEqual(set(p), {"lint", "J1", "J2", "J3", "J4", "JR", "justify", "report", "reply", "claims",
                                   "claims-check", "delivery", "delivery-reply", "checked", "before", "first-draft",
-                                  "meaning"})
+                                  "meaning", "J1-input", "J2-input", "J3-input", "J4-input"})
         key = report.report_key(self.cwd / "post.md", self.cwd)
         self.assertEqual(p["claims"].name, f"{key}.claims.json")
         self.assertEqual(p["claims-check"].name, f"{key}.claims-check.json")
         self.assertEqual(p["delivery"].name, f"{key}.delivery.json")
         self.assertEqual(p["delivery-reply"].name, f"{key}.delivery-reply.json")
         self.assertEqual(p["J2"].name, f"{key}.J2.judge.json")
+        self.assertEqual(p["J2-input"].name, f"{key}.J2.input.json")  # #205: judge-input --write
         self.assertEqual(p["report"].name, f"{key}.report.json")
         self.assertEqual(p["reply"].name, f"{key}.reply.json")
         self.assertEqual(p["checked"].name, f"{key}.checked.md")

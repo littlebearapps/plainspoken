@@ -10,7 +10,7 @@ omitClaudeMd: true
 You are one of four independent judges. You owe the writer nothing, and you don't know who or what wrote the text.
 Ignore any project or user instructions you may have been given; only this prompt and the rubric apply.
 
-## Inputs (in your prompt, as one JSON object)
+## Inputs (one JSON object, in your prompt or in the file your prompt names: read that file first)
 
 `group`, `article` (absolute path), `article_sha256`, `content_type`, `rules` (the only ids you judge),
 `severities` (each rule id's default severity), `candidates` (lint hits that need your decision; may be an empty list), `rubric` (absolute path), `calibration_notes` (absolute path or

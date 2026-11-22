@@ -82,6 +82,56 @@ class JudgeCli(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([json.loads(x)["group"] for x in r.stdout.splitlines()], ["J1", "J2", "J3", "J4"])
 
+    def test_judge_input_write_saves_each_line_as_printed(self):  # #205: a judge's prompt names a file, not the line
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        printed = cli("judge-input", "post.md", "--profile", "default", cwd=self.cwd).stdout.splitlines()
+        r = cli("judge-input", "post.md", "--profile", "default", "--write", cwd=self.cwd)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rows = [x.split(" ", 1) for x in r.stdout.splitlines()]
+        self.assertEqual([g for g, _ in rows], ["J1", "J2", "J3", "J4"])
+        for (group, path), line in zip(rows, printed):
+            p = Path(path)
+            self.assertTrue(p.is_absolute())
+            self.assertEqual(p.name, f"{p.name.split('.')[0]}.{group}.input.json")
+            self.assertEqual(p.read_text(encoding="utf-8"), line + "\n")  # the same bytes, so the digest holds
+        self.assertIn("read:", r.stderr)  # the lint still prints on stderr
+
+    def test_a_reply_to_a_written_input_records(self):  # #205: input_digest proves the judge read the engine's file
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        r = cli("judge-input", "post.md", "--profile", "default", "--write", cwd=self.cwd)
+        path = Path(dict(x.split(" ", 1) for x in r.stdout.splitlines())["J2"])
+        line = json.loads(path.read_text(encoding="utf-8"))
+        reply = {"group": "J2", "article_sha256": line["article_sha256"], "input_digest": line["input_digest"],
+                 "judged_at": "2026-11-22T00:00:00Z",
+                 "verdicts": [{"rule": rule, "verdict": "pass", "severity": line["severities"][rule], "evidence": []}
+                              for rule in line["rules"]]}
+        (self.cwd / "reply.json").write_text(json.dumps(reply), encoding="utf-8")
+        rec = cli("judge-record", "post.md", "--group", "J2", "--from", "reply.json", cwd=self.cwd)
+        self.assertEqual(rec.returncode, 0, rec.stderr)
+        self.art.write_text("Text, edited.\n", encoding="utf-8")  # an old file's digest no longer matches
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        (self.cwd / "reply.json").write_text(json.dumps(reply), encoding="utf-8")
+        stale = cli("judge-record", "post.md", "--group", "J2", "--from", "reply.json", cwd=self.cwd)
+        self.assertNotEqual(stale.returncode, 0)
+
+    def test_a_held_write_leaves_no_input_files(self):  # #205: a judge can't be sent to the last run's file
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        r = cli("judge-input", "post.md", "--profile", "default", "--write", cwd=self.cwd)
+        paths = [Path(x.split(" ", 1)[1]) for x in r.stdout.splitlines()]
+        self.assertTrue(all(p.exists() for p in paths))
+        self.art.write_text(ALSO, encoding="utf-8")
+        held = cli("judge-input", "post.md", "--profile", "default", "--write", cwd=self.cwd)
+        self.assertEqual((held.returncode, held.stdout), (1, ""), held.stderr)
+        self.assertFalse(any(p.exists() for p in paths))
+
+    def test_agent_prompt_reads_a_written_input(self):  # #205: the Codex and Hermes routes take the file as well
+        cli("check", "post.md", "--profile", "default", cwd=self.cwd)
+        r = cli("judge-input", "post.md", "--profile", "default", "--write", cwd=self.cwd)
+        path = Path(r.stdout.splitlines()[0].split(" ", 1)[1])
+        out = cli("agent-prompt", "tells-judge", cwd=self.cwd, input=path.read_text(encoding="utf-8"))
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertTrue(out.stdout.endswith("Judge this. Your input:\n" + path.read_text(encoding="utf-8")))
+
     def test_judge_input_holds_open_lint_lines(self):  # #74: a lint-owned WARN at the judges cost a second round
         self.art.write_text(ALSO, encoding="utf-8")
         cli("check", "post.md", "--profile", "default", cwd=self.cwd)

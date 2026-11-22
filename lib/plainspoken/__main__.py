@@ -333,6 +333,9 @@ def _main(argv: list[str] | None) -> int:
     ji.add_argument("--keep", action="append", default=[], metavar="RULE",
                     help="a rule whose open lint BLOCK or WARN you leave (repeat, or comma-separate); without it, "
                          "judge-input exits 1 while the lint has one, and a rule with no open line exits 2")
+    ji.add_argument("--write", action="store_true",
+                    help="save each judge's line to <key>.Jn.input.json in the reports folder and print one "
+                         "`Jn <path>` line per judge instead of the JSON, so a judge's prompt can name the file (#205)")
     ji.add_argument("--ignore-claims", action="store_true",
                     help="judge even when the draft's claim ledger isn't current (a check on its own; write never "
                          "passes it); without it, judge-input exits 3 while `claims status` is stale, INCOMPLETE or "
@@ -522,6 +525,9 @@ def _main(argv: list[str] | None) -> int:
                 lint = report.run_lint(args.path, prof, ctype, cfg)
                 _save_lint(lint, args.path, prof, cfg, root, paths)
             items = judges.judge_input(args.path, prof, reports_dir, root)
+            if args.write:  # #205: a held or failed run leaves no input file a judge could be sent to
+                for g in judges.GROUPS:
+                    paths[f"{g}-input"].unlink(missing_ok=True)
         except _INPUT_ERRORS as e:
             return _input_error(args.path, e, "prepare judge input for")
         print(report.summarise(lint), file=sys.stderr)  # stdout stays the four lines: hosts save it as the JSONL
@@ -558,6 +564,15 @@ def _main(argv: list[str] | None) -> int:
             print("plainspoken: open lint lines kept with --keep (merge still counts each one):", file=sys.stderr)
             for f in kept:
                 print(f"  {f['severity']:5} r{f['rule']:<4} L{f.get('line', '?')}", file=sys.stderr)
+        if args.write:  # the line exactly as printed without --write, so its input_digest still matches
+            try:
+                for item in items:
+                    path = paths[f"{item['group']}-input"]
+                    report.write_atomic(path, json.dumps(item, ensure_ascii=False) + "\n")
+                    print(f"{item['group']} {path.resolve()}")
+            except OSError as e:
+                return _input_error(args.path, e, "save judge input for")
+            return 0
         for item in items:
             print(json.dumps(item, ensure_ascii=False))
         return 0
