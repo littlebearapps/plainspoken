@@ -9,7 +9,7 @@ from typing import Callable
 
 from plainspoken import metrics
 from plainspoken.checks_lexical import _pattern_hits, text_units
-from plainspoken.doc import Doc, Sentence, _clean_inline, split_sentences, tokenise
+from plainspoken.doc import Doc, Sentence, _clean_inline, in_faq_section, split_sentences, tokenise
 from plainspoken.findings import Finding
 from plainspoken.registry import Config
 
@@ -35,16 +35,13 @@ def _within(a: int, b: int, tol: float) -> bool:
     return bool(max(a, b)) and abs(a - b) / max(a, b) <= tol
 
 
-def _runs(values: list[int], tol: float, length: int | list[int]) -> list[int]:
-    """Start indexes of runs of `length` consecutive values within tol of the run's first value. `length` may be a
-    list, one run length per start index (12d's FAQ knob)."""
-    lengths = length if isinstance(length, list) else [length] * len(values)
+def _runs(values: list[int], tol: float, length: int) -> list[int]:
+    """Start indexes of runs of `length` consecutive values within tol of the run's first value."""
     out, i = [], 0
     while i < len(values):
-        n = lengths[i]
-        if i + n <= len(values) and all(_within(values[i], values[j], tol) for j in range(i + 1, i + n)):
+        if i + length <= len(values) and all(_within(values[i], values[j], tol) for j in range(i + 1, i + length)):
             out.append(i)
-            i += n
+            i += length
         else:
             i += 1
     return out
@@ -52,12 +49,9 @@ def _runs(values: list[int], tol: float, length: int | list[int]) -> list[int]:
 
 def in_faq(doc: Doc, line: int) -> bool:
     """Body line `line` sits in a FAQ section: its H2 is a FAQ heading, or its nearest heading is one. The same test
-    gives a kaizen finding its `faq` section facet (`capture.section_of`), so a FAQ knob turns where the evidence is."""
-    before = [(level, title) for ln, level, title in doc.headings if ln <= line]
-    if not before:
-        return False
-    h2 = [title for level, title in before if level == 2]
-    return bool((h2 and _FAQ.search(h2[-1])) or _FAQ.search(before[-1][1]))
+    gives a kaizen finding its `faq` section facet (`capture.section_of`), leaves FAQ sections out of 12d and finds
+    the body FAQ a frontmatter FAQ copies (`doc.in_faq_section`, #208)."""
+    return in_faq_section(doc.headings, line)
 
 
 def uniform_sentences(doc: Doc, cfg: Config) -> list[Finding]:
@@ -251,14 +245,24 @@ def narrative_staccato(doc: Doc, cfg: Config) -> list[Finding]:
 
 
 def uniform_paragraphs(doc: Doc, cfg: Config) -> list[Finding]:
-    """A run of `paragraph_uniform_run` prose paragraphs of near-identical length WARNs; a run that starts in a FAQ
-    section needs `paragraph_uniform_faq_run` instead (the knob calibrate turns for FAQ answers alone)."""
+    """A run of `paragraph_uniform_run` prose paragraphs of near-identical length WARNs. FAQ answers are uniform by
+    design, so a FAQ section's paragraphs are left out, and the section breaks the run: prose before it and after it
+    never join into one (#208)."""
     t = cfg.thresholds_for(doc)
-    prose = [p for p in doc.prose_paragraphs() if p.kind == "prose"]
-    lengths = [t["paragraph_uniform_faq_run"] if in_faq(doc, p.line) else t["paragraph_uniform_run"] for p in prose]
-    return [Finding("12d", "WARN", prose[i].line, prose[i].text[:160],
-                    f"{lengths[i]}+ consecutive paragraphs of near-identical length")
-            for i in _runs([len(p.text.split()) for p in prose], t["uniform_tolerance"], lengths)]
+    run = t["paragraph_uniform_run"]
+    stretches: list[list] = [[]]
+    for p in doc.prose_paragraphs():
+        if p.kind != "prose":
+            continue
+        if in_faq(doc, p.line):
+            if stretches[-1]:
+                stretches.append([])
+            continue
+        stretches[-1].append(p)
+    message = f"{run}+ consecutive paragraphs of near-identical length"
+    return [Finding("12d", "WARN", prose[i].line, prose[i].text[:160], message)
+            for prose in stretches
+            for i in _runs([len(p.text.split()) for p in prose], t["uniform_tolerance"], run)]
 
 
 def narrative_paragraphs(doc: Doc, cfg: Config) -> list[Finding]:

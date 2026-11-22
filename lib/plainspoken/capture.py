@@ -143,7 +143,7 @@ def section_of(line: object, doc: Doc | None) -> str | None:
     before = [(level, title) for ln, level, title in doc.headings if ln <= line]
     if not before:
         return "intro"
-    if in_faq(doc, line):  # the test 12d's FAQ knob uses (checks_structural)
+    if in_faq(doc, line):  # the test 12d uses to leave FAQ sections out (checks_structural)
         return "faq"
     return "question" if before[-1][1].rstrip().endswith("?") else "other"
 

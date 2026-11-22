@@ -42,7 +42,7 @@ from plainspoken import (_util, adapters, calibrate, capture, carry, checker, cl
 from plainspoken import meaning
 from plainspoken.doc import CONTENT_TYPES
 from plainspoken.profile import CONTENT_KINDS, Profile, ProfileError, locales
-from plainspoken.registry import load_config
+from plainspoken.registry import RETIRED_THRESHOLDS, load_config, retired_thresholds
 
 # Bad input (a bad profile, unreadable or non-UTF-8 file, a directory, malformed frontmatter YAML) exits 2 with one
 # line: exit 1 means "lint BLOCKs, carry on" to /anti-ai-check, so a crash must never look like it.
@@ -113,6 +113,8 @@ def _profile_ex(args: argparse.Namespace, root: Path) -> tuple[Profile, bool]:
     if fallback and config.is_placeholder(option):  # #206: a real choice may be behind it, so never silent
         print(f"plainspoken: {option} wasn't expanded, so this run uses the {prof.name} profile. "
               "To use another, pass --profile <name>.", file=sys.stderr)
+    for line in retired_thresholds(prof):  # #208: still loads, and says what it ignored
+        print(f"plainspoken: {line}", file=sys.stderr)
     return prof, fallback
 
 
@@ -208,7 +210,8 @@ def _locale(args: argparse.Namespace, prof: Profile, root: Path) -> config.Local
 
 
 def _profile_summary(p: Profile, cfg, plugin_default: bool = False, locale: config.Locale | None = None) -> str:
-    over = ", ".join(f"{k}={v}" for k, v in sorted(p.thresholds.items())) or "none"
+    over = ", ".join(f"{k}={v}" + (" (retired, ignored)" if k in RETIRED_THRESHOLDS else "")
+                     for k, v in sorted(p.thresholds.items())) or "none"
     tag = " (plugin default)" if plugin_default else ""
     deprecated = sorted(r.id for r in cfg.rules.values() if r.status == "deprecated" and r.applies_to(p))
     return "\n".join([

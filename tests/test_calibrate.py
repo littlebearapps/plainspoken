@@ -241,19 +241,16 @@ class Kept(TmpCase):
                           facets={"section": section}))
         return out
 
-    def test_kept_12d_in_faqs_turns_the_faq_knob(self):
-        cands = self.cands(self.kept_12d(["faq", "faq", "other"]))
-        self.assertEqual([(c["rule"], c["action"], c["narrow"]) for c in cands], [("12d", "loosen", True)])
-        p = calibrate.materialise(cands[0], None, CFG, None, [], NOW)
-        self.assertEqual(p["edits"], [{"kind": "set_threshold", "table": "default", "key": "paragraph_uniform_faq_run",
-                                       "old": 4, "new": 5}])
-        self.assertEqual(p["targets"], ["ruleset", "profile"])
+    def test_kept_12d_in_faqs_proposes_nothing(self):  # #208: 12d no longer fires in FAQ sections
+        self.assertEqual(self.cands(self.kept_12d(["faq", "faq", "faq"])), [])
+        self.assertEqual(self.cands(self.kept_12d(["faq", "faq", "other"])), [])  # one doc left: under kept_min_docs
 
     def test_kept_12d_elsewhere_turns_the_broad_knob(self):
-        cands = self.cands(self.kept_12d(["faq", "other", "question"]))
+        cands = self.cands(self.kept_12d(["faq", "other", "question", "intro"]))
         p = calibrate.materialise(cands[0], None, CFG, None, [], NOW)
         self.assertEqual(p["edits"][0]["key"], "paragraph_uniform_run")
         self.assertFalse(cands[0]["narrow"])
+        self.assertEqual(cands[0]["evidence"]["kept_docs"], 3)  # the FAQ doc isn't evidence
 
     def test_two_docs_is_not_enough(self):
         self.assertEqual(self.cands(kept_4b_events()[:4], cfg=load_config(self.copy(total_only=False))), [])

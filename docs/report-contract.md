@@ -11,7 +11,9 @@ Each file, what writes it, and what it's bound to:
   Its `fields_read` lists what was linted, in order: `body`, then each of the profile's
   `visible_frontmatter_keys` the file has as a string, then the profile's `faq_frontmatter_key` once if any FAQ
   question or answer was read (the summary prints it as `read: …`). It's additive: a lint file without it, from
-  an older version, still reads and merges.
+  an older version, still reads and merges. `faq_copies` (also additive) lists the FAQ items, as `faqs[0].answer`,
+  whose text the body's FAQ section repeats: they're read once, in the body, and `judge-input` passes them to the
+  judges as `faq_frontmatter_copies`.
 - `<key>.J1.judge.json` … `<key>.J4.judge.json`: written by `judge-record --group Jn` (or `--all` for all four);
   bound to article_sha256, profile_sha256, ruleset_version (stamped from the current lint) and input_digest (a hash
   of the whole `judge-input` line; `judge-record` rebuilds that line for the current draft and refuses a reply

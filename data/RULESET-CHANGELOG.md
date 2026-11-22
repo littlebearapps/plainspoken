@@ -28,6 +28,24 @@ Ruleset versions are separate from the plugin version. Every report records the 
   both). En dashes take no marker yet. **Why:** a dash kept on purpose, such as one in a page title that has to
   match a search, could only be dismissed after every check. **Measured effect (lint only):** the verdict-diff
   corpus doesn't move (279 texts, no status or finding count changed); none of its texts has a rule 1 marker.
+- **Rule 12d leaves FAQ sections out (#208):** paragraphs in a FAQ section (the same test as the `faq` section
+  facet) no longer count toward a run of near-identical lengths, and a FAQ section breaks a run, so prose before it
+  and after it never join into one. The `paragraph_uniform_faq_run` threshold (4.3.0) is retired: a profile that
+  still sets it loads, the key is ignored, and the CLI says so in one line on stderr. Its calibrate knob goes too,
+  and calibrate spends 12d spans logged in FAQ sections, so they turn no knob. **Why:** FAQ answers are uniform by
+  design, so every check of a page with a FAQ needed a justification and a JR round for the same 12d.
+- **A body FAQ's frontmatter copy is read once (#208):** when the body's FAQ section holds a frontmatter FAQ
+  question or answer (under the profile's `faq_frontmatter_key`) as whole headings or paragraphs with the same words
+  (markup, quote style, spacing and case aside), the lint reads that text in the body only, where its line numbers
+  point. Counts that read frontmatter (dashes, transitions, phrase rules, 7d's FAQ answers, rule 24's curly-quote
+  lines) count it once. The lint report lists the items as `faq_copies`, the `read:` line says how many, and
+  `judge-input` passes them as `faq_frontmatter_copies`; the judges rubric says to judge that text once, in the body,
+  so a rule 6 list in both copies is one list. An item the body words differently is still read in the frontmatter.
+- **Measured effect of both (lint only):** the verdict-diff corpus doesn't move (279 texts, no status or finding count
+  changed): its texts run under the default profile, which has no FAQ key, and no 12d run there is in a FAQ. Across
+  41 real published and draft blog articles under their own profiles, 12 have a frontmatter FAQ the body repeats
+  (100 items read once); 12d WARNs go from 15 to 8, CANDIDATE findings for rules 5b, 5c, 10 and 16 from 97 to 91,
+  and no article's status changes. No text gains a finding.
 - **What goes stale:** saved lint reports, judge results and kept-WARN justifications made under 4.5.0 read as stale
   and ask for a re-check. The file's bytes change, so a pending kaizen proposal rebases.
 - Added by hand, not through `kaizen apply`, with the version bump because results change. The owner approves by

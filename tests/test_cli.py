@@ -357,6 +357,19 @@ class Cli(unittest.TestCase):
             self.assertIn(key, rep)
         self.assertEqual(rep["profile"], "default")
 
+    def test_a_retired_threshold_is_named_once_on_stderr(self):  # #208: the profile still loads
+        text = (REPO / "data" / "profiles" / "default.toml").read_text(encoding="utf-8")
+        text = text.replace('name = "default"', 'name = "old"').replace(
+            "[thresholds]\n", "[thresholds]\nparagraph_uniform_faq_run = 6\n", 1)
+        (self.cwd / "old.toml").write_text(text, encoding="utf-8")
+        r = cli("check", str(self.art), "--profile", "./old.toml", "--no-save", "--no-record", cwd=self.cwd)
+        self.assertEqual(r.returncode, 1, r.stderr)  # the delve BLOCK, so the lint ran
+        self.assertEqual([ln for ln in r.stderr.splitlines() if "paragraph_uniform_faq_run" in ln],
+                         ["plainspoken: old.toml: [thresholds] paragraph_uniform_faq_run is ignored: ruleset 4.6.0 "
+                          "retired it, as rule 12d leaves FAQ sections out (#208). Delete it."])
+        r = cli("profile", "--profile", "./old.toml", cwd=self.cwd)
+        self.assertIn("paragraph_uniform_faq_run=6 (retired, ignored)", r.stdout)
+
     def test_clean_text_exits_0(self):
         self.art.write_text("I fixed the bug on Friday and it hasn't come back.\n", encoding="utf-8")
         self.assertEqual(cli("check", str(self.art), "--profile", "default", cwd=self.cwd).returncode, 0)

@@ -485,7 +485,7 @@ def _yaml_quote_trap(line: str) -> bool:
 
 def typography(doc: Doc, cfg: Config) -> list[Finding]:
     out = []
-    curly, fence = [], None
+    curly, fence, copies = [], None, doc.faq_copy_lines()  # a body FAQ's frontmatter copy counts once (#208)
     for i, line in enumerate(doc.lines, 1):
         stripped = line.lstrip()
         if fence is None and stripped[:3] in ("```", "~~~"):
@@ -495,7 +495,7 @@ def typography(doc: Doc, cfg: Config) -> list[Finding]:
             if stripped.startswith(fence):
                 fence = None
             continue
-        if re.search(r"[“”‘’]", re.sub(r"`[^`]*`", "", line)):  # inline code isn't prose
+        if i not in copies and re.search(r"[“”‘’]", re.sub(r"`[^`]*`", "", line)):  # inline code isn't prose
             curly.append(i)
     if curly:
         advice = "use straight quotes"

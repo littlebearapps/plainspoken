@@ -23,7 +23,6 @@ staccato_faq_short_run = 7
 # Below this many words, rule 7d's no-long-sentence test is skipped and only its short-run test runs (#148).
 staccato_long_min_words = 150
 paragraph_uniform_run = 4
-paragraph_uniform_faq_run = 4
 bold_bullet_run = 3
 ing_opener_section_warn = 3
 ing_opener_consecutive_block = 3

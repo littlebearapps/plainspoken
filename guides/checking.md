@@ -102,8 +102,13 @@ A check reads the body plus the frontmatter keys listed in the profile's `[docum
 Markdown file. For a post or video, put the title, caption and alt text in the frontmatter and list their keys
 there, or keep alt text inline in the body as `![alt](…)`.
 
-The `read:` line under the lint heading (`fields_read` in the JSON) shows what the lint read. plainspoken checks only
-the text it's given, never a platform's rendered version.
+The profile's `[document] faq_frontmatter_key` names a list of `question` and `answer` items the page renders as its
+FAQ. When the body has a FAQ section with the same question or answer (a heading or whole paragraphs, the same words),
+the check reads that text once, in the body, so its counts don't double and its line numbers point at the body. Rule
+12d (paragraphs of near-identical length) leaves FAQ sections out: answers that look alike are the format.
+
+The `read:` line under the lint heading (`fields_read` in the JSON) shows what the lint read, and how many FAQ items
+it read in the body instead. plainspoken checks only the text it's given, never a platform's rendered version.
 
 ## Humanize
 
