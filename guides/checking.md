@@ -97,10 +97,11 @@ run it from anywhere in the project.
 
 ## What a check reads
 
-A check reads the body plus the frontmatter keys listed in the profile's `[document] visible_frontmatter_keys`
-(`title` and `description` by default). Frontmatter is the block of settings between `---` lines at the top of a
-Markdown file. For a post or video, put the title, caption and alt text in the frontmatter and list their keys
-there, or keep alt text inline in the body as `![alt](…)`.
+A check reads the body plus the frontmatter keys listed in `[document] visible_frontmatter_keys` (`title` and
+`description` by default), set in the project config or, failing that, the voice profile
+([guides/configuration.md](configuration.md#document-what-the-lint-reads-from-the-frontmatter)). Frontmatter is the
+block of settings between `---` lines at the top of a Markdown file. For a post or video, put the title, caption and
+alt text in the frontmatter and list their keys there, or keep alt text inline in the body as `![alt](…)`.
 
 The profile's `[document] faq_frontmatter_key` names a list of `question` and `answer` items the page renders as its
 FAQ. When the body has a FAQ section with the same question or answer (a heading or whole paragraphs, the same words),
