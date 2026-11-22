@@ -44,7 +44,8 @@ Each file, what writes it, and what it's bound to:
   `claims checker-input` (scratch; overwritten each round).
 - `<key>.delivery.json`: written by `reader-value deliver --reviewer delivery-checker` (the isolated reviewer's
   verified reply) or `--reviewer self-check` (the writer's own reading); read back by `reader-value status`; bound to
-  article_sha256, contract_sha256, rubric_sha256, reviewer, recorded_at.
+  article_sha256, contract_sha256, rubric_sha256, reviewer, recorded_at. `retrofit` is `{"brief_source": …}` when the
+  contract is a retrofit (written after publication), else null; `reader-value status --json` carries it too.
 - `<key>.delivery-reply.json`: written by the reader-value skill (the reviewer's raw reply, its JSON object only),
   read by `reader-value deliver --from`; bound to its own article_sha256 + contract_sha256, copied from
   `reader-value deliver-input` (scratch; overwritten each round).

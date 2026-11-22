@@ -55,6 +55,11 @@ original_value = "A three-check triage drawn from the call-outs the business att
 # Confirms that promised_outcome and original_value leave every call to action out. Must be true.
 cta_excluded_confirmed = true
 
+# Only for a piece that was published before this contract was written (a back-catalogue review). Say where its
+# intent came from: the brief or planning notes, never the published text. Delete both lines otherwise.
+# retrofit = true
+# brief_source = "the post's planning notes, March 2026"
+
 # The reader's own first useful step: a verb, the thing it acts on, and where. Required for task, implementation,
 # debugging_path and self_check. Never "contact us".
 [first_action]

@@ -895,5 +895,66 @@ class DeliveryStatusCli(DeliveryBase):
         self.assertNotIn("Traceback", r.stderr)
 
 
+RETROFIT = '\nretrofit = true\nbrief_source = "the post\'s planning notes, March 2026"\n'
+
+
+class Retrofit(unittest.TestCase):  # #204: a contract written after the piece was published says so
+    def test_a_retrofit_with_its_brief_source_is_valid(self):
+        c = {**task(), "retrofit": True, "brief_source": "the original brief in the project folder"}
+        self.assertEqual(check(c), [])
+        self.assertEqual(reader_value.retrofit_of(c), {"brief_source": "the original brief in the project folder"})
+
+    def test_a_retrofit_needs_a_brief_source(self):
+        self.assertIn("needs brief_source", messages(check({**task(), "retrofit": True})))
+
+    def test_a_brief_source_needs_retrofit_true(self):
+        for c in ({**task(), "brief_source": "the original brief"},
+                  {**task(), "retrofit": False, "brief_source": "the original brief"}):
+            self.assertIn("only for a retrofit", messages(check(c)))
+
+    def test_retrofit_must_be_a_boolean(self):
+        found = messages(check({**task(), "retrofit": "yes", "brief_source": "the original brief"}))
+        self.assertIn("schema", found)
+
+    def test_an_ordinary_contract_is_not_a_retrofit(self):
+        self.assertIsNone(reader_value.retrofit_of(task()))
+        self.assertIsNone(reader_value.retrofit_of({**task(), "retrofit": False}))
+
+
+class RetrofitDelivery(DeliveryBase):
+    def setUp(self):
+        super().setUp()
+        # top-level keys go before the fixture's [first_action] table
+        self.contract.write_text(RETROFIT.lstrip("\n") + self.contract.read_text(encoding="utf-8"), encoding="utf-8")
+
+    def test_the_record_and_status_carry_the_mark(self):
+        self.assertEqual(reader_value.validate(reader_value.load_contract(self.contract), shipped(), vague()), [])
+        rec = self.record(self.reply())
+        self.assertEqual(rec["result"], "PASS")
+        self.assertEqual(rec["retrofit"], {"brief_source": "the post's planning notes, March 2026"})
+        st = reader_value.delivery_status(self.draft, self.contract, self.record_path, self.root)
+        self.assertEqual(st["status"], "PASS", st)
+        self.assertEqual(st["retrofit"], {"brief_source": "the post's planning notes, March 2026"})
+
+    def test_status_prints_retrofit_contract(self):
+        import json
+        reply = self.write_reply(self.reply())
+        run("deliver", "drafts/kitchen sink.md", "--from", str(reply), "--reviewer", "delivery-checker",
+            cwd=self.root)
+        r = run("status", "drafts/kitchen sink.md", cwd=self.root)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(r.stdout.splitlines()[0],
+                         "delivery: PASS · retrofit contract (brief: the post's planning notes, March 2026)")
+        r = run("status", "drafts/kitchen sink.md", "--json", cwd=self.root)
+        self.assertEqual(json.loads(r.stdout)["retrofit"]["brief_source"], "the post's planning notes, March 2026")
+
+    def test_an_ordinary_contract_prints_no_mark(self):
+        self.contract.write_text((FIX / "contract.toml").read_text(encoding="utf-8"), encoding="utf-8")
+        self.record(self.reply())
+        st = reader_value.delivery_status(self.draft, self.contract, self.record_path, self.root)
+        self.assertEqual(st["status"], "PASS", st)
+        self.assertIsNone(st["retrofit"])
+
+
 if __name__ == "__main__":
     unittest.main()
