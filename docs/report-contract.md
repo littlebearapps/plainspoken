@@ -25,6 +25,12 @@ Each file, what writes it, and what it's bound to:
 - `<key>.JR.judge.json`: written by `judge-record --group JR`; bound to article_sha256 + justify_sha256,
   profile_sha256, ruleset_version.
 - `<key>.report.json`: written by `merge`; bound to everything above.
+- `<key>.rounds.json`: written by `merge` when it completes (not INCOMPLETE): the last two drafts the judges read,
+  each a different version, as the draft's sha256, a hash per sentence and the sentences each failed judge rule
+  quoted. It holds none of the draft's text. `merge` compares the draft with the latest one that isn't this version
+  to mark a judge rule entry `pre_existing` in the report: every quote is in a sentence unchanged since the judges
+  last read the draft, and that round didn't fail the rule on those sentences (#200). Deleted by
+  `meaning-diff FILE --start`.
 - `<key>.reply.json`: written by the check skill (all four judge replies one after another, or one reply on a
   retry or for JR), deleted by `judge-record --from`; bound to nothing (scratch).
 - `<key>.claims.json`: written by `claims status`; bound to article_sha256, ledger_sha256 (the status, its reasons,
@@ -132,7 +138,8 @@ justification reasons are never stored, even with excerpts on. An INCOMPLETE mer
 and a reply `judge-record` refuses logs `judge_reply_rejected` friction (both with the engine's message, file names
 and values taken out). In `<key>.report.json`, each judge rule entry carries `judge_verdict`, the judge's own call,
 beside `verdict`: when a lint BLOCK forces the verdict to `fail`, `judge_verdict` still says what the judge decided,
-and that's what the ledger records.
+and that's what the ledger records. A judge entry may also carry `pre_existing: true` (see `<key>.rounds.json`
+above); `merge` prints those rules on a `pre-existing:` line. It never changes a verdict, a status or an exit code.
 
 The claims ledger isn't a report, but it's named with the same key: `<ledger_dir>/<key>.claims.toml` (or
 `.claims.json`; `[claims] ledger_dir`, default `.plainspoken/claims`), so two articles with the same stem in

@@ -126,6 +126,7 @@
         "severity": {"enum": ["BLOCK", "WARN"]},
         "lint_block": {"type": "boolean", "description": "Pending lint+judge entries: the lint found a BLOCK."},
         "evidence": {"type": "array", "description": "Judge entries: the evidence as the judge gave it."},
+        "pre_existing": {"const": true, "description": "Judge entries (#200): every quote is in a sentence unchanged since the judges last read the draft, and that round didn't fail the rule there."},
         "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}}
       },
       "allOf": [
