@@ -213,6 +213,7 @@ def _profile_summary(p: Profile, cfg, plugin_default: bool = False, locale: conf
     deprecated = sorted(r.id for r in cfg.rules.values() if r.status == "deprecated" and r.applies_to(p))
     return "\n".join([
         f"plainspoken profile: {p.name}{tag} ({p.source})",
+        voice.version_line(p),
         f"locale {_locale_text(p, locale)} · flags: {', '.join(sorted(p.flags)) or 'none'} · ruleset {cfg.version}",
         f"threshold overrides: {over}",
         f"extra bans: {len(p.extra_bans)} · disabled rules: {', '.join(sorted(p.rules_disabled)) or 'none'}"
@@ -261,7 +262,8 @@ def _main(argv: list[str] | None) -> int:
     pr.add_argument("--type", help="with --voice: only this content type's blend and formatting "
                                    f"({', '.join(CONTENT_KINDS)})")
     pr.add_argument("--json", action="store_true", help="print the stamps a report is bound to: name, path, "
-                                                        "profile_sha256, ruleset_version, root")
+                                                        "profile_sha256, ruleset_version, root (and the "
+                                                        "profile's version and updated date, which bind nothing)")
     co = sub.add_parser("config", help="what the project config resolves to")
     cos = co.add_subparsers(dest="config_cmd", required=True)
     pf = cos.add_parser("profile-for", help="print the profile for one file (PLAINSPOKEN_PROFILE, else the first "
@@ -452,7 +454,8 @@ def _main(argv: list[str] | None) -> int:
                 print(f"plainspoken: {_first_line(e)}", file=sys.stderr)
                 return 2
             print(json.dumps({"name": prof.name, "path": prof.source, "profile_sha256": prof.sha256,
-                              "ruleset_version": version, "root": str(root)}, indent=2))
+                              "ruleset_version": version, "root": str(root), **report.version_stamps(prof)},
+                             indent=2))
             return 0
         try:
             locale = _locale(args, prof, root)

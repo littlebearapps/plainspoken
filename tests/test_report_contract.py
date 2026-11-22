@@ -226,7 +226,9 @@ class ReportContract(unittest.TestCase):
         r = cli("profile", "--json", cwd=self.root)
         self.assertEqual(r.returncode, 0, r.stderr)
         out = json.loads(r.stdout)
-        self.assertEqual(set(out), {"name", "path", "profile_sha256", "ruleset_version", "root"})
+        self.assertEqual(set(out), {"name", "path", "profile_sha256", "ruleset_version", "root", "profile_version",
+                                    "profile_updated"})
+        self.assertEqual((out["profile_version"], out["profile_updated"]), (None, None))  # #251: null when unset
         self.assertEqual(out["name"], "mine")
         self.assertEqual(Path(out["path"]), mine)
         self.assertEqual(out["ruleset_version"], load_config().version)
@@ -279,6 +281,10 @@ class ReportContract(unittest.TestCase):
         self.assertEqual(len(merged["justified"]), 2, merged["problems"])
         on_disk = json.loads(paths["report"].read_text(encoding="utf-8"))
         self.assertEqual(schema.validate(on_disk, sch), [])
+        # #251: the profile's own version and date ride along, null when unset, a date when set
+        self.assertEqual((on_disk["profile_version"], on_disk["profile_updated"]), (None, None))
+        self.assertEqual(schema.validate(dict(on_disk, profile_version="1.2", profile_updated="2026-11-22"), sch), [])
+        self.assertTrue(schema.validate(dict(on_disk, profile_updated="22 Nov"), sch))
         # the schema pins the shape: a damaged report fails it
         bad = dict(on_disk, status="MAYBE")
         bad["rules"] = {**on_disk["rules"], "x": {"source": "lint", "verdict": "pass"}}
