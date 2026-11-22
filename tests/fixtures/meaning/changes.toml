@@ -218,3 +218,10 @@ kind = "neg-add"
 class = "negation"
 before = "Parking is included in the ticket."
 after = "Parking isn't included in the ticket."
+
+[[pair]]
+id = "m32"
+kind = "so-join"
+class = "reason"
+before = "The library is closed on Mondays. Book a Tuesday session instead."
+after = "The library is closed on Mondays, so book a Tuesday session instead."

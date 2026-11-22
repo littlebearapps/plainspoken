@@ -58,6 +58,8 @@ class Lexicon:
     free: frozenset
     inclusions: frozenset
     reasons: frozenset
+    join_reasons: frozenset
+    join_reason_not_before: frozenset
     phrases: tuple  # (phrase words, counted as), longest first
     qualifiers: dict
     qualifier: re.Pattern
@@ -82,7 +84,8 @@ def load_lexicon(path: Path = DATA_PATH) -> Lexicon:
         commitment_modals=words("commitment_modals"), commitment_subjects=words("commitment_subjects"),
         adverbs=words("adverbs"), obligations=words("obligations"), conditions=words("conditions"),
         time_after=words("time_after"), exclusions=words("exclusions"), free=words("free"),
-        inclusions=words("inclusions"), reasons=words("reasons"), phrases=tuple(phrases), qualifiers=quals,
+        inclusions=words("inclusions"), reasons=words("reasons"), join_reasons=words("join_reasons"),
+        join_reason_not_before=words("join_reason_not_before"), phrases=tuple(phrases), qualifiers=quals,
         qualifier=re.compile(rf"\b({qual_alt})\s+(?=[$£€]?\d|{_NUMBER_WORD})", re.I),
         tax=re.compile(pats["tax"], re.I), price_context=re.compile(pats["price_context"], re.I),
         frames=re.compile("|".join(f"(?:{f})" for f in pats["frames"]), re.I))
@@ -318,6 +321,47 @@ def _groups(old: list[tuple[str, int]], new: list[tuple[str, int]]) -> list[tupl
 
 
 # --- the diff ---------------------------------------------------------------------------------------------------------
+JOIN_MATCH = 0.5  # the share of the first sentence's content words the words before the seam must carry (#215);
+# the words after it need only MATCH of the second's, since a join often rewords the second half ("if that's you")
+
+
+def _join_words(sentence: str, lex: Lexicon) -> list[tuple[int, str, list[str]]]:
+    """Each join reason in `sentence` with at least two words either side: (position, as written, the tokens)."""
+    pairs = _split(sentence)
+    toks = [w for w, _ in pairs]
+    out = []
+    for i, (t, raw) in enumerate(pairs):
+        if t not in lex.join_reasons:
+            continue
+        nxt = toks[i + 1] if i + 1 < len(toks) else ""
+        if nxt in lex.join_reason_not_before:
+            continue
+        if sum(w.isalpha() for w in toks[:i]) >= 2 and sum(w.isalpha() for w in toks[i + 1:]) >= 2:
+            out.append((i, raw, toks))
+    return out
+
+
+def _joined_reasons(o: list[tuple[str, int]], n: list[tuple[str, int]], lex: Lexicon) -> list[str]:
+    """The join reasons (#215) an after-text sentence puts at the seam of two neighbouring before-text sentences:
+    the words before it carry the first sentence (JOIN_MATCH), the words after it the second (MATCH), and neither had
+    the word."""
+    if len(o) < 2:
+        return []  # a join needs two before-text sentences; the seam test below finds it even beside an added one
+    olds = [(_content(s), set(tokens(s))) for s, _ in o]
+    found = []
+    for s, _ in n:
+        for i, raw, toks in _join_words(s, lex):
+            left = {_stem(t) for t in toks[:i] if t not in _STOP and len(t) > 2 and t.isalpha()}
+            right = {_stem(t) for t in toks[i + 1:] if t not in _STOP and len(t) > 2 and t.isalpha()}
+            for (xc, xt), (yc, yt) in zip(olds, olds[1:]):
+                if not xc or not yc or toks[i] in xt or toks[i] in yt:
+                    continue
+                if len(left & xc) / len(xc) >= JOIN_MATCH and len(right & yc) / len(yc) >= MATCH:
+                    found.append(raw)
+                    break
+    return found
+
+
 def _words(key: tuple, n: int, side: list, other: list) -> list[str]:
     """How `n` of `key`'s markers on `side` are written, the ones the other side doesn't also write first."""
     mine = [w for k, w in side if k == key]
@@ -343,6 +387,7 @@ def diff(before: str, after: str, lex: Lexicon | None = None) -> list[dict]:
     new_keys = {k for _, k, _ in figures(new_text)}
     whole_o, whole_n = markers(src_text, lex), markers(new_text, lex)
     whole_qo, whole_qn = _qualified(src_text, lex)[0], _qualified(new_text, lex)[0]
+    whole_joins = [sum(len(_join_words(s, lex)) for s, _ in side) for side in (old, new)]
     out = []
     for o, n in _groups(old, new):
         bt, at = " ".join(s for s, _ in o), " ".join(s for s, _ in n)
@@ -382,6 +427,9 @@ def diff(before: str, after: str, lex: Lexicon | None = None) -> list[dict]:
         for key, k in sorted((qo - qn).items()):
             if whole_qn[key] < whole_qo[key] and key[1] in new_keys:  # the number stayed, its qualifier went
                 found.append(("qual", "dropped", [qwritten[key]]))
+        joined = _joined_reasons(o, n, lex)
+        if joined and whole_joins[1] > whole_joins[0]:  # more of it in the whole text: a reason was added
+            found.append(("cause", "added", joined))
         items: dict = {}
         for cls, change, words in found:
             item = items.setdefault((cls, change), {"class": CLASSES[cls], "change": change, "words": []})

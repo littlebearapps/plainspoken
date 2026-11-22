@@ -96,6 +96,28 @@ class Diff(unittest.TestCase):
     def test_pure_join_lists_nothing(self):
         self.assertEqual(meaning.diff(self.read("issue-src.md"), self.read("issue-join.md")), [])
 
+    def test_a_so_join_is_an_added_reason(self):  # #215: round 11 shipped "so" joins that reached no owner
+        self.assertEqual(_flat(meaning.diff("There are no bookings. It's first come, first served.",
+                                            "There are no bookings, so it's first come, first served.")),
+                         [("reason", "added", ["so"])])
+
+    def test_a_so_join_that_rewords_the_second_sentence(self):  # #215: round 11's "so if that's you" join
+        before = "The club wants more helpers who can cook. If you can bake a pie, ring the canteen."
+        after = "The club wants more helpers who can cook, so if that's you, ring the canteen."
+        self.assertIn(("reason", "added", ["so"]), _flat(meaning.diff(before, after)))
+
+    def test_so_that_is_not_a_join_unless_it_joins(self):  # #215: only a seam counts, never "so" alone
+        for before, after in [
+            ("The vans run late. The gate opens at nine.", "The vans run late and the gate opens at nine."),
+            ("I've done three jobs. It went well.", "I've done three jobs so far and it went well."),
+            ("The vans run late. So the gate opens at nine.", "The vans run late, so the gate opens at nine."),
+            ("The vans run late, so the gate opens at nine.",
+             "The vans run late, so the gate opens at nine. It rains."),
+            ("The hall is big. It was so cold.", "The hall is big and it was so cold that we left."),
+            ("I think so. The vans run late.", "I think so, and the vans run late."),
+        ]:
+            self.assertNotIn("reason", [c for c, _, _ in _flat(meaning.diff(before, after))], after)
+
     def test_dropped_number_listed_reordered_not(self):
         self.assertEqual(_flat(meaning.diff(self.read("issue-src.md"), self.read("issue-drop.md"))),
                          [("number", "dropped", ["$300"])])
